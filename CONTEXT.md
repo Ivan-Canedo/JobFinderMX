@@ -89,3 +89,13 @@ _Avoid_: comprobación, consulta
 **Comprobación puntual**:
 Leer el anuncio oficial de una vacante, o de unas pocas que el titular nombra, sin recorrer ningún listado. Se hace en cualquier canal; desde Web, lo que se quiera conservar va en una nota para Code.
 _Avoid_: búsqueda, verificación
+
+## Evaluación
+
+**Núcleo**:
+Una de las dos o tres necesidades centrales de una vacante, elegida entre sus requisitos obligatorios, ambiguos o en funciones. Recibe la categoría de su mejor evidencia en el perfil del titular.
+_Avoid_: requisito clave, requisito principal
+
+**Encaje**:
+Qué tanto respalda el perfil del titular los núcleos de una vacante. Se calcula desde la categoría de cada núcleo y se muestra en estrellas; la cobertura de requisitos obligatorios se reporta aparte.
+_Avoid_: fit, puntaje, match

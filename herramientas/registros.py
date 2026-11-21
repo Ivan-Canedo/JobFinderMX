@@ -15,7 +15,8 @@ Con --copia CARPETA antes de la orden, usa los módulos, el archivo y la instant
 script; el mantenedor lo usa con su copia de prueba (CONTRIBUTING, «Titulares de prueba»).
 
 El archivo es <archivo.nombre>.xlsx en la raíz de la copia, con las pestañas del bloque de 11/REG-ESQUEMA y
-sus columnas guardadas: las calculadas de informes no se guardan, las da la orden informe.
+sus columnas guardadas. Las calculadas no se guardan: las de informes las da la orden informe, y el encaje de
+evaluaciones, que sale de sus nucleos (08/EVAL-ENCAJE), lo dan leer, informe y la instantánea.
 
 - crear: el archivo vacío, con los encabezados. No sobrescribe uno que ya exista.
 - agregar: filas nuevas, {pestaña: [{columna: texto}]}, de varias pestañas a la vez. Las referencias se
@@ -33,12 +34,14 @@ sus columnas guardadas: las calculadas de informes no se guardan, las da la orde
   «revisar vigencia», su estado, y una empresa en [FALLO] se nombra en no_revisado_pendientes. Da el busqueda_id y
   una línea «VAC-ID · título · departamento» por vacante de la búsqueda.
 - migrar: pasa a esta versión una hoja de Google descargada como .xlsx o el archivo de registros de una versión
-  anterior (ADR 0006). Lee los valores de cada pestaña por el nombre de sus columnas, ignora las calculadas de
-  informes y quita las que el esquema ya no tiene (canal), aplica las correcciones, {pestaña: {ID o "fila N":
-  {columna: texto}}}, y comprueba cada fila como agregar. Escribe el archivo completo y da, por pestaña, las filas
-  de la entrada y las del archivo escrito, más las columnas quitadas, las filas corregidas y las pestañas ignoradas. Solo lee la entrada. No sobrescribe un archivo de registros con filas,
+  anterior (ADR 0006). Lee los valores de cada pestaña por el nombre de sus columnas, quita las calculadas, como
+  el encaje guardado de evaluaciones, y las que el esquema ya no tiene (canal), aplica las correcciones,
+  {pestaña: {ID o "fila N": {columna: texto}}}, y comprueba cada fila como agregar. Escribe el archivo completo y
+  da, por pestaña, las filas de la entrada y las del archivo escrito, más las columnas quitadas, las filas
+  corregidas y las pestañas ignoradas. Solo lee la entrada. No sobrescribe un archivo de registros con filas,
   salvo cuando la entrada es ese mismo archivo.
-- leer: las filas de una pestaña, o solo las que tienen esos IDs en la primera columna o en --columna.
+- leer: las filas de una pestaña, o solo las que tienen esos IDs en la primera columna o en --columna. En
+  evaluaciones, con su encaje calculado.
 - informe: la tabla resumen de una búsqueda (08/EVAL-INFORME), con las columnas calculadas de informes
   (11/REG-CAMPOS) a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
 - instantanea: regenera completa la instantánea que lee el canal Web (11/REG-INSTANTANEA), en instantanea/:
@@ -47,17 +50,19 @@ sus columnas guardadas: las calculadas de informes no se guardan, las da la orde
   escribir. Si pasa de 300 KB, lo avisa en stderr sin fallar.
 
 Agregar, actualizar, importar y migrar comprueban cada fila que escriben contra el esquema: tipos, listas
-(empresa_id, contra 06/CAT-EMPRESAS), obligatoriedad, IDs únicos y referencias. Con un solo error no
-escriben nada: dicen todos en stderr y terminan con código 1. El JSON va a stdout. Si falta la
+(empresa_id, contra 06/CAT-EMPRESAS), la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias.
+Con un solo error no escriben nada: dicen todos en stderr y terminan con código 1. El JSON va a stdout. Si falta la
 configuración, el archivo u openpyxl, o se pide una pestaña o búsqueda inexistente, termina con código 2
 y dice qué falla.
 """
 import argparse
 import datetime as dt
 import json
+import math
 import os
 import re
 import sys
+from fractions import Fraction
 from zoneinfo import ZoneInfo
 
 
@@ -78,6 +83,8 @@ CARPETA_INSTANTANEA = "instantanea"
 ULTIMAS_BUSQUEDAS = 10
 AVISO_INSTANTANEA_KB = 300
 UMBRAL_DE_ANTIGUA = 20
+# Las estrellas que vale un núcleo según su categoría (08/EVAL-ENCAJE).
+PESOS_POR_DEFECTO = {"Directa": "5", "Transferible": "3", "Académica/formativa": "1.5", "Insuficiente": "0"}
 
 
 def error(mensaje):
@@ -227,6 +234,10 @@ def rechazar(errores):
     sys.exit(1)
 
 
+# De dónde sale cada pestaña con columnas calculadas, para el rechazo de una que se quiere escribir.
+SE_CALCULA = {"informes": "orden informe", "evaluaciones": "desde nucleos, 08/EVAL-ENCAJE"}
+
+
 def leer_entrada(archivo):
     """El JSON de las filas, de un archivo o de stdin ("-")."""
     try:
@@ -261,7 +272,7 @@ def filas_de_entrada(esquema, entrada):
                 if c not in columnas:
                     errores.append(f"{nombre}, fila {n}: {c!r} no es una columna de {nombre}.")
                 elif columnas[c]["tipo"] == "calculada":
-                    errores.append(f"{nombre}, fila {n}: {c} se calcula (orden informe); no se escribe.")
+                    errores.append(f"{nombre}, fila {n}: {c} se calcula ({SE_CALCULA[nombre]}); no se escribe.")
                 elif not isinstance(v, (str, type(None))):
                     errores.append(f"{nombre}, fila {n}: {c} debe ser texto, entre comillas; dice {v!r}.")
             filas[nombre].append({c: v or "" for c, v in fila.items()})
@@ -335,6 +346,12 @@ def comprobar(esquema, todas, revisar):
                 mal(col, f"«{v}» no es una URL que empiece con http:// o https:// y sin espacios.")
             elif tipo == "patron" and not re.fullmatch(c["patron"], v):
                 mal(col, f"«{v}» no tiene la forma {c['patron']}.")
+            elif tipo == "multivalor" and "categorias" in c:
+                for elemento in v.split(" | "):
+                    nombre_, _, categoria = elemento.rpartition(": ")
+                    if not nombre_.strip() or categoria not in c["categorias"]:
+                        mal(col, f"«{elemento}» no tiene la forma `Nombre: Categoría`, con la categoría entre: "
+                                 f"{' / '.join(c['categorias'])}.")
             elif tipo == "lista":
                 if "valores_de" in c:
                     if c["valores_de"] != "06/CAT-EMPRESAS":
@@ -929,10 +946,39 @@ def antiguedad(vacante, hoy, umbral):
     return ("≥ " if publicada == "" else "") + f"{n} d" + (" · antigua" if n >= umbral else "")
 
 
+def estrellas(evaluacion):
+    """08/EVAL-ENCAJE: el promedio de lo que vale cada núcleo según su categoría, redondeado a estrellas enteras
+    con los empates en .5 hacia abajo, y al menos ★☆☆☆☆ si algún núcleo no es insuficiente. Vacío si está excluida
+    o no tiene núcleos; «#VALUE!» si un núcleo no tiene una categoría conocida, como en un archivo editado a mano."""
+    nucleos = [n for n in evaluacion["nucleos"].split(" | ") if n]
+    if evaluacion["condiciones"] == "Excluida" or not nucleos:
+        return ""
+    categorias = [n.rpartition(": ")[2] for n in nucleos]
+    if any(c not in PESOS_POR_DEFECTO for c in categorias):
+        return "#VALUE!"
+    promedio = sum(Fraction(PESOS_POR_DEFECTO[c]) for c in categorias) / len(categorias)
+    n = math.ceil(promedio - Fraction(1, 2))
+    if any(c != "Insuficiente" for c in categorias):
+        n = max(n, 1)
+    return "★" * n + "☆" * (5 - n)
+
+
+# Las columnas calculadas que salen solo de la misma fila: leer y la instantánea las dan con las guardadas.
+DE_LA_FILA = {"evaluaciones": {"encaje": estrellas}}
+
+
+def con_calculadas(pestana, fila):
+    """La fila con sus columnas calculadas desde ella misma, en el orden del esquema."""
+    calcular = DE_LA_FILA.get(pestana["nombre"], {})
+    return {c["nombre"]: calcular[c["nombre"]](fila) if c["nombre"] in calcular else fila[c["nombre"]]
+            for c in pestana["columnas"] if c["tipo"] != "calculada" or c["nombre"] in calcular}
+
+
 def encaje(evaluacion):
+    """La columna encaje de informes: las estrellas y la cobertura, o «—» si está excluida."""
     if evaluacion["condiciones"] == "Excluida":
         return "—"
-    return evaluacion["encaje"] + (" · " + evaluacion["cobertura"] if evaluacion["cobertura"] else "")
+    return " · ".join(p for p in (estrellas(evaluacion), evaluacion["cobertura"]) if p) or "—"
 
 
 def alertas(evaluacion):
@@ -1058,7 +1104,7 @@ def vista_informes(esquema, filas, encabezado, hoy, umbral):
     return "\n".join(lineas) + "\n"
 
 
-def vista_vacantes(filas, encabezado, hoy, umbral):
+def vista_vacantes(esquema, filas, encabezado, hoy, umbral):
     """vacantes.md: una sección autocontenida por vacante evaluada cuya última observación no es Cerrada."""
     observaciones = primeras(filas["observaciones"], "observacion_id")
     ultima_evaluacion = {e["vacante_id"]: e for e in filas["evaluaciones"]}
@@ -1078,7 +1124,8 @@ def vista_vacantes(filas, encabezado, hoy, umbral):
             seccion += ["", f"### Última observación: {observacion['observacion_id']}", ""]
             seccion += campos(observacion, sin=("observacion_id", "vacante_id"))
         seccion += ["", f"### Última evaluación: {evaluacion['evaluacion_id']}", ""]
-        seccion += campos(evaluacion, sin=("evaluacion_id", "vacante_id"))
+        seccion += campos(con_calculadas(pestana_del_esquema(esquema, "evaluaciones"), evaluacion),
+                          sin=("evaluacion_id", "vacante_id"))
         # Una fila por frase literal: «Python or R» junta sus dos términos y conserva la alternativa.
         grupos = {}
         for r in requisitos.get(evaluacion["observacion_id"], []):
@@ -1112,7 +1159,7 @@ def instantanea(esquema, filas):
                   "son las de los registros. Se regenera completa con cada escritura y no se edita a mano "
                   "(11/REG-INSTANTANEA).")
     return {"informes.md": vista_informes(esquema, filas, encabezado, ahora.date(), umbral),
-            "vacantes.md": vista_vacantes(filas, encabezado, ahora.date(), umbral)}
+            "vacantes.md": vista_vacantes(esquema, filas, encabezado, ahora.date(), umbral)}
 
 
 def guardar_instantanea(vistas):
@@ -1144,7 +1191,7 @@ def leer(esquema, nombre, ids, columna):
     if columna not in encabezados(p):
         error(f"{columna!r} no es una columna guardada de {nombre}.")
     filas = abrir(esquema)[1][nombre]
-    return [f for f in filas if f[columna] in ids] if ids else filas
+    return [con_calculadas(p, f) for f in filas if not ids or f[columna] in ids]
 
 
 def main():

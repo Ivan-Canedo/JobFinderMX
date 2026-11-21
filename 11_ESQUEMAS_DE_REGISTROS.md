@@ -47,7 +47,7 @@ Definir campos, relaciones, autoridades y versionado de los datos de búsquedas,
 - `No publicado`: se comprobó que la fuente no da el dato. Solo en `job_id`, `ubicacion_literal` y `modalidad_literal`.
 - `Ninguno`: no hay nada que reportar. Solo en `busquedas` y en `evaluaciones.condiciones_detalle`.
 
-**Formato de texto:** todas las celdas de datos se escriben como texto. Así `1.10` no se convierte en 1.1, un Job ID numérico no pierde ceros y las fechas no cambian de forma. Ninguna columna lleva números ni fórmulas, y las calculadas de `informes` no se guardan.
+**Formato de texto:** todas las celdas de datos se escriben como texto. Así `1.10` no se convierte en 1.1, un Job ID numérico no pierde ceros y las fechas no cambian de forma. Ninguna columna lleva números ni fórmulas, y las calculadas de `evaluaciones` e `informes` no se guardan.
 
 **Ubicaciones múltiples:** una fila por requisición, no por sede. `ubicacion_literal` las anota en el orden de la fuente y `region_relacionada` resume el conjunto.
 
@@ -154,13 +154,13 @@ La observación es la evidencia fechada (REG-DECISIONES). La evidencia mínima d
 | version_evaluacion | Texto | Sí | Versión de 08, p. ej. `1.0` |
 | condiciones | Lista cerrada | Sí | `Sin exclusiones` / `Excluida` (08/EVAL-CONDICIONES) |
 | condiciones_detalle | Multivalor | Sí | Si está excluida: la condición y el texto literal, p. ej. `Duración: «6-month contract»`. Si no: los pendientes (`Sueldo \| Duración \| Relación \| Horario`) o `Ninguno` |
-| encaje | Lista cerrada | Si existe | `★★★★★` / `★★★★☆` / `★★★☆☆` / `★★☆☆☆` / `★☆☆☆☆` / `☆☆☆☆☆` (08/EVAL-ENCAJE); vacía si está excluida |
+| encaje | Calculada | — | Las estrellas del promedio de `nucleos` (08/EVAL-ENCAJE), de `★★★★★` a `☆☆☆☆☆`; vacía si está excluida. No se guarda: la dan `leer`, `informe` y la instantánea |
 | cobertura | Texto | Si existe | `X/Y` o `X/Y, N solo académico(s)`; vacía si está excluida |
-| nucleos | Multivalor | Si existe | `Núcleo: Categoría`, p. ej. `Análisis de datos: Directa \| Gestión de proyectos: Transferible`; vacía si está excluida |
+| nucleos | Multivalor | Si existe | `Núcleo: Categoría`, p. ej. `Análisis de datos: Directa \| Gestión de proyectos: Transferible`, con la categoría entre `Directa` / `Transferible` / `Académica/formativa` / `Insuficiente`; vacía si está excluida |
 
 - **Una fila por evaluación**, incluidas las excluidas. Las vacantes no evaluadas por no tener relación con las familias de 05 no tienen fila.
 - **Reutilización, aclaraciones y núcleos:** ver 08/EVAL-REGISTRO.
-- **Orden:** las estrellas se guardan tal cual. En orden A→Z, ★ va antes que ☆, así que las de más estrellas quedan arriba.
+- **Encaje calculado:** como sale de `nucleos`, una evaluación guardada muestra siempre el nivel de la regla vigente de 08, sin reevaluarse.
 - **Qué no se guarda:** las categorías por requisito, la familia ROL y la antigüedad, que se calcula con `vacantes` (08/EVAL-ANTIGUEDAD).
 
 ### `busquedas`
@@ -334,9 +334,9 @@ El esquema completo en la forma que lee una herramienta: pestañas, columnas, li
         {"nombre": "version_evaluacion", "tipo": "patron", "patron": "\\d+\\.\\d+", "oblig": "si"},
         {"nombre": "condiciones", "tipo": "lista", "valores": ["Sin exclusiones", "Excluida"], "oblig": "si"},
         {"nombre": "condiciones_detalle", "tipo": "multivalor", "oblig": "si"},
-        {"nombre": "encaje", "tipo": "lista", "valores": ["★★★★★", "★★★★☆", "★★★☆☆", "★★☆☆☆", "★☆☆☆☆", "☆☆☆☆☆"], "oblig": "si_existe"},
+        {"nombre": "encaje", "tipo": "calculada"},
         {"nombre": "cobertura", "tipo": "patron", "patron": "\\d+/\\d+(, \\d+ solo académicos?)?", "oblig": "si_existe"},
-        {"nombre": "nucleos", "tipo": "multivalor", "oblig": "si_existe"}
+        {"nombre": "nucleos", "tipo": "multivalor", "categorias": ["Directa", "Transferible", "Académica/formativa", "Insuficiente"], "oblig": "si_existe"}
       ]
     },
     {
@@ -365,12 +365,13 @@ El esquema completo en la forma que lee una herramienta: pestañas, columnas, li
 | `pestanas` | Las pestañas, en su orden en el archivo |
 | `pestanas[].columnas` | Las columnas de la pestaña, en orden: la primera es la A |
 | `columnas[].nombre` | El encabezado, en la fila 1 |
-| `columnas[].tipo` | `id`, `ref`, `texto`, `multivalor`, `fecha`, `url`, `patron`, `lista` o `calculada` (REG-CONVENCIONES, «Tipos»). Una `calculada` no se guarda: la calcula la herramienta (REG-CAMPOS, `informes`) |
+| `columnas[].tipo` | `id`, `ref`, `texto`, `multivalor`, `fecha`, `url`, `patron`, `lista` o `calculada` (REG-CONVENCIONES, «Tipos»). Una `calculada` no se guarda: la calcula la herramienta (REG-CAMPOS, `evaluaciones` e `informes`) |
 | `columnas[].oblig` | `si`, `si_existe` o `no` (REG-CONVENCIONES, «Obligatoriedad»). Las calculadas no lo llevan |
 | `columnas[].vacia_con` | Con `oblig` `si`: la columna puede quedar vacía cuando la nombrada tiene valor, como `ultima_observacion_id` en una fila absorbida (REG-IDENTIDAD) |
 | `columnas[].patron` | En `id`, `ref` y `patron`: la expresión regular que cumple el valor completo. En `id` y `ref` se admite además `PRUEBA-` delante |
 | `columnas[].hora` | En `fecha`: `true` si admite la hora `HH:MM` |
 | `columnas[].valores` | En `lista`: los valores aceptados |
+| `columnas[].categorias` | En `multivalor`: cada valor es `Nombre: Categoría`, con la categoría entre estas |
 | `columnas[].valores_de` | En `lista`, en lugar de `valores`: de dónde salen. `06/CAT-EMPRESAS` son los IDs del catálogo de 06 |
 | `columnas[].en` | En `ref`: la pestaña donde el ID debe existir, en su columna A |
 | `columnas[].misma_vacante` | En `ref`: `true` si la fila citada tiene el mismo `vacante_id` que esta fila |
@@ -387,19 +388,19 @@ El archivo `ChambaKit_Registros.xlsx` (el `nombre` del bloque) está en la raíz
 
 En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y la forma de su entrada, que va por stdin o en un archivo del directorio temporal de la sesión, nunca de la copia.
 
-- **Creación:** `crear`, desde el bloque, en el paso 8 de `/configurar`. Lleva las pestañas y columnas del bloque, salvo las calculadas de `informes`, que no se guardan. La validación está en la herramienta, y sus pruebas automáticas la cubren.
-- **Escritura:** tres órdenes, que comprueban cada fila que escriben contra el bloque: tipos, listas, obligatoriedad, IDs únicos y referencias. Si una fila no cumple, no escriben ninguna y dicen todos los errores. Solo comprueban las filas que escriben: un cambio no vuelve a comprobar las filas que citan a la cambiada. Las referencias se resuelven contra lo ya registrado más lo de la misma llamada.
+- **Creación:** `crear`, desde el bloque, en el paso 8 de `/configurar`. Lleva las pestañas y columnas del bloque, salvo las calculadas de `evaluaciones` e `informes`, que no se guardan. La validación está en la herramienta, y sus pruebas automáticas la cubren.
+- **Escritura:** tres órdenes, que comprueban cada fila que escriben contra el bloque: tipos, listas, la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias. Rechazan una columna calculada, como `encaje` de `evaluaciones`. Si una fila no cumple, no escriben ninguna y dicen todos los errores. Solo comprueban las filas que escriben: un cambio no vuelve a comprobar las filas que citan a la cambiada. Las referencias se resuelven contra lo ya registrado más lo de la misma llamada.
   - `importar` registra una búsqueda desde la salida JSON de `buscar.py` y un archivo de decisiones (07/BUS-REGISTRO), sin que el agente genere sus filas. Escribe la fila de `busquedas`, con la cobertura y la comparación con la última búsqueda comparable, las vacantes nuevas y una observación por vacante listada. En las ya registradas, que identifica por REG-IDENTIDAD, actualiza los campos que cambiaron y `ultima_observacion_id`. No escribe nada si queda una línea «revisar» sin decisión o un `[FALLO]` sin declarar. Devuelve el `busqueda_id` y una lista compacta de las vacantes (ID, título y departamento).
   - `agregar` escribe filas nuevas de varias pestañas a la vez: en una búsqueda, los requisitos, las evaluaciones y `informes`, que piden juicio.
   - `actualizar` cambia columnas de filas ya registradas, por su ID.
 - **Migración:** `migrar` pasa a esta versión una hoja de Google descargada como `.xlsx` (Archivo → Descargar → Microsoft Excel) o el archivo de registros de una copia 1.x, sin pasar las filas por el agente (ADR 0006).
-  - **Entrada:** lee los valores de cada pestaña por el nombre de sus columnas. Ignora las calculadas de `informes` y quita las que el esquema ya no tiene, como `canal` de `busquedas`. Se detiene si falta una pestaña o columna del bloque o sobra una que no conoce.
+  - **Entrada:** lee los valores de cada pestaña por el nombre de sus columnas. Quita las calculadas, como las de `informes` o el `encaje` que guardaban las `evaluaciones` de una versión anterior, y las que el esquema ya no tiene, como `canal` de `busquedas`. Se detiene si falta una pestaña o columna del bloque o sobra una que no conoce.
   - **Comprobación:** cada fila, con las mismas reglas que `agregar`. Con un solo error no escribe nada y dice todos, con pestaña, fila de la hoja y columna.
   - **Correcciones:** `--correcciones` recibe un JSON `{pestaña: {ID o "fila N": {columna: texto}}}`, que se aplica antes de comprobar. Así solo las filas con error pasan por el agente, que le propone al titular cada corrección. En `informes`, que no tiene ID propio, o con un ID repetido, la fila se nombra por su número.
   - **Salida:** el archivo completo y, por pestaña, cuántas filas tenía la entrada y cuántas tiene el archivo escrito, para que el titular compare. También dice las columnas quitadas, cuántas filas corrigió y las pestañas de la entrada que no son del esquema.
   - **Sin sobrescribir:** no reemplaza un archivo de registros que ya tenga filas, salvo cuando la entrada es ese mismo archivo, de una versión anterior. Solo lee la entrada: la hoja de Drive queda intacta, y el titular decide si la borra.
 - **Instantánea:** las órdenes de escritura y `migrar` la regeneran después de escribir (REG-INSTANTANEA); si rechazan la entrada, no la tocan. `instantanea` la regenera a pedido, por ejemplo si alguien la borró o la editó.
-- **Lectura:** `leer` da una pestaña completa o las filas de unos IDs. `informe` da la tabla resumen de una búsqueda: sus filas de `informes` con las columnas calculadas de REG-CAMPOS, a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
+- **Lectura:** `leer` da una pestaña completa o las filas de unos IDs; en `evaluaciones`, con su `encaje` calculado. `informe` da la tabla resumen de una búsqueda: sus filas de `informes` con las columnas calculadas de REG-CAMPOS, a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
 - **Encabezados:** la herramienta los compara con el bloque en cada uso y se detiene si no coinciden (REG-DECISIONES, «Encabezados»).
 - **Historial y respaldo:** git. El archivo se versiona en la copia, así que no se ignora. Al cerrar una sesión que lo modificó, el agente le ofrece al titular un commit con él y, si la copia tiene remoto privado, el push.
   - **Code en la nube:** la sesión trabaja en un clon nuevo, en una rama propia que Code local y el canal Web no leen. Al cerrar una sesión que cambió módulos, registros o CV de `muestras_cv/`, el agente integra en `main`, con permiso del titular para cada paso: commit, `git fetch origin main`, `git rebase origin/main` y `git push origin HEAD:main`. Si `main` no avanzó desde que abrió la sesión, el rebase no cambia nada. Si el push se rechaza porque `main` avanzó otra vez, se repiten el fetch y el rebase.
@@ -412,7 +413,7 @@ En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y 
 La copia en Markdown del archivo de registros que lee el canal Web: la carpeta `instantanea/` de la copia, con dos vistas. Es una vista, no una autoridad: manda el archivo.
 
 - **`informes.md`:** las últimas 10 búsquedas, la más reciente primero. Cada una lleva su fila de `busquedas` (alcance, cobertura, pendientes y comparación) y su tabla resumen con el formato de 08/EVAL-INFORME, con las columnas calculadas de `informes`.
-- **`vacantes.md`:** una sección por cada vacante con evaluación cuya última observación no es `Cerrada`, salvo las filas absorbidas por una fusión (`duplicado_de`, REG-IDENTIDAD). El encabezado lleva el `VAC-` ID, el Job ID, el `empresa_id` y el título, para encontrarla aunque solo llegue un fragmento. Debajo van sus campos de `vacantes` y su antigüedad, su última observación, su última evaluación registrada y los requisitos de la observación evaluada. Los requisitos van agrupados por frase literal, con sus términos normalizados y su tipo, así que «Python or R» sigue siendo una alternativa.
+- **`vacantes.md`:** una sección por cada vacante con evaluación cuya última observación no es `Cerrada`, salvo las filas absorbidas por una fusión (`duplicado_de`, REG-IDENTIDAD). El encabezado lleva el `VAC-` ID, el Job ID, el `empresa_id` y el título, para encontrarla aunque solo llegue un fragmento. Debajo van sus campos de `vacantes` y su antigüedad, su última observación, su última evaluación registrada, con su `encaje` calculado, y los requisitos de la observación evaluada. Los requisitos van agrupados por frase literal, con sus términos normalizados y su tipo, así que «Python or R» sigue siendo una alternativa.
 - **Qué no trae:** las vacantes sin evaluación, el historial de observaciones y `documentos`.
 - **Fecha:** el encabezado de cada vista lleva la fecha y hora de exportación, en la zona horaria de 04. La antigüedad está calculada a esa fecha, no a la de la lectura.
 - **Cuándo se regenera:** completa, cada vez que la herramienta escribe en el archivo (REG-LOCAL), y a pedido con `instantanea`. Se arma antes de guardar el archivo: si no se puede, como cuando falta la zona horaria de 04, la herramienta tampoco escribe las filas.

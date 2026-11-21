@@ -94,22 +94,38 @@ Son las dos o tres necesidades centrales del puesto, las mismas que identifica 0
 
 Se presentan como **estrellas · cobertura**, p. ej. **★★★☆☆ · 4/4, 1 solo académico**.
 
-**Nivel**, según los núcleos:
+**Nivel**, calculado desde los núcleos:
 
-| Estrellas | Regla |
+| Categoría del núcleo | Estrellas que vale |
 | --- | --- |
-| ★★★★★ | Todos los núcleos con evidencia directa y todos los obligatorios cubiertos |
-| ★★★★☆ | Todos los núcleos con evidencia directa, con algún obligatorio insuficiente |
-| ★★★☆☆ | Todos los núcleos con evidencia laboral (directa o transferible) y al menos uno solo transferible |
-| ★★☆☆☆ | Algún núcleo solo con evidencia académica o formativa, sin núcleos insuficientes |
-| ★☆☆☆☆ | Algún núcleo insuficiente, pero otros con evidencia |
-| ☆☆☆☆☆ | Todos los núcleos insuficientes |
+| Directa | 5 |
+| Transferible | 3 |
+| Académica/formativa | 1.5 |
+| Insuficiente | 0 |
 
-Siempre se muestran las cinco posiciones, con estrellas y no con un número, para que no se confunda la dirección de la escala. Hay más de tres niveles porque es común que una vacante tenga algún obligatorio insuficiente, y los núcleos con evidencia directa pesan más que cubrir todos los obligatorios.
+- **Encaje exacto:** el promedio de las estrellas de los núcleos, cada núcleo con el mismo peso. Vale igual con dos núcleos que con tres.
+- **Nivel:** el encaje exacto redondeado al entero, con los empates en .5 hacia abajo (2.5 da ★★☆☆☆).
+- **Mínimo:** si algún núcleo no es insuficiente, el nivel es al menos ★☆☆☆☆. ☆☆☆☆☆ queda solo para cuando todos los núcleos son insuficientes.
+- **Excluidas:** no tienen encaje.
+- **En Code,** la cuenta la hace la herramienta de registros desde `nucleos` (11/REG-CAMPOS); el agente solo decide la categoría de cada núcleo.
+
+Ejemplos, con D directa, T transferible, A académica/formativa e I insuficiente:
+
+| Núcleos | Encaje exacto | Nivel |
+| --- | --- | --- |
+| D D D | 5 | ★★★★★ |
+| D D I | 3.3 | ★★★☆☆ |
+| D T A | 3.2 | ★★★☆☆ |
+| D I | 2.5 | ★★☆☆☆ |
+| T I I | 1.0 | ★☆☆☆☆ |
+| A I I | 0.5 | ★☆☆☆☆ |
+| I I I | 0 | ☆☆☆☆☆ |
+
+Siempre se muestran las cinco posiciones, con estrellas y no con un número, para que no se confunda la dirección de la escala. ★★★★★ no exige cubrir todos los obligatorios: la cobertura se reporta aparte, para distinguir «¿tengo lo central?» de «¿cuánto de la lista cubro?».
 
 **Cobertura:** `X/Y`, donde Y es el número de requisitos obligatorios y ambiguos (un grupo de alternativas cuenta como uno) y X, los cubiertos con cualquier categoría salvo insuficiente. Si alguno se cubre solo con evidencia académica o formativa, se agrega `, N solo académico` (o `académicos`).
 
-No hay puntaje sumado ni ponderaciones: los pesos serían arbitrarios, un anuncio con muchos requisitos menores diluiría el resultado y un número aislado no dice qué falta.
+**Por qué un promedio:** un solo núcleo insuficiente no hunde una vacante con los demás núcleos directos, y la escala separa «me falta un tema puntual» de «tengo poco que ver con el puesto». Los requisitos menores no diluyen el resultado, porque solo entran los núcleos; las alertas de EVAL-INFORME siguen diciendo qué falta. Los pesos son arbitrarios, pero están escritos aquí y se pueden recalibrar con evaluaciones reales.
 
 ## EVAL-CONDICIONES — Condiciones excluyentes
 

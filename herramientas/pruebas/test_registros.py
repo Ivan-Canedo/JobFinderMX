@@ -82,10 +82,14 @@ def busqueda_ficticia():
         "evaluaciones": [
             {"evaluacion_id": "EVA-0001", "vacante_id": "VAC-0001", "observacion_id": "OBS-0001",
              "fecha_evaluacion": "2026-03-02", "version_perfil": "1.10", "version_evaluacion": "1.0",
-             "condiciones": "Sin exclusiones", "condiciones_detalle": "Sueldo | Remoto", "encaje": "★★★☆☆",
-             "cobertura": "3/4", "nucleos": "Núcleo A: Directa"}],
+             "condiciones": "Sin exclusiones", "condiciones_detalle": "Sueldo | Remoto",
+             "cobertura": "3/4", "nucleos": "Núcleo A: Directa | Núcleo B: Directa | Núcleo C: Insuficiente"}],
         "informes": [{"busqueda_id": "BUS-0001", "vacante_id": "VAC-0001", "evaluacion_id": "EVA-0001"}],
     }
+
+
+# Lo que leer agrega a las filas de busqueda_ficticia(): el encaje de EVA-0001, calculado desde sus núcleos D D I.
+CALCULADAS_AL_LEER = {"evaluaciones": {"encaje": "★★★☆☆"}}
 
 
 @unittest.skipIf(SIN_OPENPYXL, "falta openpyxl: corre las pruebas con el Python del entorno virtual")
@@ -199,7 +203,8 @@ class Agregar(CopiaFicticia):
         for pestana, filas in busqueda.items():
             with self.subTest(pestana=pestana):
                 # Las columnas que la fila no trae se leen vacías; «000123» y «1.10» siguen siendo texto.
-                esperadas = [{c: f.get(c, "") for c in self.columnas[pestana]} for f in filas]
+                esperadas = [{c: f.get(c, "") for c in self.columnas[pestana]} | CALCULADAS_AL_LEER.get(pestana, {})
+                             for f in filas]
                 self.assertEqual(self.leer(pestana), esperadas)
 
     def test_un_texto_que_empieza_con_igual_se_guarda_como_texto_y_no_como_formula(self):
@@ -250,6 +255,11 @@ class Agregar(CopiaFicticia):
             "patrón": (con("documentos", {"version_perfil": "1"}), "version_perfil"),
             "columna desconocida": (con("vacantes", {"salario": "1000"}), "salario"),
             "columna calculada": (con("informes", {"encaje": "★★★☆☆"}), "encaje"),
+            "encaje escrito en evaluaciones": (con("evaluaciones", {"encaje": "★★★☆☆"}), "encaje", "nucleos"),
+            "núcleo sin categoría": (con("evaluaciones", {"nucleos": "Núcleo A: Directa | Núcleo B"}), "nucleos",
+                                     "Núcleo B"),
+            "núcleo con categoría inexistente": (con("evaluaciones", {"nucleos": "Núcleo A: Parcial"}), "nucleos",
+                                                 "Parcial", "Académica/formativa"),
             "valor que no es texto": (con("vacantes", {"job_id": 123}), "job_id"),
             "pestaña desconocida": ({"postulaciones": [{"vacante_id": "VAC-0001"}]}, "postulaciones"),
             "filas que no son lista": ({"vacantes": {"vacante_id": "VAC-0001"}}, "vacantes"),
@@ -300,6 +310,10 @@ class Actualizar(CopiaFicticia):
             "sin el ID de la fila": ({"vacantes": [{"titulo": "x"}]}, "vacante_id"),
             "pestaña sin ID propio": ({"informes": [{"busqueda_id": "BUS-0001", "evaluacion_id": "EVA-0001"}]},
                                       "informes"),
+            "encaje escrito": ({"evaluaciones": [{"evaluacion_id": "EVA-0001", "encaje": "★★★★★"}]}, "encaje"),
+            "núcleo con categoría inexistente": ({"evaluaciones": [{"evaluacion_id": "EVA-0001",
+                                                                    "nucleos": "Núcleo A: Directa | Núcleo B: Media"}]},
+                                                 "EVA-0001", "nucleos", "Media"),
         }
         for caso, (entrada, *textos) in casos.items():
             with self.subTest(caso):
@@ -313,6 +327,21 @@ class Leer(CopiaFicticia):
         self.assertEqual([f["vacante_id"] for f in self.leer("vacantes", "--id", "VAC-0002", "VAC-0099")], ["VAC-0002"])
         self.assertEqual([f["observacion_id"] for f in self.leer("observaciones", "--columna", "vacante_id",
                                                                  "--id", "VAC-0001")], ["OBS-0001"])
+
+    def test_evaluaciones_trae_el_encaje_calculado_en_su_lugar_y_la_excluida_sin_encaje(self):
+        self.ok("crear")
+        busqueda = busqueda_ficticia()
+        busqueda["evaluaciones"].append(dict(busqueda["evaluaciones"][0], evaluacion_id="EVA-0002",
+                                             vacante_id="VAC-0002", observacion_id="OBS-0002", condiciones="Excluida",
+                                             condiciones_detalle="Duración: «6-month contract»", cobertura="",
+                                             nucleos=""))
+        self.ok("agregar", entrada=busqueda)
+        evaluaciones = self.leer("evaluaciones")
+        self.assertEqual([e["encaje"] for e in evaluaciones], ["★★★☆☆", ""])
+        columnas = list(evaluaciones[0])
+        self.assertEqual(columnas[columnas.index("encaje") - 1:columnas.index("encaje") + 2],
+                         ["condiciones_detalle", "encaje", "cobertura"])
+        self.assertEqual(self.leer("evaluaciones", "--id", "EVA-0001")[0]["encaje"], "★★★☆☆")
 
     def test_sin_el_archivo_dice_que_lo_crea_configurar(self):
         r = self.correr("leer", "vacantes")
@@ -346,10 +375,10 @@ class Informe(CopiaFicticia):
                     "fecha_verificacion": hace(0), "estado_vigencia": "Confirmada abierta", "motivo": "En listado",
                     "tipo_fuente": "Oficial"}
 
-        def evaluacion(n, condiciones, detalle, encaje="", cobertura="", nucleos=""):
+        def evaluacion(n, condiciones, detalle, cobertura="", nucleos=""):
             return {"evaluacion_id": f"EVA-000{n}", "vacante_id": f"VAC-000{n}", "observacion_id": f"OBS-000{n}",
                     "fecha_evaluacion": hace(0), "version_perfil": "1.0", "version_evaluacion": "1.0",
-                    "condiciones": condiciones, "condiciones_detalle": detalle, "encaje": encaje,
+                    "condiciones": condiciones, "condiciones_detalle": detalle,
                     "cobertura": cobertura, "nucleos": nucleos}
 
         busqueda = busqueda_ficticia()
@@ -364,14 +393,14 @@ class Informe(CopiaFicticia):
             vacante(8, "R-8", hace(0), hace(0))]
         busqueda["observaciones"] += [observacion(n) for n in range(3, 9)]
         busqueda["evaluaciones"] += [
-            evaluacion(3, "Sin exclusiones", "Sueldo | Duración | Relación | Horario", "★★★★☆", "4/4",
+            evaluacion(3, "Sin exclusiones", "Sueldo | Duración | Relación | Horario", "4/4",
                        "Núcleo A: Directa | Núcleo B: Transferible"),
             evaluacion(4, "Excluida", "Duración: «6-month contract» | Relación: «Freelance»"),
-            evaluacion(5, "Sin exclusiones", "Ninguno", "★★☆☆☆", "", "Núcleo A: Insuficiente | Núcleo B: Insuficiente"),
-            evaluacion(6, "Sin exclusiones", "Sueldo | Modalidad | Viajes", "★★★☆☆", "2/3, 1 solo académico",
-                       "Núcleo C: Académica/formativa"),
-            evaluacion(7, "Sin exclusiones", "Ubicación", "★☆☆☆☆", "1/4", "Núcleo A: Insuficiente"),
-            evaluacion(8, "Sin exclusiones", "Ninguno", "☆☆☆☆☆", "0/2")]
+            evaluacion(5, "Sin exclusiones", "Ninguno", "", "Núcleo A: Directa | Núcleo B: Insuficiente"),
+            evaluacion(6, "Sin exclusiones", "Sueldo | Modalidad | Viajes", "2/3, 1 solo académico",
+                       "Núcleo C: Académica/formativa | Núcleo D: Directa"),
+            evaluacion(7, "Sin exclusiones", "Ubicación", "1/4", "Núcleo A: Insuficiente"),
+            evaluacion(8, "Sin exclusiones", "Ninguno", "0/2", "Núcleo A: Académica/formativa")]
         busqueda["informes"] += [{"busqueda_id": "BUS-0002", "vacante_id": f"VAC-000{n}", "evaluacion_id": f"EVA-000{n}"}
                                  for n in (3, 4, 5, 6, 7, 8)]
         self.ok("agregar", entrada=busqueda)
@@ -381,16 +410,40 @@ class Informe(CopiaFicticia):
             ["XA", "R-3 — Puesto 3", "★★★★☆ · 4/4", "25 d · antigua", "—", "https://example.com/empleo/R-3"],
             ["XA", "sin Job ID — Puesto 4", "—", "≥ 3 d", "Excluida: Duración: «6-month contract»; Relación: «Freelance»",
              ""],
-            ["XA", "sin Job ID — Puesto 5", "★★☆☆☆", "—", "Insuficiente: Núcleo A; Núcleo B", ""],
+            ["XA", "sin Job ID — Puesto 5", "★★☆☆☆", "—", "Insuficiente: Núcleo B", ""],
             ["XA", "R-6 — Puesto 6", "★★★☆☆ · 2/3, 1 solo académico", "20 d · antigua",
              "Académica: Núcleo C · Pendiente: modalidad, viajes", ""],
             # Detectada antes de su fecha de publicación: cuenta desde la más antigua de las dos.
-            ["XA", "R-7 — Puesto 7", "★☆☆☆☆ · 1/4", "25 d · antigua", "Insuficiente: Núcleo A · Pendiente: ubicación",
+            ["XA", "R-7 — Puesto 7", "☆☆☆☆☆ · 1/4", "25 d · antigua", "Insuficiente: Núcleo A · Pendiente: ubicación",
              ""],
-            ["XA", "R-8 — Puesto 8", "☆☆☆☆☆ · 0/2", "0 d", "—", ""]])
+            ["XA", "R-8 — Puesto 8", "★☆☆☆☆ · 0/2", "0 d", "Académica: Núcleo A", ""]])
         self.assertEqual([(f["busqueda_id"], f["vacante_id"], f["evaluacion_id"]) for f in tabla],
                          [("BUS-0002", f"VAC-000{n}", f"EVA-000{n}") for n in (3, 4, 5, 6, 7, 8)])
         self.assertEqual(len(self.ok("informe", "BUS-0001")), 1)
+
+    def test_las_estrellas_son_el_promedio_de_los_nucleos_redondeado_con_los_empates_hacia_abajo(self):
+        letras = {"D": "Directa", "T": "Transferible", "A": "Académica/formativa", "I": "Insuficiente"}
+        patrones = {"D D I": "★★★☆☆", "D I": "★★☆☆☆", "D T A": "★★★☆☆", "T I I": "★☆☆☆☆", "A I I": "★☆☆☆☆",
+                    "I I I": "☆☆☆☆☆", "D D D": "★★★★★"}
+        busqueda = busqueda_ficticia()
+        base = (busqueda["vacantes"][0], busqueda["observaciones"][0], busqueda["evaluaciones"][0])
+        busqueda["informes"] = []
+        for n, patron in enumerate(patrones, 3):
+            vacante, observacion, evaluacion = (dict(f) for f in base)
+            vacante.update(vacante_id=f"VAC-{n:04}", job_id=f"R-{n}", ultima_observacion_id=f"OBS-{n:04}")
+            observacion.update(observacion_id=f"OBS-{n:04}", vacante_id=f"VAC-{n:04}")
+            nucleos = " | ".join(f"Núcleo {i}: {letras[x]}" for i, x in enumerate(patron.split(), 1))
+            evaluacion.update(evaluacion_id=f"EVA-{n:04}", vacante_id=f"VAC-{n:04}", observacion_id=f"OBS-{n:04}",
+                              nucleos=nucleos)
+            busqueda["vacantes"].append(vacante)
+            busqueda["observaciones"].append(observacion)
+            busqueda["evaluaciones"].append(evaluacion)
+            busqueda["informes"].append({"busqueda_id": "BUS-0001", "vacante_id": f"VAC-{n:04}",
+                                         "evaluacion_id": f"EVA-{n:04}"})
+        self.ok("agregar", entrada=busqueda)
+        encajes = {f["vacante"].split(" — ")[0]: f["encaje"] for f in self.ok("informe", "BUS-0001")}
+        self.assertEqual(encajes, {f"R-{n}": f"{estrellas} · 3/4"
+                                   for n, estrellas in enumerate(patrones.values(), 3)})
 
     def test_una_busqueda_inexistente_falla_con_un_mensaje_claro(self):
         r = self.correr("informe", "BUS-0099")
@@ -524,7 +577,7 @@ class Instantanea(CopiaFicticia):
         busqueda["evaluaciones"].append(dict(busqueda["evaluaciones"][0], evaluacion_id="EVA-0002",
                                              vacante_id="VAC-0002", observacion_id="OBS-0002",
                                              condiciones="Excluida", condiciones_detalle="Duración: «6-month contract»",
-                                             encaje="", cobertura="", nucleos=""))
+                                             cobertura="", nucleos=""))
         busqueda["informes"] = [{"busqueda_id": "BUS-0012", "vacante_id": "VAC-0001", "evaluacion_id": "EVA-0001"},
                                 {"busqueda_id": "BUS-0012", "vacante_id": "VAC-0002", "evaluacion_id": "EVA-0002"}]
         self.ok("agregar", entrada=busqueda)
@@ -539,7 +592,7 @@ class Instantanea(CopiaFicticia):
             "| Vacante | Encaje | Antigüedad | Alertas |",
             "| --- | --- | --- | --- |",
             "| [000123 — Puesto ficticio](https://example.com/empleo/000123) | ★★★☆☆ · 3/4 | 25 d · antigua "
-            "| Pendiente: remoto |",
+            "| Insuficiente: Núcleo C · Pendiente: remoto |",
             f"| sin Job ID — Otro puesto | — | ≥ {(hoy() - dt.date(2026, 3, 2)).days} d · antigua "
             "| Excluida: Duración: «6-month contract» |"])
         sin_informes = self.seccion(texto, "BUS-0011")
@@ -561,7 +614,7 @@ class Instantanea(CopiaFicticia):
             dict(busqueda["evaluaciones"][0], evaluacion_id="EVA-0002", vacante_id="VAC-0003",
                  observacion_id="OBS-0003"),
             dict(busqueda["evaluaciones"][0], evaluacion_id="EVA-0003", fecha_evaluacion="2026-03-09",
-                 encaje="★★★★☆", cobertura="4/4")]
+                 cobertura="4/4", nucleos="Núcleo A: Directa | Núcleo B: Transferible")]
         # Los requisitos de otra observación de la misma vacante no son los de la evaluada.
         busqueda["observaciones"].append(dict(busqueda["observaciones"][0], observacion_id="OBS-0005",
                                               motivo="Otra lectura"))
@@ -575,7 +628,7 @@ class Instantanea(CopiaFicticia):
         seccion = self.seccion(texto, "VAC-0001")
         for valor in ("<https://example.com/empleo/000123>", "Ciudad A1, País A", "Hybrid", "Dentro", "2026-02-20",
                       "2026-03-02", "### Última observación: OBS-0004", "2026-03-09", "Sigue en el listado",
-                      "### Última evaluación: EVA-0003", "★★★★☆", "4/4", "Núcleo A: Directa",
+                      "### Última evaluación: EVA-0003", "- **encaje:** ★★★★☆\n", "4/4", "Núcleo A: Directa",
                       "### Requisitos de OBS-0001", "Experience with Python"):
             self.assertIn(valor, seccion)
         # Ni el historial de observaciones, ni las evaluaciones anteriores, ni documentos.
@@ -880,6 +933,18 @@ class Migrar(CopiaFicticia):
         self.archivo.unlink()
         return columnas
 
+    def test_quita_el_encaje_guardado_en_evaluaciones_y_lo_calcula_desde_los_nucleos(self):
+        pestanas = self.libro_1x(busqueda_ficticia(), de_la_hoja=False)
+        # Un archivo 2.x guardaba el encaje que escribía el agente, aquí distinto del que dan sus núcleos.
+        pestanas["evaluaciones"][0].insert(pestanas["evaluaciones"][0].index("cobertura"), "encaje")
+        pestanas["evaluaciones"][1].insert(pestanas["evaluaciones"][0].index("encaje"), "★☆☆☆☆")
+        escribir_libro(self.archivo, pestanas)
+        r = self.migrar(self.archivo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["columnas_quitadas"], {"busquedas": ["canal"], "evaluaciones": ["encaje"]})
+        self.assertEqual(self.leer("evaluaciones")[0]["encaje"], "★★★☆☆")
+        self.assertIn("★★★☆☆ · 3/4", (self.dir / "instantanea" / "informes.md").read_text(encoding="utf-8"))
+
     def libro_1x(self, busqueda, de_la_hoja):
         """{pestaña: [encabezados, filas...]} con la forma 1.x: busquedas con canal y, si de_la_hoja, informes con
         sus columnas calculadas, como las descarga la hoja de Google."""
@@ -947,7 +1012,8 @@ class Migrar(CopiaFicticia):
         self.assertEqual(res["corregidas"], 3)
         for pestana, filas in busqueda_ficticia().items():
             with self.subTest(pestana=pestana):
-                self.assertEqual(self.leer(pestana), [{c: f.get(c, "") for c in self.columnas[pestana]} for f in filas])
+                self.assertEqual(self.leer(pestana), [{c: f.get(c, "") for c in self.columnas[pestana]}
+                                                      | CALCULADAS_AL_LEER.get(pestana, {}) for f in filas])
         self.assertIn("## BUS-0001", (self.dir / "instantanea" / "informes.md").read_text(encoding="utf-8"))
         # Solo lee la hoja descargada.
         self.assertEqual(self.descargada.read_bytes(), antes)
