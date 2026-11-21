@@ -12,7 +12,7 @@ Uso, con el Python del entorno virtual de la copia (en Windows, .venv\\Scripts\\
     .venv/bin/python -I herramientas/registros.py instantanea
 
 Con --copia CARPETA antes de la orden, usa los módulos, el archivo y la instantánea de esa copia en lugar de la del
-script; el mantenedor lo usa con su copia de prueba (CONTRIBUTING, «Titular de prueba»).
+script; el mantenedor lo usa con su copia de prueba (CONTRIBUTING, «Titulares de prueba»).
 
 El archivo es <archivo.nombre>.xlsx en la raíz de la copia, con las pestañas del bloque de 11/REG-ESQUEMA y
 sus columnas guardadas: las calculadas de informes no se guardan, las da la orden informe.
@@ -63,7 +63,7 @@ from zoneinfo import ZoneInfo
 
 def usar_copia(ruta):
     """La copia de los módulos, el archivo y la instantánea: la del script o, con --copia, otra, como la copia de
-    prueba del mantenedor (CONTRIBUTING, «Titular de prueba»)."""
+    prueba del mantenedor (CONTRIBUTING, «Titulares de prueba»)."""
     global RAIZ, MODULO_04, MODULO_06, MODULO_08, MODULO_11
     RAIZ = os.path.abspath(ruta)
     MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")

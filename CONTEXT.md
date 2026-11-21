@@ -21,7 +21,7 @@ El repositorio privado de un titular, creado desde la plantilla y llenado con su
 _Avoid_: fork, clon
 
 **Titular de prueba**:
-Un titular inventado, con datos sintéticos y marcados como tales, que el mantenedor usa para probar las herramientas en portales reales con un perfil siempre igual.
+Un titular inventado, con datos sintéticos y marcados como tales, que el mantenedor usa para probar las herramientas en portales reales con un perfil siempre igual. Puede haber varios; cada uno se nombra por su perfil, como «el titular de datos».
 _Avoid_: usuario de prueba, usuario falso, titular falso
 
 **Copia de prueba**:

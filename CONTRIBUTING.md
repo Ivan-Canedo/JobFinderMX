@@ -18,7 +18,7 @@ Valen las reglas de `AGENTS.md`, con estos cambios:
 
 - **Los módulos son plantilla:** estructura, instrucciones breves y marcadores «pendiente», sin datos de ninguna persona ni nombres de empresas, ni siquiera de ejemplo. Sus filas de ESTADO siguen en «Sin llenar».
 - **Remoto público a propósito:** la revisión de «Copia privada» de `AGENTS.md` no aplica a la plantilla.
-- **Sin registros ni búsquedas reales:** la plantilla no tiene archivo de registros, instantánea ni proyecto web. Los scripts se prueban con datos ficticios, en un clon de prueba (ver «Probar como titular»). La excepción es el titular de prueba, cuya copia vive fuera de git en `.scratch/` y sí busca en portales reales (ver «Titular de prueba»).
+- **Sin registros ni búsquedas reales:** la plantilla no tiene archivo de registros, instantánea ni proyecto web. Los scripts se prueban con datos ficticios, en un clon de prueba (ver «Probar como titular»). La excepción son los titulares de prueba, cuyas copias viven fuera de git en `.scratch/` y sí buscan en portales reales (ver «Titulares de prueba»).
 - **Versión de la plantilla:** vive en la tabla ESTADO de 01, junto a la URL de la plantilla; es la que anota cada copia nueva y de la que parte `/actualizar` (ADR 0004). Ver «Versión de la plantilla».
 
 ## Agent skills
@@ -79,21 +79,22 @@ El clon de prueba solo lleva lo que ya tiene commit. Para probar cambios sin com
 
 Al abrir el clon de prueba en VS Code con Claude Code, el agente debe ofrecer `/configurar`. Marca como sintéticos los datos de prueba y bórralos al terminar, incluidos el archivo de registros, la instantánea y cualquier proyecto web o repositorio de prueba.
 
-### Titular de prueba
+### Titulares de prueba
 
-Para probar herramientas nuevas contra portales reales con un perfil que no cambia de una prueba a otra, el mantenedor tiene un titular de prueba: un titular inventado, con datos sintéticos marcados como tales (nombre «Titular de Prueba», correo `@example.com`). Su perfil (puesto, región, remoto) está en `FICHA.md`, el CV ficticio y las respuestas a cada paso de `/configurar` con que se generó, no aquí, porque la plantilla es pública.
+Para probar herramientas nuevas contra portales reales con perfiles que no cambian de una prueba a otra, el mantenedor tiene titulares de prueba: titulares inventados, con datos sintéticos marcados como tales (nombre «Titular» más su perfil, como «Titular Datos», correo `@example.com`). Cada uno se nombra por su perfil, como «el titular de datos», y cubre casos distintos de región, remoto y plataforma. Su perfil está en su `FICHA.md`, el CV ficticio y las respuestas a cada paso de `/configurar` con que se generó, no aquí, porque la plantilla es pública.
 
-- **Dónde vive:** su copia de prueba está en `.scratch/titular-de-prueba/`, fuera de git: los módulos 00–11 llenos, el archivo de registros y su instantánea en la raíz, como en una copia real, más `FICHA.md` y `VERSION.md`, con la versión de la plantilla de la que salió. Su 06 lleva una sola empresa real, de Workday.
-- **Cómo se usa:** los scripts leen esa copia con `--copia`, sin copiar código a ella. Cuando el mantenedor pide «prueba X para el titular de prueba», el agente corre la herramienta de la plantilla con `--copia .scratch/titular-de-prueba`. Por ejemplo:
+- **Dónde viven:** cada copia de prueba está en `.scratch/titulares-de-prueba/<perfil>/`, fuera de git: los módulos 00–11 llenos, el archivo de registros y su instantánea en la raíz, como en una copia real, más `FICHA.md` y `VERSION.md`, con la versión de la plantilla de la que salió y las correcciones a mano. Su 06 lleva una sola empresa real. `ls .scratch/titulares-de-prueba` da los perfiles que hay.
+- **Cómo se usan:** los scripts leen una copia con `--copia`, sin copiar código a ella. Cuando el mantenedor pide «prueba X para el titular de marketing», el agente corre la herramienta de la plantilla con `--copia .scratch/titulares-de-prueba/marketing`. Si no nombra un perfil, el agente pregunta cuál, o si son todos. Por ejemplo:
 
   ```sh
-  python3 -I herramientas/buscar.py --copia .scratch/titular-de-prueba --salida "$(mktemp -d)/salida.json"
-  .venv/bin/python -I herramientas/registros.py --copia .scratch/titular-de-prueba leer busquedas
+  python3 -I herramientas/buscar.py --copia .scratch/titulares-de-prueba/<perfil> --salida "$(mktemp -d)/salida.json"
+  .venv/bin/python -I herramientas/registros.py --copia .scratch/titulares-de-prueba/<perfil> leer busquedas
   ```
 
   La salida JSON va al directorio temporal, como en cualquier copia (`AGENTS.md`).
-- **Cómo se genera:** con `/configurar` completo en un clon de prueba (ver «Probar como titular»), contestando con `FICHA.md`; luego se copian a `.scratch/titular-de-prueba/` los módulos, el archivo de registros y la instantánea, se anota en `VERSION.md` la versión de la plantilla del clon y se borra el clon.
-- **Mantenimiento:** `/actualizar` no sirve, porque la carpeta no tiene git. Si un script rechaza un módulo tras un cambio de la plantilla, se corrige a mano ese módulo y se sube la versión en `VERSION.md`. Si los cambios se acumulan, se regenera completo desde `FICHA.md`.
+- **Cómo se genera uno:** se escribe su `FICHA.md` y se corre `/configurar` completo en un clon de prueba (ver «Probar como titular»), contestando con ella; luego se copian a `.scratch/titulares-de-prueba/<perfil>/` los módulos, el archivo de registros, la instantánea y los CV de `muestras_cv/`, se anota en `VERSION.md` la versión de la plantilla del clon y se borra el clon.
+- **Cambiar un perfil:** se edita primero su `FICHA.md` y el cambio se aplica a los módulos como en la copia de un titular real (un `U##` o `PREF-U##` nuevo, con el antecedente en 02 §12), anotándolo en `VERSION.md`. Así también se prueba actualizar una copia llena.
+- **Mantenimiento:** `/actualizar` no sirve, porque la carpeta no tiene git. Si un script rechaza un módulo tras un cambio de la plantilla, se corrige a mano ese módulo y se anota en `VERSION.md`. Si los cambios se acumulan, se regenera completo desde `FICHA.md`.
 - **Solo local:** `.scratch/` no viaja a la nube; para probar ahí, ver «Probar en la nube».
 
 ### Probar en la nube

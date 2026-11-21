@@ -40,7 +40,7 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chr
 
 def usar_copia(ruta):
     """La copia de la que se leen el 04 y el 06: la del script o, con --copia, otra, como la copia de prueba del
-    mantenedor (CONTRIBUTING, «Titular de prueba»)."""
+    mantenedor (CONTRIBUTING, «Titulares de prueba»)."""
     global RAIZ, MODULO_04, MODULO_06
     RAIZ = os.path.abspath(ruta)
     MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")
