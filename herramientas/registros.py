@@ -11,6 +11,9 @@ Uso, con el Python del entorno virtual de la copia (en Windows, .venv\\Scripts\\
     .venv/bin/python -I herramientas/registros.py informe BUS-ID
     .venv/bin/python -I herramientas/registros.py instantanea
 
+Con --copia CARPETA antes de la orden, usa los módulos, el archivo y la instantánea de esa copia en lugar de la del
+script; el mantenedor lo usa con su copia de prueba (CONTRIBUTING, «Titular de prueba»).
+
 El archivo es <archivo.nombre>.xlsx en la raíz de la copia, con las pestañas del bloque de 11/REG-ESQUEMA y
 sus columnas guardadas: las calculadas de informes no se guardan, las da la orden informe.
 
@@ -57,11 +60,20 @@ import re
 import sys
 from zoneinfo import ZoneInfo
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")
-MODULO_06 = os.path.join(RAIZ, "06_EMPRESAS_OBJETIVO.md")
-MODULO_08 = os.path.join(RAIZ, "08_EVALUACION_DE_VACANTES.md")
-MODULO_11 = os.path.join(RAIZ, "11_ESQUEMAS_DE_REGISTROS.md")
+
+def usar_copia(ruta):
+    """La copia de los módulos, el archivo y la instantánea: la del script o, con --copia, otra, como la copia de
+    prueba del mantenedor (CONTRIBUTING, «Titular de prueba»)."""
+    global RAIZ, MODULO_04, MODULO_06, MODULO_08, MODULO_11
+    RAIZ = os.path.abspath(ruta)
+    MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")
+    MODULO_06 = os.path.join(RAIZ, "06_EMPRESAS_OBJETIVO.md")
+    MODULO_08 = os.path.join(RAIZ, "08_EVALUACION_DE_VACANTES.md")
+    MODULO_11 = os.path.join(RAIZ, "11_ESQUEMAS_DE_REGISTROS.md")
+
+
+usar_copia(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # por defecto, la copia del script
+
 CARPETA_INSTANTANEA = "instantanea"
 ULTIMAS_BUSQUEDAS = 10
 AVISO_INSTANTANEA_KB = 300
@@ -1137,6 +1149,8 @@ def leer(esquema, nombre, ids, columna):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--copia", metavar="CARPETA",
+                    help="usar los módulos, el archivo y la instantánea de otra copia (por defecto, la del script)")
     ordenes = ap.add_subparsers(dest="orden", required=True)
     ordenes.add_parser("crear", help="crea el archivo desde 11/REG-ESQUEMA")
     o = ordenes.add_parser("agregar", help="agrega filas, comprobadas contra 11/REG-ESQUEMA")
@@ -1161,6 +1175,10 @@ def main():
                    help='{pestaña: {ID o "fila N": {columna: texto}}}, aplicadas antes de comprobar')
     ordenes.add_parser("instantanea", help="regenera la instantánea completa que lee el canal Web")
     a = ap.parse_args()
+    if a.copia is not None:
+        if not os.path.isdir(a.copia):
+            ap.error(f"--copia: {a.copia!r} no existe o no es una carpeta")
+        usar_copia(a.copia)
     esquema = leer_esquema()
     if a.orden == "crear":
         res = crear(esquema)

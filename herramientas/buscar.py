@@ -2,7 +2,7 @@
 """ChambaKit: listado y detalle de vacantes por empresa (canal Code, 07/BUS-ACCESO-CODE).
 
 Uso:
-    python3 -I herramientas/buscar.py [EMP-ID ...] [--salida archivo.json] [--sin-remotas]
+    python3 -I herramientas/buscar.py [EMP-ID ...] [--salida archivo.json] [--sin-remotas] [--copia CARPETA]
 
 Las empresas se nombran por su ID de 06; por defecto, todas las del catálogo (CAT-EMPRESAS). La región,
 el alcance del remoto y la zona horaria salen del bloque de 04/PREF-UBICACION; la plataforma, el portal
@@ -37,9 +37,17 @@ from zoneinfo import ZoneInfo
 VERSION = "1.0"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 
-RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")
-MODULO_06 = os.path.join(RAIZ, "06_EMPRESAS_OBJETIVO.md")
+
+def usar_copia(ruta):
+    """La copia de la que se leen el 04 y el 06: la del script o, con --copia, otra, como la copia de prueba del
+    mantenedor (CONTRIBUTING, «Titular de prueba»)."""
+    global RAIZ, MODULO_04, MODULO_06
+    RAIZ = os.path.abspath(ruta)
+    MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")
+    MODULO_06 = os.path.join(RAIZ, "06_EMPRESAS_OBJETIVO.md")
+
+
+usar_copia(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # por defecto, la copia del script
 
 
 class Fallo(Exception):
@@ -1569,7 +1577,12 @@ def main():
     ap.add_argument("empresas", nargs="*", metavar="EMP-ID", help="IDs de 06 (por defecto, todo el catálogo)")
     ap.add_argument("--salida", help="archivo JSON de salida (por defecto, stdout)")
     ap.add_argument("--sin-remotas", action="store_true", help="omitir el listado de vacantes remotas")
+    ap.add_argument("--copia", metavar="CARPETA", help="leer el 04 y el 06 de otra copia (por defecto, la del script)")
     a = ap.parse_args()
+    if a.copia is not None:
+        if not os.path.isdir(a.copia):
+            ap.error(f"--copia: {a.copia!r} no existe o no es una carpeta")
+        usar_copia(a.copia)
     pref = leer_preferencias(MODULO_04)
     catalogo = leer_catalogo(MODULO_06)
     pedidas = [e.upper() for e in a.empresas] or list(catalogo)

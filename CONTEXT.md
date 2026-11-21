@@ -20,6 +20,14 @@ _Avoid_: template, repo base
 El repositorio privado de un titular, creado desde la plantilla y llenado con sus datos.
 _Avoid_: fork, clon
 
+**Titular de prueba**:
+Un titular inventado, con datos sintéticos y marcados como tales, que el mantenedor usa para probar las herramientas en portales reales con un perfil siempre igual.
+_Avoid_: usuario de prueba, usuario falso, titular falso
+
+**Copia de prueba**:
+Los módulos llenos y el archivo de registros del titular de prueba, guardados fuera de git en el equipo del mantenedor. Tiene la forma de una copia, pero no es un repositorio ni se publica.
+_Avoid_: clon de prueba (ese es temporal y nace sin llenar), fixture
+
 **Versión de la plantilla**:
 Una publicación numerada de la plantilla (1.0, 1.1…). Cada copia anota de cuál salió o a cuál se actualizó por última vez.
 _Avoid_: release, versión del módulo

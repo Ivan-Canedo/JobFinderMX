@@ -161,6 +161,20 @@ class ConfiguracionFaltante(CopiaFicticia):
                       modulo_06({"EMP-ACME": ficha("EMP-ACME", {"plataforma": "workday", "portal": "https://x"})}))
         self.assertFallaSinBuscar(self.correr("--sin-remotas"), "--sin-remotas", "remoto")
 
+    def test_con_copia_lee_el_04_y_el_06_de_esa_carpeta_y_no_los_de_la_del_script(self):
+        # La del script queda sin módulos: si los leyera de ahí, fallaría por el 04 que falta.
+        otra = self.dir / "otra copia"
+        otra.mkdir()
+        (otra / "04_PREFERENCIAS_LABORALES.md").write_text(
+            modulo_04(preferencias([grupo("XA", nombres=["Ciudad A1"])])), encoding="utf-8")
+        (otra / "06_EMPRESAS_OBJETIVO.md").write_text(
+            modulo_06({"EMP-ACME": ficha("EMP-ACME", {"plataforma": "workday", "portal": "https://x"})}),
+            encoding="utf-8")
+        self.assertFallaSinBuscar(self.correr("--copia", str(otra), "EMP-OTRA"), "EMP-OTRA", "EMP-ACME")
+
+    def test_con_una_copia_que_no_existe_falla_y_la_nombra(self):
+        self.assertFallaSinBuscar(self.correr("--copia", str(self.dir / "no existe")), "--copia", "no existe")
+
 
 class WorkdayFalso:
     """La API de Workday de un sitio ficticio: robots.txt, facetas y listado por facetas (POST) y detalle (GET).

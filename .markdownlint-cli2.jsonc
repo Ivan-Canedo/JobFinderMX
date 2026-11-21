@@ -11,6 +11,7 @@
   },
   "globs": ["**/*.md"],
   // Salidas generadas para una vacante, con el formato que exige herramientas/generar_cv.py, y el
-  // entorno virtual de la herramienta de registros, con los .md de sus bibliotecas.
-  "ignores": ["muestras_cv/**", ".venv/**"]
+  // entorno virtual de la herramienta de registros, con los .md de sus bibliotecas, y las notas del mantenedor
+  // fuera de git (tickets, specs y la copia de prueba).
+  "ignores": ["muestras_cv/**", ".venv/**", ".scratch/**"]
 }

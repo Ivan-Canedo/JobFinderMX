@@ -161,6 +161,32 @@ class Crear(CopiaFicticia):
         self.assertNotIn("Traceback", r.stderr)
 
 
+class Copia(CopiaFicticia):
+    """--copia: los módulos, el archivo y la instantánea de otra carpeta, no los de la del script."""
+
+    def test_con_copia_lee_los_modulos_y_escribe_el_archivo_y_la_instantanea_en_esa_carpeta(self):
+        otra = self.dir / "otra copia"
+        otra.mkdir()
+        for modulo in ("04_PREFERENCIAS_LABORALES.md", "06_EMPRESAS_OBJETIVO.md", "08_EVALUACION_DE_VACANTES.md",
+                       "11_ESQUEMAS_DE_REGISTROS.md"):
+            (self.dir / modulo).rename(otra / modulo)
+        self.ok("--copia", str(otra), "crear")
+        self.ok("--copia", str(otra), "agregar", entrada=busqueda_ficticia())
+        self.assertTrue((otra / "ChambaKit_Registros.xlsx").is_file())
+        self.assertTrue((otra / "instantanea" / "vacantes.md").is_file())
+        self.assertFalse(self.archivo.exists())
+        self.assertFalse((self.dir / "instantanea").exists())
+        self.assertEqual(self.ok("--copia", str(otra), "leer", "vacantes", "--id", "VAC-0001")[0]["titulo"],
+                         "Puesto ficticio")
+
+    def test_con_una_copia_que_no_existe_falla_y_la_nombra(self):
+        r = self.correr("--copia", str(self.dir / "no existe"), "crear")
+        self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+        self.assertIn("--copia", r.stderr)
+        self.assertIn("no existe", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
+
 class Agregar(CopiaFicticia):
     def setUp(self):
         super().setUp()
