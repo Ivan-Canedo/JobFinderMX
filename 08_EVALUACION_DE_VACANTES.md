@@ -121,7 +121,7 @@ Ejemplos, con D directa, T transferible, A académica/formativa e I insuficiente
 | A I I | 0.5 | ★☆☆☆☆ |
 | I I I | 0 | ☆☆☆☆☆ |
 
-Siempre se muestran las cinco posiciones, con estrellas y no con un número, para que no se confunda la dirección de la escala. ★★★★★ no exige cubrir todos los obligatorios: la cobertura se reporta aparte, para distinguir «¿tengo lo central?» de «¿cuánto de la lista cubro?».
+Siempre se muestran las cinco posiciones, con estrellas y no solo con un número, para que no se confunda la dirección de la escala; el detalle agrega el encaje exacto entre paréntesis (EVAL-INFORME). ★★★★★ no exige cubrir todos los obligatorios: la cobertura se reporta aparte, para distinguir «¿tengo lo central?» de «¿cuánto de la lista cubro?».
 
 **Cobertura:** `X/Y`, donde Y es el número de requisitos obligatorios y ambiguos (un grupo de alternativas cuenta como uno) y X, los cubiertos con cualquier categoría salvo insuficiente. Si alguno se cubre solo con evidencia académica o formativa, se agrega `, N solo académico` (o `académicos`).
 
@@ -178,14 +178,16 @@ Dimensión aparte: no modifica el encaje ni las condiciones. Se calcula al armar
 
 ### Tabla resumen
 
-Es lo que se entrega tras una búsqueda. Se ordena por estrellas y, con empate, la vacante más nueva va primero. Las excluidas van al final, con su motivo:
+Es lo que se entrega tras una búsqueda. Se ordena por estrellas, luego por encaje exacto (EVAL-ENCAJE) y luego la vacante más nueva primero, por la fecha desde la que cuenta su antigüedad. Las excluidas van al final, con su motivo. En Code, este orden lo da `informe`:
 
 | Vacante | Encaje | Antigüedad | Alertas |
 | --- | --- | --- | --- |
 | [Job ID — título](URL) | ★★★☆☆ · 4/4, 1 solo académico | 18 d | — |
-| [Job ID — título](URL) | ★☆☆☆☆ · 10/12, 2 solo académicos | 12 d | Insuficiente: núcleo A · Académica: núcleo B |
 | [Job ID — título](URL) | ★★★☆☆ · 8/10 | 19 d | Pendiente: remoto |
+| [Job ID — título](URL) | ★☆☆☆☆ · 10/12, 2 solo académicos | 12 d | Insuficiente: núcleo A · Académica: núcleo B |
 | [Job ID — título](URL) | — | 25 d · antigua | **Excluida:** duración «6-month contract» |
+
+La tabla muestra solo las estrellas y la cobertura; el encaje exacto va en el detalle.
 
 **Alertas:** solo lo que puede pesar en la decisión de postular.
 
@@ -195,7 +197,7 @@ Es lo que se entrega tras una búsqueda. Se ordena por estrellas y, con empate, 
 
 Debajo de la tabla, una línea: «N sin relación con las familias de 05: no evaluadas».
 
-**Registro en `informes` (11):** al final del registro de la búsqueda (07/BUS-REGISTRO), una fila por vacante de la tabla, en su orden, con `busqueda_id`, `vacante_id` y la `evaluacion_id` que se muestra. Encaje, antigüedad y alertas no se guardan: los calcula la herramienta de 11/REG-LOCAL, con el mismo formato de esta tabla. La línea de no evaluadas no se guarda.
+**Registro en `informes` (11):** al final del registro de la búsqueda (07/BUS-REGISTRO), una fila por vacante de la tabla, en cualquier orden, con `busqueda_id`, `vacante_id` y la `evaluacion_id` que se muestra. Encaje, antigüedad y alertas no se guardan: los calcula la herramienta de 11/REG-LOCAL, con el mismo formato y el mismo orden de esta tabla. La línea de no evaluadas no se guarda.
 
 **Consultarla después,** la tabla no se rehace:
 
@@ -208,7 +210,7 @@ Debajo de la tabla, una línea: «N sin relación con las familias de 05: no eva
 Se entrega solo cuando el titular pregunta por una vacante y, si hacía falta, después de resolver las preguntas A:
 
 1. **Encabezado:** empresa, Job ID, título, enlace, ubicación literal (con el lugar de la región de 04 que le corresponde, si aplica), modalidad literal, fecha de publicación, antigüedad y familia de 05.
-2. **Encaje** y **condiciones**, en dos líneas: el encaje como en la tabla; las condiciones completas, `Sin exclusiones · pendientes: …` con todos los pendientes, o `Excluida: …`.
+2. **Encaje** y **condiciones**, en dos líneas: el encaje con su valor exacto entre paréntesis, con un decimal y punto, y la cobertura, `★★★☆☆ (3.3) · 10/15`; las condiciones completas, `Sin exclusiones · pendientes: …` con todos los pendientes, o `Excluida: …`.
 3. **Núcleos:** núcleo, categoría, evidencia y límite.
 4. **Requisitos:** tabla completa con requisito literal, tipo, categoría, evidencia y límite.
 5. **Para el CV (09):** núcleos y evidencias a destacar, y qué presentar solo como formación. Es la entrada de CV-SINTESIS paso 1; la tabla de requisitos sirve como base de CV-TRAZA.

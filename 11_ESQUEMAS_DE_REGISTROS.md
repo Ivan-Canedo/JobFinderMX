@@ -154,7 +154,7 @@ La observación es la evidencia fechada (REG-DECISIONES). La evidencia mínima d
 | version_evaluacion | Texto | Sí | Versión de 08, p. ej. `1.0` |
 | condiciones | Lista cerrada | Sí | `Sin exclusiones` / `Excluida` (08/EVAL-CONDICIONES) |
 | condiciones_detalle | Multivalor | Sí | Si está excluida: la condición y el texto literal, p. ej. `Duración: «6-month contract»`. Si no: los pendientes (`Sueldo \| Duración \| Relación \| Horario`) o `Ninguno` |
-| encaje | Calculada | — | Las estrellas del promedio de `nucleos` (08/EVAL-ENCAJE), de `★★★★★` a `☆☆☆☆☆`; vacía si está excluida. No se guarda: la dan `leer`, `informe` y la instantánea |
+| encaje | Calculada | — | Las estrellas del promedio de `nucleos` (08/EVAL-ENCAJE), de `★★★★★` a `☆☆☆☆☆`, con el encaje exacto entre paréntesis, con un decimal y punto: `★★★☆☆ (3.3)`; vacía si está excluida. No se guarda: la dan `leer` y la instantánea, e `informe` solo con las estrellas |
 | cobertura | Texto | Si existe | `X/Y` o `X/Y, N solo académico(s)`; vacía si está excluida |
 | nucleos | Multivalor | Si existe | `Núcleo: Categoría`, p. ej. `Análisis de datos: Directa \| Gestión de proyectos: Transferible`, con la categoría entre `Directa` / `Transferible` / `Académica/formativa` / `Insuficiente`; vacía si está excluida |
 
@@ -192,7 +192,7 @@ La tabla resumen de cada búsqueda (08/EVAL-INFORME), para consultarla sin rehac
 | alertas | Calculada | — | Si está excluida: `Excluida: …` con `condiciones_detalle` separado por `;`. Si no, unidos con ` · `: `Insuficiente: …` y `Académica: …` con los núcleos de esa categoría en `nucleos`, separados por `;`, y `Pendiente: …` con los pendientes de `condiciones_detalle` que no sean Sueldo, Duración, Relación ni Horario, en minúsculas. `—` si no hay nada (08/EVAL-INFORME) |
 | url_oficial | Calculada | — | La de `vacantes`, aparte, porque `informe` da `vacante` como texto, sin su liga |
 
-- **Una fila por vacante evaluada de la tabla,** incluidas las excluidas, en el orden de la tabla. No tiene ID propio: cada fila es la pareja `busqueda_id` + `vacante_id`. Las vacantes no evaluadas no tienen fila, y la línea «N sin relación…» no se guarda.
+- **Una fila por vacante evaluada de la tabla,** incluidas las excluidas, en cualquier orden: `informe` las ordena como 08/EVAL-INFORME. No tiene ID propio: cada fila es la pareja `busqueda_id` + `vacante_id`. Las vacantes no evaluadas no tienen fila, y la línea «N sin relación…» no se guarda.
 - **Referencias que faltan:** si la vacante o la evaluación de una fila no existe, sus columnas calculadas dicen `#N/A`.
 - **Umbral de «antigua»:** la herramienta lo lee de la línea «Marca «antigua»» de 08/EVAL-ACUERDOS, donde el titular lo cambia; sin esa línea, usa 20 días.
 - **Un solo cálculo:** la lógica de estas columnas vive solo en `herramientas/registros.py`. Un cambio de estas reglas se hace en la herramienta, en su prueba y en esta tabla.
@@ -400,7 +400,7 @@ En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y 
   - **Salida:** el archivo completo y, por pestaña, cuántas filas tenía la entrada y cuántas tiene el archivo escrito, para que el titular compare. También dice las columnas quitadas, cuántas filas corrigió y las pestañas de la entrada que no son del esquema.
   - **Sin sobrescribir:** no reemplaza un archivo de registros que ya tenga filas, salvo cuando la entrada es ese mismo archivo, de una versión anterior. Solo lee la entrada: la hoja de Drive queda intacta, y el titular decide si la borra.
 - **Instantánea:** las órdenes de escritura y `migrar` la regeneran después de escribir (REG-INSTANTANEA); si rechazan la entrada, no la tocan. `instantanea` la regenera a pedido, por ejemplo si alguien la borró o la editó.
-- **Lectura:** `leer` da una pestaña completa o las filas de unos IDs; en `evaluaciones`, con su `encaje` calculado. `informe` da la tabla resumen de una búsqueda: sus filas de `informes` con las columnas calculadas de REG-CAMPOS, a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
+- **Lectura:** `leer` da una pestaña completa o las filas de unos IDs; en `evaluaciones`, con su `encaje` calculado. `informe` da la tabla resumen de una búsqueda: sus filas de `informes`, en el orden de 08/EVAL-INFORME, con las columnas calculadas de REG-CAMPOS, a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
 - **Encabezados:** la herramienta los compara con el bloque en cada uso y se detiene si no coinciden (REG-DECISIONES, «Encabezados»).
 - **Historial y respaldo:** git. El archivo se versiona en la copia, así que no se ignora. Al cerrar una sesión que lo modificó, el agente le ofrece al titular un commit con él y, si la copia tiene remoto privado, el push.
   - **Code en la nube:** la sesión trabaja en un clon nuevo, en una rama propia que Code local y el canal Web no leen. Al cerrar una sesión que cambió módulos, registros o CV de `muestras_cv/`, el agente integra en `main`, con permiso del titular para cada paso: commit, `git fetch origin main`, `git rebase origin/main` y `git push origin HEAD:main`. Si `main` no avanzó desde que abrió la sesión, el rebase no cambia nada. Si el push se rechaza porque `main` avanzó otra vez, se repiten el fetch y el rebase.

@@ -88,8 +88,9 @@ def busqueda_ficticia():
     }
 
 
-# Lo que leer agrega a las filas de busqueda_ficticia(): el encaje de EVA-0001, calculado desde sus núcleos D D I.
-CALCULADAS_AL_LEER = {"evaluaciones": {"encaje": "★★★☆☆"}}
+# Lo que leer agrega a las filas de busqueda_ficticia(): el encaje de EVA-0001, calculado desde sus núcleos D D I,
+# con su valor exacto.
+CALCULADAS_AL_LEER = {"evaluaciones": {"encaje": "★★★☆☆ (3.3)"}}
 
 
 @unittest.skipIf(SIN_OPENPYXL, "falta openpyxl: corre las pruebas con el Python del entorno virtual")
@@ -337,11 +338,11 @@ class Leer(CopiaFicticia):
                                              nucleos=""))
         self.ok("agregar", entrada=busqueda)
         evaluaciones = self.leer("evaluaciones")
-        self.assertEqual([e["encaje"] for e in evaluaciones], ["★★★☆☆", ""])
+        self.assertEqual([e["encaje"] for e in evaluaciones], ["★★★☆☆ (3.3)", ""])
         columnas = list(evaluaciones[0])
         self.assertEqual(columnas[columnas.index("encaje") - 1:columnas.index("encaje") + 2],
                          ["condiciones_detalle", "encaje", "cobertura"])
-        self.assertEqual(self.leer("evaluaciones", "--id", "EVA-0001")[0]["encaje"], "★★★☆☆")
+        self.assertEqual(self.leer("evaluaciones", "--id", "EVA-0001")[0]["encaje"], "★★★☆☆ (3.3)")
 
     def test_sin_el_archivo_dice_que_lo_crea_configurar(self):
         r = self.correr("leer", "vacantes")
@@ -405,45 +406,70 @@ class Informe(CopiaFicticia):
                                  for n in (3, 4, 5, 6, 7, 8)]
         self.ok("agregar", entrada=busqueda)
         tabla = self.ok("informe", "BUS-0002")
+        # Por estrellas, con la excluida al final.
         self.assertEqual([[f[c] for c in ("empresa", "vacante", "encaje", "antiguedad", "alertas", "url_oficial")]
                           for f in tabla], [
             ["XA", "R-3 — Puesto 3", "★★★★☆ · 4/4", "25 d · antigua", "—", "https://example.com/empleo/R-3"],
-            ["XA", "sin Job ID — Puesto 4", "—", "≥ 3 d", "Excluida: Duración: «6-month contract»; Relación: «Freelance»",
-             ""],
-            ["XA", "sin Job ID — Puesto 5", "★★☆☆☆", "—", "Insuficiente: Núcleo B", ""],
             ["XA", "R-6 — Puesto 6", "★★★☆☆ · 2/3, 1 solo académico", "20 d · antigua",
              "Académica: Núcleo C · Pendiente: modalidad, viajes", ""],
+            ["XA", "sin Job ID — Puesto 5", "★★☆☆☆", "—", "Insuficiente: Núcleo B", ""],
+            ["XA", "R-8 — Puesto 8", "★☆☆☆☆ · 0/2", "0 d", "Académica: Núcleo A", ""],
             # Detectada antes de su fecha de publicación: cuenta desde la más antigua de las dos.
             ["XA", "R-7 — Puesto 7", "☆☆☆☆☆ · 1/4", "25 d · antigua", "Insuficiente: Núcleo A · Pendiente: ubicación",
              ""],
-            ["XA", "R-8 — Puesto 8", "★☆☆☆☆ · 0/2", "0 d", "Académica: Núcleo A", ""]])
+            ["XA", "sin Job ID — Puesto 4", "—", "≥ 3 d", "Excluida: Duración: «6-month contract»; Relación: «Freelance»",
+             ""]])
         self.assertEqual([(f["busqueda_id"], f["vacante_id"], f["evaluacion_id"]) for f in tabla],
-                         [("BUS-0002", f"VAC-000{n}", f"EVA-000{n}") for n in (3, 4, 5, 6, 7, 8)])
+                         [("BUS-0002", f"VAC-000{n}", f"EVA-000{n}") for n in (3, 6, 5, 8, 7, 4)])
         self.assertEqual(len(self.ok("informe", "BUS-0001")), 1)
 
-    def test_las_estrellas_son_el_promedio_de_los_nucleos_redondeado_con_los_empates_hacia_abajo(self):
+    def busqueda_con(self, registradas):
+        """busqueda_ficticia() con una vacante evaluada en BUS-0001 por cada (patrón, días), desde R-3, en ese orden
+        de registro y sin la de la ficticia. El patrón son las categorías de sus núcleos (D directa, T transferible,
+        A académica/formativa, I insuficiente), o «Excluida»; los días, desde su fecha de publicación, o None para
+        dejar las fechas de la ficticia."""
         letras = {"D": "Directa", "T": "Transferible", "A": "Académica/formativa", "I": "Insuficiente"}
-        patrones = {"D D I": "★★★☆☆", "D I": "★★☆☆☆", "D T A": "★★★☆☆", "T I I": "★☆☆☆☆", "A I I": "★☆☆☆☆",
-                    "I I I": "☆☆☆☆☆", "D D D": "★★★★★"}
         busqueda = busqueda_ficticia()
         base = (busqueda["vacantes"][0], busqueda["observaciones"][0], busqueda["evaluaciones"][0])
         busqueda["informes"] = []
-        for n, patron in enumerate(patrones, 3):
+        for n, (patron, dias) in enumerate(registradas, 3):
             vacante, observacion, evaluacion = (dict(f) for f in base)
             vacante.update(vacante_id=f"VAC-{n:04}", job_id=f"R-{n}", ultima_observacion_id=f"OBS-{n:04}")
+            if dias is not None:
+                vacante.update(fecha_publicacion=hace(dias), primera_deteccion=hace(0))
             observacion.update(observacion_id=f"OBS-{n:04}", vacante_id=f"VAC-{n:04}")
-            nucleos = " | ".join(f"Núcleo {i}: {letras[x]}" for i, x in enumerate(patron.split(), 1))
-            evaluacion.update(evaluacion_id=f"EVA-{n:04}", vacante_id=f"VAC-{n:04}", observacion_id=f"OBS-{n:04}",
-                              nucleos=nucleos)
+            evaluacion.update(evaluacion_id=f"EVA-{n:04}", vacante_id=f"VAC-{n:04}", observacion_id=f"OBS-{n:04}")
+            if patron == "Excluida":
+                evaluacion.update(condiciones="Excluida", condiciones_detalle="Duración: «6-month contract»",
+                                  cobertura="", nucleos="")
+            else:
+                evaluacion["nucleos"] = " | ".join(f"Núcleo {i}: {letras[x]}" for i, x in enumerate(patron.split(), 1))
             busqueda["vacantes"].append(vacante)
             busqueda["observaciones"].append(observacion)
             busqueda["evaluaciones"].append(evaluacion)
             busqueda["informes"].append({"busqueda_id": "BUS-0001", "vacante_id": f"VAC-{n:04}",
                                          "evaluacion_id": f"EVA-{n:04}"})
-        self.ok("agregar", entrada=busqueda)
+        return busqueda
+
+    def test_las_estrellas_son_el_promedio_de_los_nucleos_redondeado_con_los_empates_hacia_abajo(self):
+        patrones = {"D D I": "★★★☆☆", "D I": "★★☆☆☆", "D T A": "★★★☆☆", "T I I": "★☆☆☆☆", "A I I": "★☆☆☆☆",
+                    "I I I": "☆☆☆☆☆", "D D D": "★★★★★"}
+        self.ok("agregar", entrada=self.busqueda_con([(patron, None) for patron in patrones]))
         encajes = {f["vacante"].split(" — ")[0]: f["encaje"] for f in self.ok("informe", "BUS-0001")}
         self.assertEqual(encajes, {f"R-{n}": f"{estrellas} · 3/4"
                                    for n, estrellas in enumerate(patrones.values(), 3)})
+
+    def test_ordena_por_estrellas_luego_por_encaje_exacto_y_luego_por_la_mas_nueva_con_las_excluidas_al_final(self):
+        # En el orden en que se registran.
+        self.ok("agregar", entrada=self.busqueda_con([("Excluida", 1), ("D T A", 2), ("D D I", 9), ("D D I", 3),
+                                                      ("T I I", 0)]))
+        tabla = self.ok("informe", "BUS-0001")
+        # D D I (3.3) arriba de D T A (3.2), las dos ★★★☆☆; entre las dos D D I, la más nueva primero.
+        self.assertEqual([(f["vacante"].split(" — ")[0], f["encaje"]) for f in tabla], [
+            ("R-6", "★★★☆☆ · 3/4"), ("R-5", "★★★☆☆ · 3/4"), ("R-4", "★★★☆☆ · 3/4"), ("R-7", "★☆☆☆☆ · 3/4"),
+            ("R-3", "—")])
+        informes = (self.dir / "instantanea" / "informes.md").read_text(encoding="utf-8")
+        self.assertEqual(re.findall(r"^\| \[(R-\d+) ", informes, re.M), ["R-6", "R-5", "R-4", "R-7", "R-3"])
 
     def test_una_busqueda_inexistente_falla_con_un_mensaje_claro(self):
         r = self.correr("informe", "BUS-0099")
@@ -628,7 +654,7 @@ class Instantanea(CopiaFicticia):
         seccion = self.seccion(texto, "VAC-0001")
         for valor in ("<https://example.com/empleo/000123>", "Ciudad A1, País A", "Hybrid", "Dentro", "2026-02-20",
                       "2026-03-02", "### Última observación: OBS-0004", "2026-03-09", "Sigue en el listado",
-                      "### Última evaluación: EVA-0003", "- **encaje:** ★★★★☆\n", "4/4", "Núcleo A: Directa",
+                      "### Última evaluación: EVA-0003", "- **encaje:** ★★★★☆ (4.0)\n", "4/4", "Núcleo A: Directa",
                       "### Requisitos de OBS-0001", "Experience with Python"):
             self.assertIn(valor, seccion)
         # Ni el historial de observaciones, ni las evaluaciones anteriores, ni documentos.
@@ -942,7 +968,7 @@ class Migrar(CopiaFicticia):
         r = self.migrar(self.archivo)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout)["columnas_quitadas"], {"busquedas": ["canal"], "evaluaciones": ["encaje"]})
-        self.assertEqual(self.leer("evaluaciones")[0]["encaje"], "★★★☆☆")
+        self.assertEqual(self.leer("evaluaciones")[0]["encaje"], "★★★☆☆ (3.3)")
         self.assertIn("★★★☆☆ · 3/4", (self.dir / "instantanea" / "informes.md").read_text(encoding="utf-8"))
 
     def libro_1x(self, busqueda, de_la_hoja):

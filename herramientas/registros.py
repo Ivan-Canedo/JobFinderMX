@@ -41,9 +41,10 @@ evaluaciones, que sale de sus nucleos (08/EVAL-ENCAJE), lo dan leer, informe y l
   corregidas y las pestañas ignoradas. Solo lee la entrada. No sobrescribe un archivo de registros con filas,
   salvo cuando la entrada es ese mismo archivo.
 - leer: las filas de una pestaña, o solo las que tienen esos IDs en la primera columna o en --columna. En
-  evaluaciones, con su encaje calculado.
-- informe: la tabla resumen de una búsqueda (08/EVAL-INFORME), con las columnas calculadas de informes
-  (11/REG-CAMPOS) a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
+  evaluaciones, con su encaje calculado y su valor exacto: ★★★☆☆ (3.3).
+- informe: la tabla resumen de una búsqueda (08/EVAL-INFORME), ordenada por estrellas, encaje exacto y la vacante
+  más nueva, con las excluidas al final, y con las columnas calculadas de informes (11/REG-CAMPOS) a la fecha de
+  hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
 - instantanea: regenera completa la instantánea que lee el canal Web (11/REG-INSTANTANEA), en instantanea/:
   informes.md, con las últimas 10 búsquedas y su tabla resumen, y vacantes.md, con una sección por vacante
   evaluada cuya última observación no es Cerrada. Agregar, actualizar, importar y migrar la regeneran después de
@@ -946,13 +947,14 @@ def antiguedad(vacante, hoy, umbral):
     return ("≥ " if publicada == "" else "") + f"{n} d" + (" · antigua" if n >= umbral else "")
 
 
-def estrellas(evaluacion):
-    """08/EVAL-ENCAJE: el promedio de lo que vale cada núcleo según su categoría, redondeado a estrellas enteras
-    con los empates en .5 hacia abajo, y al menos ★☆☆☆☆ si algún núcleo no es insuficiente. Vacío si está excluida
-    o no tiene núcleos; «#VALUE!» si un núcleo no tiene una categoría conocida, como en un archivo editado a mano."""
+def encaje_calculado(evaluacion):
+    """08/EVAL-ENCAJE: (estrellas, encaje exacto). El exacto es el promedio de lo que vale cada núcleo según su
+    categoría; las estrellas lo redondean al entero con los empates en .5 hacia abajo, y son al menos 1 si algún
+    núcleo no es insuficiente. None si está excluida o no tiene núcleos; «#VALUE!» si un núcleo no tiene una
+    categoría conocida, como en un archivo editado a mano."""
     nucleos = [n for n in evaluacion["nucleos"].split(" | ") if n]
     if evaluacion["condiciones"] == "Excluida" or not nucleos:
-        return ""
+        return None
     categorias = [n.rpartition(": ")[2] for n in nucleos]
     if any(c not in PESOS_POR_DEFECTO for c in categorias):
         return "#VALUE!"
@@ -960,11 +962,33 @@ def estrellas(evaluacion):
     n = math.ceil(promedio - Fraction(1, 2))
     if any(c != "Insuficiente" for c in categorias):
         n = max(n, 1)
-    return "★" * n + "☆" * (5 - n)
+    return n, promedio
+
+
+def texto_del_encaje(evaluacion, con_exacto):
+    """Las cinco posiciones del nivel (★★★☆☆) y, con_exacto, el encaje exacto con un decimal y punto, ★★★☆☆ (3.3),
+    como en el detalle (08/EVAL-INFORME). Vacío si no tiene encaje, o «#VALUE!»."""
+    calculado = encaje_calculado(evaluacion)
+    if not isinstance(calculado, tuple):
+        return calculado or ""
+    n, promedio = calculado
+    texto = "★" * n + "☆" * (5 - n)
+    if con_exacto:
+        # Los .x5 hacia arriba, como se leen: D A, 3.25, da 3.3.
+        texto += f" ({math.floor(promedio * 10 + Fraction(1, 2)) / 10:.1f})"
+    return texto
+
+
+def estrellas(evaluacion):
+    return texto_del_encaje(evaluacion, con_exacto=False)
+
+
+def encaje_con_exacto(evaluacion):
+    return texto_del_encaje(evaluacion, con_exacto=True)
 
 
 # Las columnas calculadas que salen solo de la misma fila: leer y la instantánea las dan con las guardadas.
-DE_LA_FILA = {"evaluaciones": {"encaje": estrellas}}
+DE_LA_FILA = {"evaluaciones": {"encaje": encaje_con_exacto}}
 
 
 def con_calculadas(pestana, fila):
@@ -1030,22 +1054,47 @@ def primeras(filas, columna):
     return por_id
 
 
+def fecha_mas_antigua(vacante):
+    """La fecha desde la que cuenta la antigüedad (08/EVAL-ANTIGUEDAD), o "" si no tiene una fecha válida."""
+    fechas = [f for f in (vacante["fecha_publicacion"], vacante["primera_deteccion"]) if es_fecha(f, False)]
+    return min(fechas, default="")
+
+
+def orden_de_la_tabla(vacante, evaluacion):
+    """La clave de orden de una fila de la tabla resumen (08/EVAL-INFORME): por estrellas, luego por encaje exacto
+    y luego la vacante más nueva primero, con las excluidas al final. Una fila sin encaje calculable, por una
+    referencia que falta o un núcleo sin categoría, va entre las de encaje y las excluidas."""
+    calculado = None if evaluacion is None else encaje_calculado(evaluacion)
+    if evaluacion is not None and evaluacion["condiciones"] == "Excluida":
+        grupo, n, exacto = 2, 0, 0
+    elif isinstance(calculado, tuple):
+        grupo, (n, exacto) = 0, calculado
+    else:
+        grupo, n, exacto = 1, 0, 0
+    # Sin fecha, después de las que tienen.
+    fecha = "" if vacante is None else fecha_mas_antigua(vacante)
+    mas_nueva = -dt.date.fromisoformat(fecha).toordinal() if fecha else math.inf
+    return grupo, -n, -exacto, mas_nueva
+
+
 def tabla_resumen(esquema, filas, busqueda_id, hoy, umbral):
-    """Las filas de informes de una búsqueda, en su orden, con sus columnas calculadas a la fecha hoy."""
+    """Las filas de informes de una búsqueda, en el orden de 08/EVAL-INFORME, con sus columnas calculadas a la
+    fecha hoy. Con todo igual, conserva el orden en que se registraron."""
     vacantes = primeras(filas["vacantes"], "vacante_id")
     evaluaciones = primeras(filas["evaluaciones"], "evaluacion_id")
     columnas = [c["nombre"] for c in pestana_del_esquema(esquema, "informes")["columnas"]]
     tabla = []
     for f in filas["informes"]:
         if f["busqueda_id"] == busqueda_id:
-            fila = f | calculadas(vacantes.get(f["vacante_id"]), evaluaciones.get(f["evaluacion_id"]), hoy, umbral)
-            tabla.append({c: fila[c] for c in columnas})
-    return tabla
+            vacante, evaluacion = vacantes.get(f["vacante_id"]), evaluaciones.get(f["evaluacion_id"])
+            fila = f | calculadas(vacante, evaluacion, hoy, umbral)
+            tabla.append((orden_de_la_tabla(vacante, evaluacion), {c: fila[c] for c in columnas}))
+    return [fila for _, fila in sorted(tabla, key=lambda t: t[0])]
 
 
 def informe(esquema, busqueda_id):
-    """La tabla resumen de una búsqueda (08/EVAL-INFORME): sus filas de informes, en su orden, con las
-    columnas calculadas a la fecha de hoy."""
+    """La tabla resumen de una búsqueda (08/EVAL-INFORME): sus filas de informes, ordenadas, con las columnas
+    calculadas a la fecha de hoy."""
     filas = abrir(esquema)[1]
     if not any(f["busqueda_id"] == busqueda_id for f in filas["busquedas"]):
         error(f"{busqueda_id} no existe en busquedas.")
