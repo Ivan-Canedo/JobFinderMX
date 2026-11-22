@@ -82,8 +82,16 @@ _Avoid_: ATS, portal
 La parte del script de búsqueda que sabe leer una plataforma de reclutamiento; cada empresa que la usa solo aporta su configuración.
 _Avoid_: adaptador por empresa, scraper
 
+**Bolsa de empleo**:
+Un sitio donde los empleadores publican sus vacantes y se postula ahí mismo, como OCC Mundial o Computrabajo. Para una vacante publicada en ella, su anuncio en la bolsa es el oficial, aunque la empresa sea confidencial.
+_Avoid_: portal de empleo, job board, agregador
+
+**Agregador**:
+Un sitio que copia vacantes publicadas en otros lados y redirige a ellos para postular, como Jooble o Talent.com. Nunca es la fuente oficial de una vacante.
+_Avoid_: bolsa de empleo, buscador de empleo
+
 **Búsqueda**:
-Recorrer el listado de vacantes de una o varias empresas en sus portales, filtrarlas, evaluarlas y registrarlas. Solo se hace en el canal Code.
+Recorrer el listado de vacantes de una o varias empresas en sus portales, o de una bolsa de empleo, filtrarlas, evaluarlas y registrarlas. Solo se hace en el canal Code.
 _Avoid_: comprobación, consulta
 
 **Comprobación puntual**:

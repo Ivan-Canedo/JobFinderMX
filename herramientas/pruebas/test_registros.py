@@ -533,6 +533,63 @@ class Informe(CopiaFicticia):
                 self.assertNotIn("Traceback", r.stderr)
                 self.assertEqual(self.archivo.read_bytes(), antes)
 
+    PESOS = "Directa 5, Transferible 3, Académica/formativa 1.5, Insuficiente 0"
+
+    def con_pesos(self, pesos):
+        """El 08 ficticio con otros pesos en su línea «Pesos del encaje», o sin la línea con None."""
+        modulo = self.dir / "08_EVALUACION_DE_VACANTES.md"
+        texto = (RAIZ / "08_EVALUACION_DE_VACANTES.md").read_text(encoding="utf-8")
+        linea = re.search(r"^- \*\*Pesos del encaje:\*\*.*\n", texto, re.M).group(0)
+        self.assertEqual(linea.count(self.PESOS), 1)
+        modulo.write_text(texto.replace(linea, "" if pesos is None else linea.replace(self.PESOS, pesos)),
+                          encoding="utf-8")
+
+    def test_los_pesos_del_encaje_salen_de_eval_acuerdos_y_recalculan_las_evaluaciones_guardadas(self):
+        self.ok("agregar", entrada=self.busqueda_con([("D I", None), ("T I I", None), ("D T A", None)]))
+
+        def encajes():
+            return [f["encaje"] for f in self.ok("informe", "BUS-0001")]
+
+        self.assertEqual(encajes(), ["★★★☆☆ · 3/4", "★★☆☆☆ · 3/4", "★☆☆☆☆ · 3/4"])
+        # Las ya guardadas toman el nivel nuevo sin reevaluarse; con decimales con punto y negritas o sin ellas.
+        for pesos in ("Directa 5, Transferible 3, Académica/formativa 1.5, Insuficiente 1",
+                      "Directa **5**, Transferible **3**, Académica/formativa **1.5**, Insuficiente **1.0**",
+                      "Directa: 5, Transferible: 3, Académica/formativa: 1.5, Insuficiente: 1"):
+            with self.subTest(pesos=pesos):
+                self.con_pesos(pesos)
+                self.assertEqual(encajes(), ["★★★☆☆ · 3/4", "★★★☆☆ · 3/4", "★★☆☆☆ · 3/4"])
+        self.assertEqual(self.leer("evaluaciones", "--id", "EVA-0003")[0]["encaje"], "★★★☆☆ (3.0)")
+        self.ok("instantanea")
+        self.assertIn("- **encaje:** ★★★☆☆ (3.0)\n",
+                      (self.dir / "instantanea" / "vacantes.md").read_text(encoding="utf-8"))
+
+    def test_sin_la_linea_de_pesos_en_08_valen_los_de_por_defecto(self):
+        self.con_pesos(None)
+        self.ok("agregar", entrada=self.busqueda_con([("D D I", None), ("D I", None), ("A I I", None)]))
+        self.assertEqual([f["encaje"] for f in self.ok("informe", "BUS-0001")],
+                         ["★★★☆☆ · 3/4", "★★☆☆☆ · 3/4", "★☆☆☆☆ · 3/4"])
+        self.assertEqual(self.leer("evaluaciones", "--id", "EVA-0003")[0]["encaje"], "★★★☆☆ (3.3)")
+
+    def test_una_linea_de_pesos_que_no_se_puede_leer_dice_donde_corregirla(self):
+        self.ok("agregar", entrada={"busquedas": busqueda_ficticia()["busquedas"]})
+        otra = {"busquedas": [dict(busqueda_ficticia()["busquedas"][0], busqueda_id="BUS-0002")]}
+        for pesos in ("Directa 5, Transferible 3, Académica/formativa 1.5, Insuficiente cero",
+                      "Directa 5, Transferible 3, Insuficiente 0",
+                      "Directa 6, Transferible 3, Académica/formativa 1.5, Insuficiente 0",
+                      "Directa 5, Transferible 3, Académica/formativa 1,5, Insuficiente 0",
+                      "Directa 5, Transferible 3, Académica/formativa 1.5, Insuficiente -1"):
+            self.con_pesos(pesos)
+            # Las escrituras también los necesitan, para la instantánea: no escriben nada.
+            for argumentos, entrada in ((("informe", "BUS-0001"), None), (("agregar",), otra)):
+                with self.subTest(pesos=pesos, orden=argumentos[0]):
+                    antes = self.archivo.read_bytes()
+                    r = self.correr(*argumentos, entrada=entrada)
+                    self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
+                    for t in ("08_EVALUACION_DE_VACANTES.md", "EVAL-ACUERDOS", "Pesos del encaje", pesos):
+                        self.assertIn(t, r.stderr)
+                    self.assertNotIn("Traceback", r.stderr)
+                    self.assertEqual(self.archivo.read_bytes(), antes)
+
 
 class Instantanea(CopiaFicticia):
     """La instantánea que lee el canal Web (11/REG-INSTANTANEA): informes.md y vacantes.md en instantanea/."""

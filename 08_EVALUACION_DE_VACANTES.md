@@ -21,8 +21,9 @@ Comparar los requisitos y condiciones de una vacante con la trayectoria y las pr
 
 ## EVAL-ACUERDOS — Valores por defecto y decisiones del titular
 
-**Valor por defecto (ajustable):**
+**Valores por defecto (ajustables):**
 
+- **Pesos del encaje:** las estrellas que vale un núcleo según su categoría son Directa 5, Transferible 3, Académica/formativa 1.5, Insuficiente 0 (EVAL-ENCAJE). La herramienta de registros lee estos números para calcular el encaje en `leer`, `informe` y la instantánea (11/REG-CAMPOS, `evaluaciones`): si el titular cambia uno, se cambia aquí, en cifras, con punto decimal y entre 0 y 5, y las evaluaciones guardadas toman el nivel nuevo sin reevaluarse. Sin esta línea valen 5, 3, 1.5 y 0, en ese orden.
 - **Marca «antigua»:** a partir de 20 días publicada (EVAL-ANTIGUEDAD). Señala las vacantes abiertas hace tiempo para que el titular lo considere al decidir; no excluye. La herramienta de registros lee el número de esta línea para `informe` y la instantánea (11/REG-CAMPOS, `informes`): si el titular lo cambia, se cambia aquí, en cifras, y sin esta línea vale 20.
 
 **Decisiones del titular:** si el titular cambia un valor por defecto, el cambio se anota aquí, con ID `EVAL-U##` y fecha, y se aplica en la sección que lo usa. Sus condiciones no se anotan aquí: su autoridad es 04 (EVAL-CONDICIONES).
@@ -96,20 +97,14 @@ Se presentan como **estrellas · cobertura**, p. ej. **★★★☆☆ · 4/4, 1
 
 **Nivel**, calculado desde los núcleos:
 
-| Categoría del núcleo | Estrellas que vale |
-| --- | --- |
-| Directa | 5 |
-| Transferible | 3 |
-| Académica/formativa | 1.5 |
-| Insuficiente | 0 |
-
+- **Pesos:** cada núcleo vale las estrellas de su categoría en la línea «Pesos del encaje» de EVAL-ACUERDOS.
 - **Encaje exacto:** el promedio de las estrellas de los núcleos, cada núcleo con el mismo peso. Vale igual con dos núcleos que con tres.
 - **Nivel:** el encaje exacto redondeado al entero, con los empates en .5 hacia abajo (2.5 da ★★☆☆☆).
 - **Mínimo:** si algún núcleo no es insuficiente, el nivel es al menos ★☆☆☆☆. ☆☆☆☆☆ queda solo para cuando todos los núcleos son insuficientes.
 - **Excluidas:** no tienen encaje.
 - **En Code,** la cuenta la hace la herramienta de registros desde `nucleos` (11/REG-CAMPOS); el agente solo decide la categoría de cada núcleo.
 
-Ejemplos, con D directa, T transferible, A académica/formativa e I insuficiente:
+Ejemplos con los pesos por defecto, con D directa, T transferible, A académica/formativa e I insuficiente:
 
 | Núcleos | Encaje exacto | Nivel |
 | --- | --- | --- |
@@ -125,7 +120,7 @@ Siempre se muestran las cinco posiciones, con estrellas y no solo con un número
 
 **Cobertura:** `X/Y`, donde Y es el número de requisitos obligatorios y ambiguos (un grupo de alternativas cuenta como uno) y X, los cubiertos con cualquier categoría salvo insuficiente. Si alguno se cubre solo con evidencia académica o formativa, se agrega `, N solo académico` (o `académicos`).
 
-**Por qué un promedio:** un solo núcleo insuficiente no hunde una vacante con los demás núcleos directos, y la escala separa «me falta un tema puntual» de «tengo poco que ver con el puesto». Los requisitos menores no diluyen el resultado, porque solo entran los núcleos; las alertas de EVAL-INFORME siguen diciendo qué falta. Los pesos son arbitrarios, pero están escritos aquí y se pueden recalibrar con evaluaciones reales.
+**Por qué un promedio:** un solo núcleo insuficiente no hunde una vacante con los demás núcleos directos, y la escala separa «me falta un tema puntual» de «tengo poco que ver con el puesto». Los requisitos menores no diluyen el resultado, porque solo entran los núcleos; las alertas de EVAL-INFORME siguen diciendo qué falta. Los pesos son arbitrarios, pero están escritos en EVAL-ACUERDOS y se pueden recalibrar con evaluaciones reales.
 
 ## EVAL-CONDICIONES — Condiciones excluyentes
 

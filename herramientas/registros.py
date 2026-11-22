@@ -50,6 +50,9 @@ evaluaciones, que sale de sus nucleos (08/EVAL-ENCAJE), lo dan leer, informe y l
   evaluada cuya última observación no es Cerrada. Agregar, actualizar, importar y migrar la regeneran después de
   escribir. Si pasa de 300 KB, lo avisa en stderr sin fallar.
 
+El encaje de evaluaciones se calcula con los pesos de la línea «Pesos del encaje» de 08/EVAL-ACUERDOS o, sin esa
+línea, con los de por defecto.
+
 Agregar, actualizar, importar y migrar comprueban cada fila que escriben contra el esquema: tipos, listas
 (empresa_id, contra 06/CAT-EMPRESAS), la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias.
 Con un solo error no escriben nada: dicen todos en stderr y terminan con código 1. El JSON va a stdout. Si falta la
@@ -70,8 +73,9 @@ from zoneinfo import ZoneInfo
 def usar_copia(ruta):
     """La copia de los módulos, el archivo y la instantánea: la del script o, con --copia, otra, como la copia de
     prueba del mantenedor (CONTRIBUTING, «Titulares de prueba»)."""
-    global RAIZ, MODULO_04, MODULO_06, MODULO_08, MODULO_11
+    global RAIZ, MODULO_04, MODULO_06, MODULO_08, MODULO_11, _pesos
     RAIZ = os.path.abspath(ruta)
+    _pesos = None  # los de otra copia se leen de su 08
     MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")
     MODULO_06 = os.path.join(RAIZ, "06_EMPRESAS_OBJETIVO.md")
     MODULO_08 = os.path.join(RAIZ, "08_EVALUACION_DE_VACANTES.md")
@@ -84,7 +88,7 @@ CARPETA_INSTANTANEA = "instantanea"
 ULTIMAS_BUSQUEDAS = 10
 AVISO_INSTANTANEA_KB = 300
 UMBRAL_DE_ANTIGUA = 20
-# Las estrellas que vale un núcleo según su categoría (08/EVAL-ENCAJE).
+# Las estrellas que vale un núcleo según su categoría, si 08/EVAL-ACUERDOS no trae la línea «Pesos del encaje».
 PESOS_POR_DEFECTO = {"Directa": "5", "Transferible": "3", "Académica/formativa": "1.5", "Insuficiente": "0"}
 
 
@@ -919,18 +923,47 @@ def leer_zona_horaria():
               "`.venv\\Scripts\\python.exe -m pip install tzdata`).")
 
 
+def linea_de_acuerdos(etiqueta, para):
+    """La línea «- **etiqueta:** …» de 08/EVAL-ACUERDOS, donde el titular cambia un valor por defecto, o None."""
+    acuerdos = seccion(leer_modulo(MODULO_08, para), "EVAL-ACUERDOS") or ""
+    linea = re.search(rf"^- \*\*{re.escape(etiqueta)}:\*\*.*$", acuerdos, re.M)
+    return None if linea is None else linea.group(0)
+
+
 def umbral_de_antigua():
     """Los días de la marca «antigua», de su línea en 08/EVAL-ACUERDOS; sin esa línea, los 20 por defecto."""
-    ruta = MODULO_08
-    acuerdos = seccion(leer_modulo(ruta, "el umbral de «antigua»"), "EVAL-ACUERDOS") or ""
-    linea = re.search(r"^- \*\*Marca «antigua»:\*\*.*$", acuerdos, re.M)
+    linea = linea_de_acuerdos("Marca «antigua»", "el umbral de «antigua»")
     if linea is None:
         return UMBRAL_DE_ANTIGUA
-    dias = re.search(r"a partir de \**(\d+)\**\s+días?\b", linea.group(0))
+    dias = re.search(r"a partir de \**(\d+)\**\s+días?\b", linea)
     if dias is None:
-        error(f"{ruta}, EVAL-ACUERDOS: la línea «Marca «antigua»» debe decir «a partir de N días», con N en "
-              "cifras; dice: " + linea.group(0))
+        error(f"{MODULO_08}, EVAL-ACUERDOS: la línea «Marca «antigua»» debe decir «a partir de N días», con N en "
+              "cifras; dice: " + linea)
     return int(dias.group(1))
+
+
+def pesos_del_encaje():
+    """{categoría: Fraction}, de la línea «Pesos del encaje» de 08/EVAL-ACUERDOS; sin esa línea, los de por
+    defecto. Se lee una vez por ejecución."""
+    global _pesos
+    if _pesos is not None:
+        return _pesos
+    linea = linea_de_acuerdos("Pesos del encaje", "los pesos del encaje")
+    if linea is None:
+        _pesos = {c: Fraction(v) for c, v in PESOS_POR_DEFECTO.items()}
+        return _pesos
+    pesos = {}
+    for categoria in PESOS_POR_DEFECTO:
+        # En cifras, con punto decimal, con negritas o sin ellas y con dos puntos o sin ellos; «1,5» no es 1, y
+        # «-1» no se lee.
+        valor = re.search(rf"(?<!\w){re.escape(categoria)}\s*:?\s*\**(\d+(?:\.\d+)?)\**(?![.,]?\d)", linea)
+        if valor is None or Fraction(valor.group(1)) > 5:
+            error(f"{MODULO_08}, EVAL-ACUERDOS: la línea «Pesos del encaje» debe dar las estrellas de "
+                  f"{', '.join(PESOS_POR_DEFECTO)}, cada una seguida de su número, en cifras, con punto decimal y "
+                  f"entre 0 y 5; falla en {categoria}; dice: " + linea)
+        pesos[categoria] = Fraction(valor.group(1))
+    _pesos = pesos
+    return _pesos
 
 
 def antiguedad(vacante, hoy, umbral):
@@ -949,16 +982,17 @@ def antiguedad(vacante, hoy, umbral):
 
 def encaje_calculado(evaluacion):
     """08/EVAL-ENCAJE: (estrellas, encaje exacto). El exacto es el promedio de lo que vale cada núcleo según su
-    categoría; las estrellas lo redondean al entero con los empates en .5 hacia abajo, y son al menos 1 si algún
-    núcleo no es insuficiente. None si está excluida o no tiene núcleos; «#VALUE!» si un núcleo no tiene una
+    categoría, con los pesos de 08/EVAL-ACUERDOS; las estrellas lo redondean al entero con los empates en .5
+    hacia abajo, y son al menos 1 si algún núcleo no es insuficiente. None si está excluida o no tiene núcleos; «#VALUE!» si un núcleo no tiene una
     categoría conocida, como en un archivo editado a mano."""
     nucleos = [n for n in evaluacion["nucleos"].split(" | ") if n]
     if evaluacion["condiciones"] == "Excluida" or not nucleos:
         return None
     categorias = [n.rpartition(": ")[2] for n in nucleos]
-    if any(c not in PESOS_POR_DEFECTO for c in categorias):
+    pesos = pesos_del_encaje()
+    if any(c not in pesos for c in categorias):
         return "#VALUE!"
-    promedio = sum(Fraction(PESOS_POR_DEFECTO[c]) for c in categorias) / len(categorias)
+    promedio = sum(pesos[c] for c in categorias) / len(categorias)
     n = math.ceil(promedio - Fraction(1, 2))
     if any(c != "Insuficiente" for c in categorias):
         n = max(n, 1)
@@ -1099,6 +1133,7 @@ def informe(esquema, busqueda_id):
     if not any(f["busqueda_id"] == busqueda_id for f in filas["busquedas"]):
         error(f"{busqueda_id} no existe en busquedas.")
     hoy = dt.datetime.now(leer_zona_horaria()).date()
+    pesos_del_encaje()  # aunque ninguna fila tenga encaje, una línea mal escrita se avisa
     return tabla_resumen(esquema, filas, busqueda_id, hoy, umbral_de_antigua())
 
 
@@ -1203,6 +1238,7 @@ def instantanea(esquema, filas):
     antes de guardar el archivo de registros: si falta lo que piden, como la zona horaria de 04, no se escribe nada."""
     ahora = dt.datetime.now(leer_zona_horaria())
     umbral = umbral_de_antigua()
+    pesos_del_encaje()  # antes de escribir, aunque ninguna fila tenga encaje
     encabezado = (f"**Exportada:** {ahora:%Y-%m-%d %H:%M} ({ahora.tzinfo.key}), desde "
                   f"`{esquema['archivo']['nombre']}.xlsx`. La antigüedad está calculada a esa fecha; las demás fechas "
                   "son las de los registros. Se regenera completa con cada escritura y no se edita a mano "
