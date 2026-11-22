@@ -2,6 +2,22 @@
 
 Qué trae cada versión de la plantilla y qué hace `/actualizar` en la copia al llegar a ella. Lo escribe el mantenedor (`CONTRIBUTING.md`, «Versión de la plantilla»); en la copia no se edita.
 
+## v2.2 — 2026-11-22
+
+### Qué cambió
+
+- El encaje de una vacante ya no lo decide su peor núcleo: es el promedio de las estrellas que vale cada núcleo según su categoría (directa 5, transferible 3, académica/formativa 1.5, insuficiente 0), redondeado. Dos núcleos directos y uno insuficiente dan ★★★☆☆, no ★☆☆☆☆, y ☆☆☆☆☆ queda solo para cuando ningún núcleo tiene respaldo.
+- Tus evaluaciones guardadas se recalculan desde sus núcleos, sin reevaluarse: algunas cambian de estrellas, y ninguna vence por esto.
+- En Code, la herramienta de registros calcula las estrellas y ordena la tabla resumen: el agente registra la evaluación antes de entregártela. Dentro de un mismo nivel va primero la de mayor encaje exacto, que el detalle de una vacante muestra entre paréntesis: `★★★☆☆ (3.3) · 10/15`.
+- Los pesos están en la línea «Pesos del encaje» de 08/EVAL-ACUERDOS. Si para tu perfil una categoría vale más o menos, puedes cambiarlos con una decisión `EVAL-U##`. Lo que ya habías cambiado en EVAL-ACUERDOS, como el umbral de «antigua», se conserva.
+- Una vacante excluida ya no recibe encaje, ni a pedido.
+- En Web, el agente calcula el encaje con los mismos pesos, y su nota para Code trae los núcleos sin estrellas.
+
+### En la copia
+
+1. **Quitar el encaje guardado (automática):** si la copia tiene `ChambaKit_Registros.xlsx`, corre `.venv/bin/python -I herramientas/registros.py migrar ChambaKit_Registros.xlsx` (en Windows, `.venv\Scripts\python.exe`) antes de cualquier otra orden de la herramienta, que rechaza el archivo mientras tenga la columna. Quita `encaje` de `evaluaciones` y regenera la instantánea con las estrellas calculadas. Muéstrale al titular los conteos y las columnas quitadas. El archivo y `instantanea/` van en el commit del paso 6 de `/actualizar`.
+2. **Categorías de los núcleos (con el titular):** solo si `migrar` listó errores en la acción 1. Ahora comprueba también la categoría de cada núcleo, que antes no se comprobaba, y con un solo error no escribió nada. Por cada núcleo con una categoría escrita de otra forma, propónle al titular la de la lista que le corresponde (`Directa`, `Transferible`, `Académica/formativa` o `Insuficiente`), sin inventarla, y repite la orden con `--correcciones` (11/REG-LOCAL, «Migración») hasta que no queden errores. Esta acción no edita módulos.
+
 ## v2.1 — 2026-10-29
 
 ### Qué cambió

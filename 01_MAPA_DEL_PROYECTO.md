@@ -4,7 +4,7 @@
 
 ## ESTADO — Punto de continuidad
 
-**Versión de la plantilla:** 2.1, de <https://github.com/Ivan-Canedo/ChambaKit> — la de ChambaKit de la que salió esta copia o a la que se actualizó por última vez. En la copia, solo `/actualizar` la cambia.
+**Versión de la plantilla:** 2.2, de <https://github.com/Ivan-Canedo/ChambaKit> — la de ChambaKit de la que salió esta copia o a la que se actualizó por última vez. En la copia, solo `/actualizar` la cambia.
 
 **Estados:** «Sin llenar» espera el paso de `/configurar` que nombra su fila; «Configurado» ya lo pasó.
 
@@ -17,10 +17,10 @@
 | 05 Habilidades y roles | 1.0 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): matriz de evidencias y familias de roles desde 02 y 04 |
 | 06 Empresas | 1.5 | Sin llenar | `/configurar`, paso 7 (Empresas): fichas de las empresas objetivo |
 | 07 Método de búsqueda | 1.9 | Sin llenar | `/configurar`, paso 7 (Empresas): queda listo con la región de 04 y las fichas de 06 |
-| 08 Evaluación | 1.3 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): queda listo con las condiciones de 04 y las familias de 05 |
+| 08 Evaluación | 1.4 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): queda listo con las condiciones de 04 y las familias de 05 |
 | 09 Generación de CV | 1.4 | Sin llenar | `/configurar`, paso 6 (CV base): color del CV |
 | 10 Tendencias | 1.1 | Sin llenar | `/configurar`, paso 8 (Registros): queda listo cuando existen los registros |
-| 11 Esquema de registros | 1.6 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
+| 11 Esquema de registros | 1.7 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
 
 **Orden sugerido:**
 

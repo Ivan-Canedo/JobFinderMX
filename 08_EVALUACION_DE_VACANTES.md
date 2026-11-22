@@ -1,6 +1,6 @@
 # 08 — Evaluación de vacantes
 
-**Versión:** 1.3 — 2026-10-27 — La evaluación desde Web usa la descripción leída o pegada y termina en una nota para Code (EVAL-FLUJO).
+**Versión:** 1.4 — 2026-11-22 — El encaje es el promedio de las estrellas de los núcleos, con los pesos de EVAL-ACUERDOS, y en Code lo calcula la herramienta de registros (EVAL-ENCAJE, EVAL-FLUJO, EVAL-INFORME).
 **Estado:** método de la plantilla. Las condiciones salen de 04 y las familias de 05; queda listo con el paso 5 de `/configurar` (Habilidades y roles).
 **Evaluaciones vigentes desde:** 1.0. Sube a la versión nueva solo si el cambio altera la clasificación de requisitos, las categorías, la elección de núcleos, la cobertura o las condiciones. Un cambio en la fórmula del nivel o en los pesos no lo sube, porque la herramienta recalcula las estrellas desde `nucleos` (EVAL-ENCAJE). Un cambio de 04 tampoco: lo cubre la regla de EVAL-REGISTRO.
 

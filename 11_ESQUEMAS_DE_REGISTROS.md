@@ -1,6 +1,6 @@
 # 11 — Esquema de registros
 
-**Versión:** 1.6 — 2026-10-28 — En Code en la nube, los cambios se integran en `main` al cerrar, y un choque en el archivo de registros se resuelve reimportando (REG-LOCAL, «Historial y respaldo»).
+**Versión:** 1.7 — 2026-11-22 — `encaje` de `evaluaciones` se calcula desde `nucleos`, la herramienta valida la categoría de cada núcleo y `migrar` quita la columna guardada (REG-CAMPOS, REG-ESQUEMA, REG-LOCAL, REG-INSTANTANEA).
 **Estado:** esquema de la plantilla. El paso 8 de `/configurar` (Registros) crea el archivo de registros desde el bloque de REG-ESQUEMA.
 
 ## Responsabilidad
