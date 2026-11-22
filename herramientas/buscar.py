@@ -343,14 +343,32 @@ def sin_generales(texto):
     return " ".join(p for p in normalizar(texto).split() if p not in GENERALES)
 
 
-def nombra_pais(literal, nombres):
-    """La ubicación nombra uno de esos países como una de sus partes, separadas por comas, guiones con espacios,
-    paréntesis o un punto entre palabras, sin contar las palabras generales: «Ciudad, País», «País - Ciudad»,
-    «Remote - País», «MEX.Ciudad». Así otro lugar que contiene el nombre del país («Nuevo País A») no lo nombra.
-    El punto de una abreviatura («U.S.A.», «Edo. A») no separa."""
-    buscados = {sin_generales(n) for n in nombres}
+def partes_ubicacion(literal):
+    """Las partes de una ubicación, en orden, separadas por comas, guiones con espacios, paréntesis, barra, «|»
+    o un punto entre palabras: «Ciudad, País», «País - Ciudad», «Remote - País», «MEX.Ciudad». El punto de una
+    abreviatura («U.S.A.», «Edo. A») no separa. Cada parte va normalizada y sin las palabras generales, y las que
+    quedan vacías no cuentan: «País A (Remote)» tiene una sola parte, «pais a»."""
     partes = re.split(r"\s+[-–]\s+|[,|/()]|(?<=[^\W\d_]{2})\.(?=[^\W\d_]{2})", literal)
-    return any(sin_generales(parte) in buscados for parte in partes)
+    return [p for p in map(sin_generales, partes) if p]
+
+
+def nombres_de_paises(pref):
+    """Los nombres de todos los países de 04, normalizados y sin las palabras generales, como las partes."""
+    return {sin_generales(n) for nombres in pref["paises"].values() for n in nombres}
+
+
+def nombra_pais(literal, nombres):
+    """La ubicación nombra uno de esos países como una de sus partes. Así otro lugar que contiene el nombre del
+    país («Nuevo País A») no lo nombra."""
+    buscados = {sin_generales(n) for n in nombres}
+    return any(parte in buscados for parte in partes_ubicacion(literal))
+
+
+def parte_localidad(literal, pref):
+    """La primera parte de la ubicación que no es un país de 04: «ciudad a» en «Ciudad A, Estado A, País A» y en
+    «XAA.Ciudad A». None si no hay, como en «País A» o «Remote - País A»."""
+    paises = nombres_de_paises(pref)
+    return next((p for p in partes_ubicacion(literal) if p not in paises), None)
 
 
 def paises_nombrados(literal, pref):
