@@ -468,9 +468,10 @@ def region(literales, pref):
     return "Fuera", revisar
 
 
-def es_remota(modalidad):
-    return bool(modalidad) and re.search(r"(?<![^\W_])(?:remot[eoa]s?|teletrabajo)(?![^\W_])",
-                                         normalizar(modalidad)) is not None
+def es_remota(texto):
+    """Una modalidad o una ubicación que dice remoto («Remote», «Remoto», «Teletrabajo»)."""
+    return bool(texto) and re.search(r"(?<![^\W_])(?:remot[eoa]s?|teletrabajo)(?![^\W_])",
+                                     normalizar(texto)) is not None
 
 
 def alcance_remoto(literal, pref, paises=None):
@@ -587,17 +588,37 @@ def listado(r, consulta, total, ids, vistas=frozenset()):
         r["completa"] = r["completa"] and len(ids) == total
 
 
+def modalidad_remota(v):
+    """(remota, contradicción): si la vacante es remota por su modalidad o, si la plataforma no la publica, por su
+    ubicación («País (Remote)»). Si la modalidad publicada dice otra cosa y la ubicación dice remoto, gana la
+    modalidad, y la contradicción es la nota «revisar» con las dos; si no, None (ADR 0009, «Ante la duda»)."""
+    modalidad, ubicacion = v["modalidad_literal"], v["ubicacion_literal"]
+    if modalidad in (None, "", "No publicado"):
+        return es_remota(ubicacion), None
+    if not es_remota(modalidad) and es_remota(ubicacion):
+        return False, (f"la modalidad publicada («{modalidad}») contradice la ubicación («{ubicacion}»): cuenta como "
+                       f"«{modalidad}»; confirmar la modalidad en el anuncio")
+    return es_remota(modalidad), None
+
+
 def repartir(r, v, pref, de_remotas=False, paises=None, remota=None):
     """Las de la región van a vacantes; las remotas de fuera, si las trajo un filtro de remoto ya acotado al alcance
     de 04 (de_remotas) o pueden estar en ese alcance, a remotas_fuera_de_region, y las que pueden estar llevan su
-    ubicación en ubicaciones_por_revisar; las demás solo dejan su ubicación en fuera_de_region. paises: los códigos
+    ubicación en ubicaciones_por_revisar; las demás solo dejan su ubicación en fuera_de_region. Una remota de la
+    región en el alcance no lleva ubicaciones por revisar: ya se acepta como remota. paises: los códigos
     ISO de sus ubicaciones, si la plataforma los publica (alcance_remoto). remota: si es remota, cuando la plataforma
-    lo dice fuera de su modalidad. Devuelve si la vacante se entrega, para leer el detalle solo de esas."""
+    lo dice fuera de su modalidad; si no, modalidad_remota. Devuelve si la vacante se entrega, para leer el detalle
+    solo de esas."""
+    if remota is None:
+        remota, contradiccion = modalidad_remota(v)
+        if contradiccion:
+            v.setdefault("revisar", []).append(contradiccion)
     if v["region_relacionada"] != "Fuera":
+        if remota and (de_remotas or alcance_remoto(v["ubicacion_literal"], pref, paises) == "dentro"):
+            v["ubicaciones_por_revisar"] = []
         r["vacantes"].append(v)
         return True
     if not de_remotas:
-        remota = es_remota(v["modalidad_literal"]) if remota is None else remota
         alcance = alcance_remoto(v["ubicacion_literal"], pref, paises) if remota else "fuera"
         if alcance == "fuera":
             anotar_fuera(r, v["ubicacion_literal"])
@@ -1642,10 +1663,11 @@ def imprimir_revisar(vacantes):
     """Las líneas «revisar» de las vacantes de una empresa, agrupadas para que se lean en un portal grande: una
     «revisar ubicación» por ubicación literal por revisar, con los IDs que la comparten; las de vigencia, una por
     vacante, y cada nota una vez por ID, porque las publicaciones de una requisición repiten la suya
-    (sr_requisiciones). El JSON de cada vacante no cambia."""
+    (sr_requisiciones). Una vacante sin ubicación publicada sale como tal; una remota en el alcance ya no lleva
+    ubicaciones por revisar (repartir). El JSON de cada vacante no cambia."""
     por_ubicacion = {}
     for v in vacantes:
-        if v["ubicaciones_por_revisar"] or v["region_relacionada"] == "Indeterminada":
+        if v["ubicaciones_por_revisar"] or not v["ubicacion_literal"]:
             for u in v["ubicaciones_por_revisar"] or [v["ubicacion_literal"] or "sin ubicación publicada"]:
                 ids = por_ubicacion.setdefault(u, [])
                 if nombre_en_revisar(v) not in ids:

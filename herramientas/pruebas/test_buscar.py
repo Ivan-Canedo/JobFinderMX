@@ -221,8 +221,9 @@ class WorkdayFalso:
     """La API de Workday de un sitio ficticio: robots.txt, facetas y listado por facetas (POST) y detalle (GET).
 
     Cada anuncio es un dict con id, ubicaciones (la primera es la principal), pais y, si no es
-    presencial, modalidad. Como en Workday, los valores de faceta solo existen si algún anuncio los
-    tiene, y parámetros distintos se combinan con «y»."""
+    presencial, modalidad; con modalidad None no publica remoteType, ni en la faceta ni en el detalle.
+    Como en Workday, los valores de faceta solo existen si algún anuncio los tiene, y parámetros
+    distintos se combinan con «y»."""
 
     PLATAFORMA = "workday"
     HOST = "https://acme.wd1.myworkdayjobs.com"
@@ -241,7 +242,7 @@ class WorkdayFalso:
         v = {"locations": a["ubicaciones"][0]}
         if self.faceta_de_pais:
             v["Location_Country"] = a["pais"]
-        if self.faceta_de_remoto:
+        if self.faceta_de_remoto and a.get("modalidad", "On-site") is not None:
             v["remoteType"] = a.get("modalidad", "On-site")
         return v
 
@@ -821,6 +822,59 @@ class ClasificacionDeUbicaciones(ConPortalFalso):
                 self.assertEqual(self.regiones(r), {"R-3": "Indeterminada"})
                 self.assertEqual(self.regiones(r, "remotas_fuera_de_region"), {"R-2": "Fuera"})
                 self.assertIn("[OK] EMP-ACME: 2/2 únicos; 0 en la región; remotas fuera de la región: 1", errores)
+
+    def test_sin_modalidad_publicada_una_ubicacion_remota_cuenta_como_remota(self):
+        bloque = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])], alcance="paises", paises_remoto=["XA"])
+        portal = WorkdayFalso([
+            # Sin remoteType: la faceta de remoto no las trae, solo el listado de la región
+            {"id": "R-1", "pais": "País A", "ubicaciones": ["País A (Remote)"], "modalidad": None},
+            {"id": "R-2", "pais": "País A", "ubicaciones": ["Ciudad A7, País A (Remote)"], "modalidad": None},
+            {"id": "R-3", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]},
+            # Por revisar en la región porque nombra la división sin una localidad aceptada, pero ya es remota en el
+            # alcance
+            {"id": "R-4", "pais": "País A", "ubicaciones": ["Ciudad X, Estado A, País A (Remote)"], "modalidad": None},
+            # Para que el portal tenga faceta de remoto: su listado, acotado a XA, no la trae
+            {"id": "R-9", "pais": "País C", "ubicaciones": ["Ciudad C1, País C"], "modalidad": "Remote"},
+        ])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r), {"R-1": "Indeterminada", "R-3": "Dentro", "R-4": "Indeterminada"})
+        self.assertEqual(self.regiones(r, "remotas_fuera_de_region"), {"R-2": "Fuera"})
+        self.assertEqual({v["job_id"]: v["ubicaciones_por_revisar"] for v in r["vacantes"]},
+                         {"R-1": [], "R-3": [], "R-4": []})
+        self.assertEqual(r["remotas_fuera_de_region"][0]["ubicaciones_por_revisar"], [])
+        self.assertEqual(r["fuera_de_region"], [])
+        self.assertNotIn("revisar ubicación", errores)
+        self.assertNotIn("revisar:", errores)
+
+    def test_si_la_modalidad_publicada_contradice_la_ubicacion_gana_la_modalidad(self):
+        bloque = preferencias([grupo("XA", nombres=["Ciudad A1"])], alcance="paises", paises_remoto=["XA"])
+        portal = WorkdayFalso([
+            {"id": "R-1", "pais": "País A", "ubicaciones": ["País A (Remote)"], "modalidad": "On-site"},
+            {"id": "R-2", "pais": "País A", "ubicaciones": ["Ciudad A7, País A (Remote)"], "modalidad": "On-site"},
+            # Para que el portal tenga faceta de remoto: su listado, acotado a XA, no la trae
+            {"id": "R-9", "pais": "País C", "ubicaciones": ["Ciudad C1, País C"], "modalidad": "Remote"},
+        ])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r), {"R-1": "Indeterminada"})
+        self.assertEqual(r["vacantes"][0]["ubicaciones_por_revisar"], ["País A (Remote)"])
+        self.assertEqual(r["remotas_fuera_de_region"], [])
+        self.assertEqual(r["fuera_de_region"], ["Ciudad A7, País A (Remote)"])
+        self.assertIn("revisar ubicación: País A (Remote) (1 vacante: R-1)", errores)
+        self.assertIn("revisar: R-1 la modalidad publicada («On-site») contradice la ubicación («País A (Remote)»)",
+                      errores)
+
+    def test_sin_remoto_en_04_una_ubicacion_remota_no_cuenta_como_remota_en_el_alcance(self):
+        bloque = preferencias([grupo("XA", nombres=["Ciudad A1"])], alcance="ninguno")
+        portal = WorkdayFalso([
+            {"id": "R-1", "pais": "País A", "ubicaciones": ["País A (Remote)"], "modalidad": None},
+            {"id": "R-2", "pais": "País A", "ubicaciones": ["Ciudad A7, País A (Remote)"], "modalidad": None},
+        ])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r), {"R-1": "Indeterminada"})
+        self.assertEqual(r["vacantes"][0]["ubicaciones_por_revisar"], ["País A (Remote)"])
+        self.assertEqual(r["remotas_fuera_de_region"], [])
+        self.assertEqual(r["fuera_de_region"], ["Ciudad A7, País A (Remote)"])
+        self.assertIn("revisar ubicación: País A (Remote) (1 vacante: R-1)", errores)
 
     def test_una_ciudad_homonima_en_otro_pais_de_04_queda_fuera(self):
         bloque = preferencias([grupo("XA", ["Provincia A1"], ["Ciudad A1"]), grupo("XB", ["Provincia B1"])])

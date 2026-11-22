@@ -1,6 +1,6 @@
 # 06 — Empresas objetivo y fichas
 
-**Versión:** 1.6 — 2026-11-22 — CAT-PLATAFORMAS: en SmartRecruiters, el alcance del remoto lo deciden la tabla de países y la página de cada remota.
+**Versión:** 1.7 — 2026-11-22 — CAT-PLATAFORMAS: en Workday, la faceta de remoto no trae las vacantes sin `remoteType`.
 **Estado:** plantilla sin empresas. Las agrega el paso 7 de `/configurar` (Empresas), cada una con su ficha y la configuración de su plataforma de reclutamiento.
 
 ## CAT-EMPRESAS — Catálogo
@@ -43,6 +43,7 @@ Lo que pone cada plataforma en el bloque de configuración de una ficha y cómo 
 - **`portal`:** esa URL, sin la ruta de una vacante. Puede llevar el idioma (`/<idioma>/<sitio>`).
 - **Listado:** con la faceta de país del portal, por los nombres de `paises` de 04 de cada país de `localidades`. Si el portal no tiene faceta de país, con los valores de su faceta de ubicación que nombran uno de esos países como una de sus partes («País - Ciudad», «Ciudad, País») o una localidad aceptada.
 - **Remoto:** con la faceta de remoto del portal, acotada a los países del remoto si el alcance es `"paises"`. Si no la tiene, con sus ubicaciones «Remote …». Si no hay ninguna de las dos, el script lo avisa con una línea «revisar».
+- **Límite de la faceta de remoto:** no trae las vacantes sin `remoteType`, aunque su ubicación diga «País (Remote)». Las de los países de `localidades` llegan con el listado de la región y cuentan como remotas por su ubicación (07/BUS-ACCESO-CODE, «Modalidad»); las de otros países no llegan por ningún listado.
 - **`consulta`:** `{"facetas": {"<parámetro>": ["<nombre visible>"]}, "texto": "<búsqueda>"}`, con al menos uno de los dos. Reemplaza el listado por países; sirve para una empresa con miles de vacantes en un país grande. Los parámetros y los nombres son los del portal, que aparecen en `facets` de la respuesta del listado; el script busca sus IDs por nombre en cada ejecución y avisa con «revisar» si un nombre ya no aparece.
 - **Vigencia:** `canApply`. `true` = postulación activa; cualquier otro valor sale como «Revisar».
 - **Comprobación de ID:** la ruta del detalle termina en `_<jobReqId>`, a veces con un sufijo `-1` (republicación).
