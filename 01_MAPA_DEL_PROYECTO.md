@@ -13,7 +13,7 @@
 | 00 Instrucciones | 1.5 | Sin llenar | `/configurar`, paso 8 (Registros): crea el archivo de registros |
 | 02 Perfil maestro | 1.0 | Sin llenar | `/configurar`, paso 3 (Perfil maestro): extrae la trayectoria del CV actual y entrevista lo que falte |
 | 03 CV base | 1.0 | Sin llenar | `/configurar`, paso 6 (CV base): redacta el CV en español e inglés desde 02 |
-| 04 Preferencias | 1.1 | Sin llenar | `/configurar`, paso 4 (Preferencias): región, modalidad, sueldo y exclusiones |
+| 04 Preferencias | 1.2 | Sin llenar | `/configurar`, paso 4 (Preferencias): región, modalidad, sueldo y exclusiones |
 | 05 Habilidades y roles | 1.0 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): matriz de evidencias y familias de roles desde 02 y 04 |
 | 06 Empresas | 1.5 | Sin llenar | `/configurar`, paso 7 (Empresas): fichas de las empresas objetivo |
 | 07 Método de búsqueda | 1.9 | Sin llenar | `/configurar`, paso 7 (Empresas): queda listo con la región de 04 y las fichas de 06 |

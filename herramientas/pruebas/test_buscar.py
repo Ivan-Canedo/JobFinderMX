@@ -770,6 +770,27 @@ class ClasificacionDeUbicaciones(ConPortalFalso):
         self.assertEqual(self.regiones(r), {"R-1": "Dentro", "R-4": "Dentro"})
         self.assertEqual(sorted(r["fuera_de_region"]), ["Ciudad A1, País C", "Ciudad B1, Provincia A1, País B"])
 
+    def test_una_ciudad_homonima_de_su_division_solo_cuenta_en_el_lugar_de_la_localidad(self):
+        bloque = preferencias([grupo("XA", ["Estado A", "Valle de A"], ["Estado A", "Valle de A"])],
+                              paises={**PAISES, "XA": ["País A", "XAA"]})
+        portal = WorkdayFalso([
+            {"id": "R-1", "pais": "País A", "ubicaciones": ["Estado A, País A"]},
+            {"id": "R-2", "pais": "País A", "ubicaciones": ["Estado A, Estado A, País A"]},
+            {"id": "R-3", "pais": "País A", "ubicaciones": ["Ciudad X, Estado A, País A"]},
+            {"id": "R-4", "pais": "País A", "ubicaciones": ["XAA.Estado A"]},
+            # Con una palabra general en el nombre
+            {"id": "R-5", "pais": "País A", "ubicaciones": ["Valle de A, País A"]},
+            # Otro lugar que contiene el nombre no es la localidad
+            {"id": "R-6", "pais": "País A", "ubicaciones": ["Nuevo Estado A, País A"]},
+        ])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r), {"R-1": "Dentro", "R-2": "Dentro", "R-3": "Indeterminada",
+                                            "R-4": "Dentro", "R-5": "Dentro", "R-6": "Indeterminada"})
+        revisar = {v["job_id"]: v["ubicaciones_por_revisar"] for v in r["vacantes"]}
+        self.assertEqual(revisar["R-3"], ["Ciudad X, Estado A, País A"])
+        self.assertEqual(revisar["R-6"], ["Nuevo Estado A, País A"])
+        self.assertIn("revisar ubicación: R-3 Ciudad X, Estado A, País A", errores)
+
     def test_avisa_por_cada_pais_de_la_region_que_el_portal_no_ofrece(self):
         bloque = preferencias([grupo("XA", nombres=["Ciudad A1"]), grupo("XB", nombres=["Ciudad B1"])])
         portal = WorkdayFalso([{"id": "R-1", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]}])

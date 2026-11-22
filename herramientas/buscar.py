@@ -395,11 +395,17 @@ def clasificar_ubicacion(literal, pref):
     # Una ubicación que nombra otro país de 04, y no el del grupo, no es de ese grupo: hay ciudades y
     # divisiones homónimas entre países
     nombrados = paises_nombrados(literal, pref)
+    localidad = parte_localidad(literal, pref)
     for g in pref["localidades"]:
         if nombrados and g["pais"] not in nombrados:
             continue
         if g["nombres"]:
-            if nombra(s, g["nombres"]):
+            # Una ciudad homónima de su división cuenta como localidad solo en el lugar de la localidad;
+            # en otro lugar nombra la división
+            divisiones = {normalizar(d) for d in g["divisiones"]}
+            homonimas = {sin_generales(n) for n in g["nombres"] if normalizar(n) in divisiones}
+            otras = [n for n in g["nombres"] if normalizar(n) not in divisiones]
+            if nombra(s, otras) or localidad in homonimas:
                 return "dentro"
             # Nombra su división sin una localidad aceptada: puede estar dentro
             revisar = revisar or nombra(s, g["divisiones"])

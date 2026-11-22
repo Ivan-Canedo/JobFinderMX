@@ -1,6 +1,6 @@
 # 04 — Preferencias laborales
 
-**Versión:** 1.1 — 2026-10-29 — `paises` lleva también el código alfa-3 del país.
+**Versión:** 1.2 — 2026-11-22 — Una ciudad homónima de su división cuenta como localidad solo en el lugar de la localidad.
 **Estado:** plantilla sin llenar. Lo llena el paso 4 de `/configurar` (Preferencias) con las respuestas del titular; el bloque de PREF-UBICACION no trae valores.
 
 ## PREF-USO — Interpretación
@@ -67,6 +67,7 @@ Dónde acepta trabajar el titular y desde dónde acepta vacantes remotas. Los lu
 **Cómo se lee un grupo de `localidades`:**
 
 - **Con `nombres`:** acepta solo esas localidades. Una ubicación que nombra una de sus `divisiones`, o solo su país, sin nombrar ninguna localidad aceptada queda por revisar, porque puede estar dentro.
+  - **Ciudad homónima de su división:** un nombre que también está en `divisiones` cuenta como la localidad solo cuando es la parte de la localidad, la primera sin contar las que son un país; en otro lugar nombra la división. Con «Estado A» en `nombres` y en `divisiones`, «Estado A, País A» y «XAA.Estado A» están dentro, y «Ciudad X, Estado A, País A» queda por revisar.
 - **Sin `nombres`, con `divisiones`:** acepta cualquier localidad de esas divisiones. Una ubicación que solo nombra el país queda por revisar.
 - **Sin `nombres` ni `divisiones`:** acepta cualquier localidad del país.
 
