@@ -48,6 +48,8 @@ def usar_copia(ruta):
 
 
 usar_copia(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # por defecto, la copia del script
+# La tabla de países es de la plantilla: se lee junto al script, también con --copia (ADR 0009)
+TABLA_DE_PAISES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "paises.json")
 
 
 class Fallo(Exception):
@@ -159,6 +161,38 @@ def leer_preferencias(ruta):
     if not (isinstance(p["moneda"], str) and re.fullmatch(r"[A-Z]{3}", p["moneda"])):
         mal(f"moneda debe ser un código ISO 4217 de tres letras mayúsculas; dice {p['moneda']!r}.")
     return p
+
+
+def leer_tabla_de_paises(ruta):
+    """La tabla de países de la plantilla: código ISO 3166-1 alfa-2 → sus nombres (los de CLDR en inglés y en español
+    que una ubicación puede escribir como una de sus partes, el alfa-3 y formas usuales de los portales)."""
+    def mal(mensaje):
+        error(f"{ruta}: {mensaje}; es un archivo de la plantilla, junto a buscar.py, y sin ella el script no reconoce "
+              "los países que 04 no nombra.")
+
+    try:
+        with open(ruta, encoding="utf-8") as f:
+            tabla = json.load(f)
+    except OSError as e:
+        mal(f"no se pudo leer la tabla de países ({e.strerror})")
+    except ValueError as e:
+        mal(f"la tabla de países no es JSON válido ({e})")
+    if not isinstance(tabla, dict) or not all(re.fullmatch(r"[A-Z]{2}", c) and lista_de_textos(n) and n
+                                              for c, n in tabla.items()):
+        mal("la tabla de países debe ser un objeto: código ISO de dos letras mayúsculas → lista de nombres")
+    return tabla
+
+
+def paises_reconocidos(tabla, paises):
+    """{código ISO: nombres normalizados como las partes de una ubicación} de los países que reconoce el script: los de
+    la tabla, con los de paises de 04 sumados al país de su código. Si un nombre de 04 es de otro país en la tabla,
+    gana 04 y ese nombre deja de contar para el otro."""
+    de_04 = {c: {sin_generales(n) for n in nombres} - {""} for c, nombres in paises.items()}
+    de_04_todos = set().union(*de_04.values())
+    reconocidos = {c: {sin_generales(n) for n in nombres} - de_04_todos - {""} for c, nombres in tabla.items()}
+    for c, nombres in de_04.items():
+        reconocidos[c] = reconocidos.get(c, set()) | nombres
+    return reconocidos
 
 
 def leer_catalogo(ruta):
@@ -353,8 +387,8 @@ def partes_ubicacion(literal):
 
 
 def nombres_de_paises(pref):
-    """Los nombres de todos los países de 04, normalizados y sin las palabras generales, como las partes."""
-    return {sin_generales(n) for nombres in pref["paises"].values() for n in nombres}
+    """Los nombres de todos los países que reconoce el script (paises_reconocidos)."""
+    return set().union(*pref["reconocidos"].values())
 
 
 def nombra_pais(literal, nombres):
@@ -365,14 +399,16 @@ def nombra_pais(literal, nombres):
 
 
 def parte_localidad(literal, pref):
-    """La primera parte de la ubicación que no es un país de 04: «ciudad a» en «Ciudad A, Estado A, País A» y en
-    «XAA.Ciudad A». None si no hay, como en «País A» o «Remote - País A»."""
+    """La primera parte de la ubicación que no es un país reconocido: «ciudad a» en «Ciudad A, Estado A, País A», en
+    «XAA.Ciudad A» y en «Country Z, Ciudad Z». None si no hay, como en «País A» o «Remote - País A»."""
     paises = nombres_de_paises(pref)
     return next((p for p in partes_ubicacion(literal) if p not in paises), None)
 
 
 def paises_nombrados(literal, pref):
-    return {c for c, nombres in pref["paises"].items() if nombra_pais(literal, nombres)}
+    """Los códigos de los países reconocidos que la ubicación nombra como una de sus partes."""
+    partes = set(partes_ubicacion(literal))
+    return {c for c, nombres in pref["reconocidos"].items() if nombres & partes}
 
 
 def paises_region(pref):
@@ -383,7 +419,7 @@ def paises_region(pref):
 def demasiado_general(s, pref):
     """La ubicación normalizada s no nombra ningún lugar fuera de los países de la región: puede estar dentro."""
     for c in paises_region(pref):
-        for n in sorted(pref["paises"][c], key=len, reverse=True):
+        for n in sorted(pref["reconocidos"][c], key=len, reverse=True):
             s = re.sub(palabra(n), " ", s)
     return all(p in GENERALES for p in re.findall(r"[^\W\d_]+", s))
 
@@ -437,15 +473,17 @@ def es_remota(modalidad):
                                          normalizar(modalidad)) is not None
 
 
-def en_alcance_remoto(literal, pref, paises=None):
-    """Una remota está en el alcance del remoto de 04, o puede estarlo porque no nombra ningún país de 04.
-    paises: los códigos ISO de sus ubicaciones, si la plataforma los publica; deciden mejor que los nombres,
-    porque también reconocen los países que 04 no nombra."""
+def alcance_remoto(literal, pref, paises=None):
+    """«dentro», «revisar» o «fuera»: una remota contra el alcance del remoto de 04. Con el alcance "paises", deciden
+    los códigos ISO de sus ubicaciones (paises), si la plataforma los publica; si no, los países reconocidos que nombra:
+    alguno del alcance, dentro; otros, fuera; ninguno, puede estar y queda por revisar (ADR 0009)."""
     alcance = pref["remoto"]["alcance"]
     if alcance != "paises":
-        return alcance == "cualquiera"
+        return "dentro" if alcance == "cualquiera" else "fuera"
     nombrados = set(paises or ()) or paises_nombrados(literal or "", pref)
-    return not nombrados or bool(nombrados & set(pref["remoto"]["paises"]))
+    if not nombrados:
+        return "revisar"
+    return "dentro" if nombrados & set(pref["remoto"]["paises"]) else "fuera"
 
 
 def sin_remotas(pref, remotas):
@@ -549,18 +587,24 @@ def listado(r, consulta, total, ids, vistas=frozenset()):
         r["completa"] = r["completa"] and len(ids) == total
 
 
-def repartir(r, v, pref, de_remotas=False, paises=None):
+def repartir(r, v, pref, de_remotas=False, paises=None, remota=None):
     """Las de la región van a vacantes; las remotas de fuera, si las trajo un filtro de remoto ya acotado al alcance
-    de 04 (de_remotas) o están en ese alcance, a remotas_fuera_de_region; las demás solo dejan su ubicación en
-    fuera_de_region. paises: los códigos ISO de sus ubicaciones, si la plataforma los publica (en_alcance_remoto).
-    Devuelve si la vacante se entrega, para leer el detalle solo de esas."""
+    de 04 (de_remotas) o pueden estar en ese alcance, a remotas_fuera_de_region, y las que pueden estar llevan su
+    ubicación en ubicaciones_por_revisar; las demás solo dejan su ubicación en fuera_de_region. paises: los códigos
+    ISO de sus ubicaciones, si la plataforma los publica (alcance_remoto). remota: si es remota, cuando la plataforma
+    lo dice fuera de su modalidad. Devuelve si la vacante se entrega, para leer el detalle solo de esas."""
     if v["region_relacionada"] != "Fuera":
         r["vacantes"].append(v)
-    elif de_remotas or (es_remota(v["modalidad_literal"]) and en_alcance_remoto(v["ubicacion_literal"], pref, paises)):
-        r["remotas_fuera_de_region"].append(v)
-    else:
-        anotar_fuera(r, v["ubicacion_literal"])
-        return False
+        return True
+    if not de_remotas:
+        remota = es_remota(v["modalidad_literal"]) if remota is None else remota
+        alcance = alcance_remoto(v["ubicacion_literal"], pref, paises) if remota else "fuera"
+        if alcance == "fuera":
+            anotar_fuera(r, v["ubicacion_literal"])
+            return False
+        if alcance == "revisar":
+            v["ubicaciones_por_revisar"].append(v["ubicacion_literal"])
+    r["remotas_fuera_de_region"].append(v)
     return True
 
 
@@ -1096,8 +1140,7 @@ def wk_recorrer(r, pref, eid, cuenta, filtros, nombre, vistas, de_remotas=False)
             vistas.add(f["shortcode"])
             v = wk_vacante(pref, eid, cuenta, f)
             codigos = wk_codigos(f)
-            remota = f.get("remote") is True and en_alcance_remoto(v["ubicacion_literal"], pref, codigos)
-            if repartir(r, v, pref, de_remotas or remota, codigos):
+            if repartir(r, v, pref, de_remotas, codigos, remota=True if f.get("remote") is True else None):
                 wk_detalle(v, f["shortcode"])
     return f"{filtro}: {len(ids)} únicos de {total}"
 
@@ -1348,7 +1391,7 @@ def sr_remotas(r, pref, eid, empresa, vistas):
     "paises", lo decide el lugar de cada una. Devuelve cómo se revisaron."""
     def puede_estar(lugares):
         # El alcance, con los lugares juntos: si el sitio no dice cómo agrupa, uno puede no ser un lugar («Full-time»)
-        return sr_en_la_region(lugares, pref) or en_alcance_remoto(" | ".join(lugares), pref)
+        return sr_en_la_region(lugares, pref) or alcance_remoto(" | ".join(lugares), pref) != "fuera"
 
     return "Filtro locationType=REMOTE del sitio, " + sr_recorrer(
         r, pref, eid, empresa, {"locationType": "REMOTE"}, "Remotas", vistas, puede_estar,
@@ -1639,6 +1682,7 @@ def main():
             ap.error(f"--copia: {a.copia!r} no existe o no es una carpeta")
         usar_copia(a.copia)
     pref = leer_preferencias(MODULO_04)
+    pref["reconocidos"] = paises_reconocidos(leer_tabla_de_paises(TABLA_DE_PAISES), pref["paises"])
     catalogo = leer_catalogo(MODULO_06)
     pedidas = [e.upper() for e in a.empresas] or list(catalogo)
     desconocidas = [e for e in pedidas if e not in catalogo]

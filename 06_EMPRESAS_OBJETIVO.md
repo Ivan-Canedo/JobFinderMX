@@ -1,6 +1,6 @@
 # 06 — Empresas objetivo y fichas
 
-**Versión:** 1.5 — 2026-10-29 — CAT-PLATAFORMAS describe el 429 real con que Workable bloquea las IP de la nube.
+**Versión:** 1.6 — 2026-11-22 — CAT-PLATAFORMAS: en SmartRecruiters, el alcance del remoto lo deciden la tabla de países y la página de cada remota.
 **Estado:** plantilla sin empresas. Las agrega el paso 7 de `/configurar` (Empresas), cada una con su ficha y la configuración de su plataforma de reclutamiento.
 
 ## CAT-EMPRESAS — Catálogo
@@ -122,8 +122,12 @@ Lo que pone cada plataforma en el bloque de configuración de una ficha y cómo 
   - **Por otro campo:** el lugar es el texto bajo el título de cada publicación, y se completan todos los grupos.
   - **Sin ningún «Show more»:** se prueban los dos.
 
-  Se lee la página de cada publicación que puede estar en la región o nombra uno de sus países, y el lugar de la página decide la región. Un lugar del listado que no nombra ningún país de 04, como «Ciudad, Estado», lo decide la página de la primera publicación con ese lugar.
-- **Remoto:** con el filtro `locationType=REMOTE` del sitio, que trae las remotas de todos los países; se lista antes que la región, porque el listado no dice la modalidad. Con el alcance `"paises"`, lo decide el nombre del país en el lugar de cada remota, porque el sitio no publica su código ISO: una remota de un país que 04 no nombra puede estar en el alcance y se entrega.
+  Se lee la página de cada publicación que puede estar en la región o nombra uno de sus países, y el lugar de la página decide la región. Un lugar del listado que no nombra ningún país reconocido, como «Ciudad, Estado», lo decide la página de la primera publicación con ese lugar. El script reconoce los países de su tabla de países (`herramientas/paises.json`, de la plantilla) y los de `paises` de 04, que mandan sobre ella.
+- **Remoto:** con el filtro `locationType=REMOTE` del sitio, que trae las remotas de todos los países; se lista antes que la región, porque el listado no dice la modalidad. Con el alcance `"paises"`, deciden los países reconocidos en el lugar de cada remota, porque el sitio no publica su código ISO:
+  - **Un país del alcance en el listado:** se lee su página y se entrega.
+  - **Solo países reconocidos fuera del alcance:** su página no se lee, y su lugar queda en `fuera_de_region`.
+  - **Ningún país reconocido**, como «Ciudad, Estado»: se lee su página, y decide su país (`addressCountry`).
+  - **Tampoco en la página:** puede estar en el alcance; se entrega con su ubicación en `ubicaciones_por_revisar` y sale como «revisar ubicación» (ADR 0009).
 - **`consulta`:** `{"grupos": ["<nombre visible del grupo>"], "texto": "<búsqueda>"}`, con al menos uno de los dos. Reemplaza el listado de la región:
   - **`grupos`:** nombres de grupo del sitio de carreras (ubicaciones o departamentos), como aparecen en él. El script avisa con «revisar» si uno ya no aparece.
   - **`texto`:** la búsqueda del sitio (`search`), que es aproximada: también trae publicaciones que no corresponden.

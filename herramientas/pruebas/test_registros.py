@@ -21,7 +21,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from test_buscar import WorkdayFalso, ficha, grupo, preferencias
+from test_buscar import TABLA_DE_PAISES, WorkdayFalso, ficha, grupo, preferencias
 from test_buscar import modulo_04 as modulo_04_con_region, modulo_06 as modulo_06_con_fichas
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -799,6 +799,8 @@ class Importar(CopiaFicticia):
     def setUp(self):
         super().setUp()
         shutil.copy(RAIZ / "herramientas" / "buscar.py", self.dir / "herramientas")
+        (self.dir / "herramientas" / "paises.json").write_text(json.dumps(TABLA_DE_PAISES, ensure_ascii=False),
+                                                                encoding="utf-8")
         (self.dir / "04_PREFERENCIAS_LABORALES.md").write_text(
             modulo_04_con_region(preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])], alcance="cualquiera")),
             encoding="utf-8")

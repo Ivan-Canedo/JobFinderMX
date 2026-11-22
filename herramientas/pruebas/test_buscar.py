@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import unittest
 import urllib.error
 import urllib.parse
@@ -31,6 +32,9 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "herramientas" / "buscar.py"
 
 PAISES = {"XA": ["País A", "Country A"], "XB": ["País B", "Country B"], "XC": ["País C", "Country C"]}
+# La tabla de países que lee el script junto a sí mismo, ficticia: las pruebas no dependen de CLDR. «Tierra Z» es
+# también un nombre de XA en la prueba de la prioridad de 04
+TABLA_DE_PAISES = {"XY": ["Country Y", "País Y", "XYY"], "XZ": ["Country Z", "País Z", "XZZ", "Tierra Z"]}
 
 
 def preferencias(localidades, alcance="ninguno", paises_remoto=(), **cambios):
@@ -70,6 +74,8 @@ class CopiaFicticia(unittest.TestCase):
         self.dir = pathlib.Path(self._tmp.name)
         (self.dir / "herramientas").mkdir()
         shutil.copy(SCRIPT, self.dir / "herramientas")
+        (self.dir / "herramientas" / "paises.json").write_text(json.dumps(TABLA_DE_PAISES, ensure_ascii=False),
+                                                                encoding="utf-8")
 
     def tearDown(self):
         self._tmp.cleanup()
@@ -174,6 +180,41 @@ class ConfiguracionFaltante(CopiaFicticia):
 
     def test_con_una_copia_que_no_existe_falla_y_la_nombra(self):
         self.assertFallaSinBuscar(self.correr("--copia", str(self.dir / "no existe")), "--copia", "no existe")
+
+    def test_sin_la_tabla_de_paises_o_con_una_que_no_sirve_falla_con_un_mensaje_claro(self):
+        tabla = self.dir / "herramientas" / "paises.json"
+        casos = {"ausente": None, "JSON inválido": '{"XZ": ["Country Z"],}', "código en minúsculas": '{"xz": ["Z"]}',
+                 "país sin nombres": '{"XZ": []}'}
+        for caso, texto in casos.items():
+            with self.subTest(caso):
+                tabla.unlink(missing_ok=True)
+                if texto is not None:
+                    tabla.write_text(texto, encoding="utf-8")
+                self.escribir(modulo_04(preferencias([grupo("XA", nombres=["Ciudad A1"])])), modulo_06({}))
+                self.assertFallaSinBuscar(self.correr(), "paises.json", "tabla de países")
+
+
+class TablaDePaises(unittest.TestCase):
+    """La tabla real de la plantilla. Solo su formato: las pruebas de la lógica usan una ficticia."""
+
+    def test_cada_pais_tiene_su_codigo_alfa_2_y_nombres_que_no_repite_otro_pais(self):
+        tabla = json.loads((RAIZ / "herramientas" / "paises.json").read_text(encoding="utf-8"))
+        self.assertIsInstance(tabla, dict)
+        self.assertGreater(len(tabla), 200)
+        duenos = {}
+        for codigo, nombres in tabla.items():
+            with self.subTest(codigo):
+                self.assertRegex(codigo, r"^[A-Z]{2}$")
+                self.assertIsInstance(nombres, list)
+                self.assertTrue(nombres)
+                for n in nombres:
+                    self.assertIsInstance(n, str)
+                    self.assertTrue(n.strip())
+                    # Como compara el script: sin mayúsculas ni acentos
+                    sin_acentos = "".join(c for c in unicodedata.normalize("NFKD", n.casefold())
+                                          if not unicodedata.combining(c))
+                    duenos.setdefault(" ".join(sin_acentos.split()), set()).add(codigo)
+        self.assertEqual({n: d for n, d in duenos.items() if len(d) > 1}, {})
 
 
 class WorkdayFalso:
@@ -1437,7 +1478,7 @@ class AdaptadorDeSmartRecruiters(ConPortalFalso):
             publicacion("1", "Ciudad A1, País A"),
             publicacion("2", "Ciudad A2, País A", modalidad="remote"),
             publicacion("3", "Ciudad C1, País C", modalidad="remote"),
-            # Un país que 04 no nombra: por el nombre, puede estar en el alcance
+            # Un país que no reconocen 04 ni la tabla: puede estar en el alcance, y queda por revisar
             publicacion("4", "Ciudad D1, País D", modalidad="remote"),
             publicacion("5", "Ciudad B1, País B", modalidad="hybrid"),
         ]
@@ -1456,9 +1497,45 @@ class AdaptadorDeSmartRecruiters(ConPortalFalso):
                 self.assertEqual(sorted(portal.detalles), detalles + ["5"])
                 self.assertEqual(self.regiones(r), {"R5": "Dentro"})
                 self.assertEqual(self.regiones(r, "remotas_fuera_de_region"), remotas)
+                por_revisar = {v["job_id"]: v["ubicaciones_por_revisar"] for v in r["remotas_fuera_de_region"]}
+                self.assertEqual(por_revisar["R4"], ["Ciudad D1, Región X, País D"] if alcance == "paises" else [])
                 self.assertEqual(r["fuera_de_region"], fuera)
                 self.assertEqual((r["total_reportado"], r["unicos"], r["completa"]), (5, 5, True))
                 self.assertIn("locationType=REMOTE", r["remotas_revision"])
+
+    def test_con_el_alcance_paises_una_remota_de_un_pais_reconocido_fuera_del_alcance_queda_fuera(self):
+        portal = SmartRecruitersFalso([
+            # Un país de la tabla, fuera del alcance: la página no se pide
+            publicacion("1", "Ciudad Z, Country Z", modalidad="remote"),
+            # Un lugar que contiene el nombre de un país de 04 no lo nombra
+            publicacion("2", "Nuevo País A, Country Z", modalidad="remote"),
+            # Sin país reconocido en el listado: decide el addressCountry de su página
+            publicacion("3", "Ciudad Z, ZZ", modalidad="remote", detalle=("Ciudad Z", "ZZ", "Country Z")),
+            publicacion("4", "Ciudad Y, ZZ", modalidad="remote", detalle=("Ciudad Y", "ZZ", "País A")),
+            # Sin país en ninguna parte: puede estar en el alcance, y queda por revisar
+            publicacion("5", "Ciudad Q, QQ", modalidad="remote", detalle=("Ciudad Q", "QQ", "")),
+        ])
+        bloque = preferencias([grupo("XB", nombres=["Ciudad B1"])], alcance="paises", paises_remoto=["XA"])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(sorted(portal.detalles), ["3", "4", "5"])
+        self.assertEqual(self.regiones(r, "remotas_fuera_de_region"), {"R4": "Fuera", "R5": "Fuera"})
+        revisar = {v["job_id"]: v["ubicaciones_por_revisar"] for v in r["remotas_fuera_de_region"]}
+        self.assertEqual(revisar, {"R4": [], "R5": ["Ciudad Q, QQ"]})
+        # Sin «Show more», el sitio no dice cómo agrupa: el lugar del listado lleva también el texto bajo el título
+        self.assertEqual(sorted(r["fuera_de_region"]), ["Ciudad Z, Country Z | Full-time", "Ciudad Z, ZZ, Country Z",
+                                                        "Nuevo País A, Country Z | Full-time"])
+        self.assertIn("revisar ubicación: Ciudad Q, QQ (1 vacante: R5)", errores)
+        self.assertNotIn("R4", "".join(linea for linea in errores.splitlines() if "revisar" in linea))
+
+    def test_un_nombre_de_04_que_la_tabla_da_a_otro_pais_cuenta_para_el_pais_de_04(self):
+        portal = SmartRecruitersFalso([publicacion("1", "Ciudad Q, Tierra Z", modalidad="remote"),
+                                       publicacion("2", "Ciudad Q, Country Z", modalidad="remote")])
+        bloque = preferencias([grupo("XB", nombres=["Ciudad B1"])], alcance="paises", paises_remoto=["XA"],
+                              paises={**PAISES, "XA": ["País A", "Country A", "Tierra Z"]})
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r, "remotas_fuera_de_region"), {"R1": "Fuera"})
+        self.assertEqual(r["remotas_fuera_de_region"][0]["ubicaciones_por_revisar"], [])
+        self.assertEqual(r["fuera_de_region"], ["Ciudad Q, Country Z | Full-time"])
 
     def test_la_consulta_de_la_ficha_elige_grupos_y_busca_texto(self):
         portal = SmartRecruitersFalso([publicacion("1", "Ciudad A1, País A"), publicacion("2", "Ciudad A2, País A"),
