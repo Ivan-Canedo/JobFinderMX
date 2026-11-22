@@ -1,6 +1,6 @@
 # 07 — Método de búsqueda
 
-**Versión:** 1.9 — 2026-11-22 — `informe` ordena la tabla resumen y la evaluación de una nota de Web se registra sin estrellas (BUS-REGISTRO, BUS-PUNTUAL).
+**Versión:** 1.10 — 2026-11-22 — Las líneas «revisar» del script se agrupan por ubicación y por requisición (BUS-ACCESO-CODE, BUS-REGISTRO).
 **Estado:** método de la plantilla. Queda listo con la región de 04 y las fichas de 06, en el paso 7 de `/configurar` (Empresas).
 
 ## BUS-ALCANCE — Responsabilidad
@@ -66,7 +66,12 @@ python3 -I herramientas/buscar.py [EMP-ID ...] [--salida archivo.json] [--sin-re
 - **Host fuera de la lista (Code en la nube):** si el `[FALLO]` dice que el host no está en la lista de dominios del entorno de la nube, el agente le da al titular el host con que termina el mensaje, para que lo agregue en claude.ai/code (entorno → red → Custom). Con el host agregado, se vuelve a buscar esa empresa; hasta entonces queda sin hacer, como cualquier `[FALLO]`. El mensaje de `robots.txt` que no se pudo leer es otro caso: ahí falló la petición al portal.
 - **IP bloqueada (Code en la nube):** si el `[FALLO]` dice que el sitio bloquea las IP de Code en la nube y que la empresa se busca en Code local, el sitio respondió HTTP 429 con el `error code: 1015` de Cloudflare o con un `Retry-After` de más de un minuto, como hace Workable con todas sus cuentas (06/CAT-PLATAFORMAS). El script no lo reintenta, porque esperar no lo resuelve. Esa empresa queda como no revisada en la cobertura (BUS-COBERTURA) y el agente le dice al titular que la busque en Code local. En Code local, el mismo 429 se reintenta como cualquier límite pasajero, con la espera de `Retry-After`.
 - **Qué no hace:** filtrar por familia ROL, evaluar ni escribir en los registros. Eso sigue en los pasos 4–9.
-- **Resumen en pantalla:** una línea por empresa (`[OK]`, `[INCOMPLETA]`, `[SIN TOTAL]` o `[FALLO]`; únicos/total, en la región y remotas), una línea `cobertura:` si la fuente no publica total, y las líneas «revisar» que hay que atender antes de registrar, también las de las remotas fuera de la región. Una vacante sin Job ID publicado se nombra por su URL.
+- **Resumen en pantalla:** una línea por empresa (`[OK]`, `[INCOMPLETA]`, `[SIN TOTAL]` o `[FALLO]`; únicos/total, en la región y remotas), una línea `cobertura:` si la fuente no publica total, y las líneas «revisar» que hay que atender antes de registrar, también las de las remotas fuera de la región. Una vacante sin Job ID publicado se nombra por su URL. Las líneas se agrupan para que un portal grande se pueda leer:
+  - **«revisar ubicación»:** una por ubicación literal por revisar de cada empresa, con el número y los IDs de las vacantes que la comparten, como «revisar ubicación: Ciudad X, Estado A, País A (3 vacantes: R-1, R-2, R-3)». Una vacante con dos ubicaciones por revisar sale en las dos líneas.
+  - **Requisición con varias publicaciones:** una sola línea «revisar» con su Job ID, el número de publicaciones y sus URL.
+  - **Las demás,** como «revisar vigencia», van una por vacante.
+
+  El JSON no cambia: cada vacante conserva sus `ubicaciones_por_revisar` y sus notas `revisar`.
 
 ## BUS-ACCESO-WEB — Lectura de una vacante desde Web
 
@@ -157,7 +162,7 @@ Si la herramienta rechaza la entrada, no escribe nada y dice todos los errores: 
 }
 ```
 
-- **`revisar`:** una decisión por cada línea «revisar ubicación» (`region_relacionada` con `motivo_region`) y por cada «revisar vigencia» (`estado_vigencia` con `motivo`, según BUS-VIGENCIA). Cada vacante se nombra como en su línea: por su Job ID o, sin él, por su URL. Una requisición con varias publicaciones (su línea «revisar» lo dice) se registra como una sola vacante, con todas sus ubicaciones, y pide su región. Una decisión también corrige una vacante sin línea «revisar», por ejemplo con la vigencia que se vio en su detalle.
+- **`revisar`:** una decisión por cada vacante que nombra una línea «revisar ubicación» (`region_relacionada` con `motivo_region`): una por cada ID de una línea agrupada, y una sola por vacante aunque salga en dos líneas y por cada «revisar vigencia» (`estado_vigencia` con `motivo`, según BUS-VIGENCIA). Cada vacante se nombra como en su línea: por su Job ID o, sin él, por su URL. Una requisición con varias publicaciones (su línea «revisar» lo dice) se registra como una sola vacante, con todas sus ubicaciones, y pide su región. Una decisión también corrige una vacante sin línea «revisar», por ejemplo con la vigencia que se vio en su detalle.
 - **Líneas «revisar» de una empresa,** como un filtro que el portal no ofrece: `importar` las copia a la cobertura. Lo que dejan sin revisar va en `no_revisado_pendientes`.
 - **`[FALLO]`:** cada empresa que falló se nombra, por su EMP-ID, en `no_revisado_pendientes`. Una que falló por un bloqueo de Code en la nube (BUS-ACCESO-CODE) se nombra con el motivo, por ejemplo «EMP-ID: apply.workable.com bloquea las IP de Code en la nube; buscar en Code local».
 - **Sin decisión:** si queda una línea «revisar» sin decidir o un `[FALLO]` sin declarar, `importar` no escribe nada.

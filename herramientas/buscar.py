@@ -1595,6 +1595,37 @@ ADAPTADORES = {"workday": workday, "eightfold": eightfold, "workable": workable,
                "oraclerecruitingcloud": oraclerecruitingcloud}
 
 
+def imprimir_revisar(vacantes):
+    """Las líneas «revisar» de las vacantes de una empresa, agrupadas para que se lean en un portal grande: una
+    «revisar ubicación» por ubicación literal por revisar, con los IDs que la comparten; las de vigencia, una por
+    vacante, y cada nota una vez por ID, porque las publicaciones de una requisición repiten la suya
+    (sr_requisiciones). El JSON de cada vacante no cambia."""
+    por_ubicacion = {}
+    for v in vacantes:
+        if v["ubicaciones_por_revisar"] or v["region_relacionada"] == "Indeterminada":
+            for u in v["ubicaciones_por_revisar"] or [v["ubicacion_literal"] or "sin ubicación publicada"]:
+                ids = por_ubicacion.setdefault(u, [])
+                if nombre_en_revisar(v) not in ids:
+                    ids.append(nombre_en_revisar(v))
+    for u, ids in por_ubicacion.items():
+        cuantas = "1 vacante" if len(ids) == 1 else f"{len(ids)} vacantes"
+        print(f"    revisar ubicación: {u} ({cuantas}: {', '.join(ids)})", file=sys.stderr)
+    dichas = set()
+    for v in vacantes:
+        nombre = nombre_en_revisar(v)
+        if v["estado_vigencia"] != "Confirmada abierta" or "detalle no consultado" in (v["motivo"] or ""):
+            print(f"    revisar vigencia: {nombre} {v['motivo']}", file=sys.stderr)
+        for nota in v.get("revisar", []):
+            if (nombre, nota) not in dichas:
+                dichas.add((nombre, nota))
+                print(f"    revisar: {nombre} {nota}", file=sys.stderr)
+
+
+def nombre_en_revisar(v):
+    """Cómo se nombra una vacante en sus líneas «revisar»: sin Job ID publicado (11/REG-IDENTIDAD), por su URL."""
+    return v["job_id"] if v["job_id"] not in (None, "No publicado") else v["url_oficial"] or v["url_fuente"]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=f"Plataformas con adaptador: {', '.join(ADAPTADORES)}.")
@@ -1645,15 +1676,7 @@ def main():
             print(f"    cobertura: {r['verificacion_cobertura']}", file=sys.stderr)
         for nota in r["revisar"]:
             print(f"    revisar: {nota}", file=sys.stderr)
-        for v in r["vacantes"] + r["remotas_fuera_de_region"]:
-            # Sin Job ID publicado (11/REG-IDENTIDAD), la vacante se nombra por su URL
-            ident = v["job_id"] if v["job_id"] not in (None, "No publicado") else v["url_oficial"] or v["url_fuente"]
-            if v["ubicaciones_por_revisar"] or v["region_relacionada"] == "Indeterminada":
-                print(f"    revisar ubicación: {ident} {v['ubicacion_literal']}", file=sys.stderr)
-            if v["estado_vigencia"] != "Confirmada abierta" or "detalle no consultado" in (v["motivo"] or ""):
-                print(f"    revisar vigencia: {ident} {v['motivo']}", file=sys.stderr)
-            for nota in v.get("revisar", []):
-                print(f"    revisar: {ident} {nota}", file=sys.stderr)
+        imprimir_revisar(r["vacantes"] + r["remotas_fuera_de_region"])
     salida = json.dumps(res, ensure_ascii=False, indent=1)
     if a.salida:
         with open(a.salida, "w", encoding="utf-8") as f:

@@ -532,7 +532,8 @@ def listadas(r):
 
 
 def por_revisar(v):
-    """Las líneas «revisar» de una vacante que piden decisión, {columna decidible: línea}, como las da buscar.py."""
+    """Las líneas «revisar» de una vacante que piden decisión, {columna decidible: línea}, con las mismas condiciones
+    de buscar.py, que en pantalla agrupa las de ubicación por ubicación literal."""
     lineas = {}
     if v["ubicaciones_por_revisar"] or v["region_relacionada"] == "Indeterminada" or v.get("revisar"):
         notas = [v["ubicacion_literal"]] + list(v.get("revisar") or [])

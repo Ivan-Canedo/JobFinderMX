@@ -682,7 +682,28 @@ class ClasificacionDeUbicaciones(ConPortalFalso):
             self.assertLessEqual(CAMPOS_DE_VACANTES_Y_OBSERVACIONES, set(v))
             self.assertEqual(v["estado_vigencia"], "Confirmada abierta")
         self.assertIn("[OK] EMP-ACME: 6/6 únicos; 4 en la región", errores)
-        self.assertIn("revisar ubicación: R-4 Municipio A9, Edo. A, País A", errores)
+        self.assertIn("revisar ubicación: Municipio A9, Edo. A, País A (1 vacante: R-4)", errores)
+
+    def test_las_vacantes_con_la_misma_ubicacion_por_revisar_dan_una_sola_linea(self):
+        bloque = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])])
+        portal = WorkdayFalso(
+            [{"id": f"R-{i}", "pais": "País A", "ubicaciones": ["Ciudad A9, Estado A, País A"]} for i in range(1, 6)]
+            + [{"id": "R-6", "pais": "País A", "ubicaciones": ["Ciudad A8, Estado A, País A"]},
+               {"id": "R-7", "pais": "País A", "ubicaciones": ["Ciudad A8, Estado A, País A"]},
+               {"id": "R-8", "pais": "País A", "ubicaciones": ["Ciudad A1, Estado A, País A"]},
+               # Con dos ubicaciones por revisar, sale en las dos líneas
+               {"id": "R-9", "pais": "País A",
+                "ubicaciones": ["Ciudad A9, Estado A, País A", "Ciudad A8, Estado A, País A"]}])
+        r, errores = self.buscar(bloque, portal)
+        # El JSON no cambia: cada vacante lleva su ubicación por revisar
+        revisar = {v["job_id"]: v["ubicaciones_por_revisar"] for v in r["vacantes"]}
+        self.assertEqual(revisar, {**{f"R-{i}": ["Ciudad A9, Estado A, País A"] for i in range(1, 6)},
+                                   "R-6": ["Ciudad A8, Estado A, País A"], "R-7": ["Ciudad A8, Estado A, País A"],
+                                   "R-8": [], "R-9": ["Ciudad A9, Estado A, País A", "Ciudad A8, Estado A, País A"]})
+        lineas = [linea.strip() for linea in errores.splitlines() if "revisar ubicación:" in linea]
+        self.assertEqual(lineas, [
+            "revisar ubicación: Ciudad A9, Estado A, País A (6 vacantes: R-1, R-2, R-3, R-4, R-5, R-9)",
+            "revisar ubicación: Ciudad A8, Estado A, País A (3 vacantes: R-6, R-7, R-9)"])
 
     def test_una_ubicacion_que_solo_nombra_el_pais_queda_por_revisar(self):
         bloque = preferencias([grupo("XA", nombres=["Ciudad A1"]), grupo("XB", divisiones=["Provincia B1"])])
@@ -701,9 +722,11 @@ class ClasificacionDeUbicaciones(ConPortalFalso):
         self.assertEqual(revisar, {"R-1": ["País A"], "R-2": ["Country A"], "R-3": ["Multiple Locations"],
                                    "R-4": ["Country B"], "R-5": []})
         self.assertEqual(r["fuera_de_region"], ["Ciudad B9, Provincia B2, País B"])
-        for job_id in ("R-1", "R-2", "R-3", "R-4"):
-            self.assertIn(f"revisar ubicación: {job_id} ", errores)
-        self.assertNotIn("revisar ubicación: R-5", errores)
+        for lugar, job_id in (("País A", "R-1"), ("Country A", "R-2"), ("Multiple Locations", "R-3"),
+                              ("Country B", "R-4")):
+            self.assertIn(f"revisar ubicación: {lugar} (1 vacante: {job_id})", errores)
+        self.assertFalse([linea for linea in errores.splitlines()
+                          if "revisar ubicación:" in linea and "R-5" in linea])
 
     def test_varios_paises_con_remoto_desde_algunos(self):
         bloque = preferencias([grupo("XA"), grupo("XB", divisiones=["Provincia B1"])],
@@ -789,7 +812,7 @@ class ClasificacionDeUbicaciones(ConPortalFalso):
         revisar = {v["job_id"]: v["ubicaciones_por_revisar"] for v in r["vacantes"]}
         self.assertEqual(revisar["R-3"], ["Ciudad X, Estado A, País A"])
         self.assertEqual(revisar["R-6"], ["Nuevo Estado A, País A"])
-        self.assertIn("revisar ubicación: R-3 Ciudad X, Estado A, País A", errores)
+        self.assertIn("revisar ubicación: Ciudad X, Estado A, País A (1 vacante: R-3)", errores)
 
     def test_avisa_por_cada_pais_de_la_region_que_el_portal_no_ofrece(self):
         bloque = preferencias([grupo("XA", nombres=["Ciudad A1"]), grupo("XB", nombres=["Ciudad B1"])])
@@ -1330,7 +1353,7 @@ class AdaptadorDeSmartRecruiters(ConPortalFalso):
         self.assertEqual({p: vacantes[p]["estado_vigencia"] for p in ("100", "102")},
                          {"100": "Confirmada abierta", "102": "Revisar"})
         self.assertIn("[OK] EMP-ACME: 14/14 únicos; 12 en la región", errores)
-        self.assertIn("revisar ubicación: R200 Ciudad A7, Estado A, País A", errores)
+        self.assertIn("revisar ubicación: Ciudad A7, Estado A, País A (1 vacante: R200)", errores)
         self.assertIn("revisar vigencia: R102 ", errores)
 
     def test_un_grupo_que_no_nombra_un_pais_de_04_se_decide_por_la_pagina_de_su_primera_publicacion(self):
@@ -1363,13 +1386,23 @@ class AdaptadorDeSmartRecruiters(ConPortalFalso):
         self.assertEqual(len(r["vacantes"]), 11)
         self.assertEqual(r["fuera_de_region"], ["Ciudad Z2, EZ"])
 
-    def test_avisa_de_las_publicaciones_de_una_misma_requisicion(self):
+    def test_una_requisicion_con_varias_publicaciones_da_una_sola_linea_revisar(self):
         portal = SmartRecruitersFalso([publicacion("1", "Ciudad A1, País A", ref_detalle="REQ-1"),
                                        publicacion("2", "Ciudad A2, País A", ref_detalle="REQ-1"),
+                                       publicacion("4", "Ciudad A3, País A", ref_detalle="REQ-1"),
                                        publicacion("3", "Ciudad A1, País A")])
         r, errores = self.buscar(preferencias([grupo("XA")]), portal)
-        self.assertEqual(sorted(v["job_id"] for v in r["vacantes"]), ["R3", "REQ-1", "REQ-1"])
-        self.assertEqual(errores.count("revisar: REQ-1 requisición con 2 publicaciones en esta búsqueda"), 2)
+        self.assertEqual(sorted(v["job_id"] for v in r["vacantes"]), ["R3", "REQ-1", "REQ-1", "REQ-1"])
+        # El JSON conserva la nota en cada publicación; stderr la dice una vez, con las tres URL
+        mismas = [v for v in r["vacantes"] if v["job_id"] == "REQ-1"]
+        notas = {n for v in mismas for n in v["revisar"]}
+        self.assertEqual(len(notas), 1)
+        self.assertTrue(all(len(v["revisar"]) == 1 for v in mismas))
+        self.assertEqual(errores.count("revisar: REQ-1 requisición"), 1)
+        linea = next(linea for linea in errores.splitlines() if "revisar: REQ-1 requisición" in linea)
+        self.assertIn("con 3 publicaciones", linea)
+        for v in mismas:
+            self.assertIn(v["url_oficial"], linea)
         self.assertNotIn("revisar: R3 requisición", errores)
 
     def test_agrupado_por_departamento_completa_todos_los_grupos_y_toma_el_lugar_de_cada_publicacion(self):
