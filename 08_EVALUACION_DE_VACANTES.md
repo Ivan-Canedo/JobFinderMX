@@ -2,7 +2,7 @@
 
 **Versión:** 1.3 — 2026-10-27 — La evaluación desde Web usa la descripción leída o pegada y termina en una nota para Code (EVAL-FLUJO).
 **Estado:** método de la plantilla. Las condiciones salen de 04 y las familias de 05; queda listo con el paso 5 de `/configurar` (Habilidades y roles).
-**Evaluaciones vigentes desde:** 1.0. Sube a la versión nueva solo si el cambio altera la clasificación de requisitos, las categorías, el nivel, la cobertura o las condiciones. Un cambio de 04 no lo sube: lo cubre la regla de EVAL-REGISTRO.
+**Evaluaciones vigentes desde:** 1.0. Sube a la versión nueva solo si el cambio altera la clasificación de requisitos, las categorías, la elección de núcleos, la cobertura o las condiciones. Un cambio en la fórmula del nivel o en los pesos no lo sube, porque la herramienta recalcula las estrellas desde `nucleos` (EVAL-ENCAJE). Un cambio de 04 tampoco: lo cubre la regla de EVAL-REGISTRO.
 
 ## EVAL-ALCANCE — Responsabilidad
 
@@ -35,14 +35,14 @@ Comparar los requisitos y condiciones de una vacante con la trayectoria y las pr
 
 1. **Búsqueda (07):** al terminar, evaluar cada vacante relacionada con alguna familia ROL de 05. Si la relación es dudosa, se evalúa. Las demás se cuentan en una línea y no se evalúan; si el titular pide alguna, se evalúa.
 2. **Por vacante, en este orden:** condiciones (EVAL-CONDICIONES). Si 04 excluye tipos de puesto, se empieza por «Tipo de puesto», que se ve en el título o en el anuncio: si no cumple, se registra `Excluida` sin extraer requisitos (07). Si la vacante no quedó excluida, clasificación de requisitos (EVAL-REQUISITOS) y encaje (EVAL-ENCAJE). Reutilizar una evaluación guardada cuando aplique (EVAL-REGISTRO).
-3. **Entregar solo la tabla resumen** (EVAL-INFORME). Sin preguntas ni detalle.
-4. **Cuando el titular pregunta por una vacante:** si hace falta, preguntarle lo que pueda cambiar el resultado (EVAL-PREGUNTAS); después, entregar el detalle.
-5. **Si le interesa:** generar el CV (09) a partir del detalle.
-6. **Registrar** cada evaluación en la pestaña `evaluaciones` (EVAL-REGISTRO), y la tabla resumen en `informes` (EVAL-INFORME).
+3. **Registrar** cada evaluación en la pestaña `evaluaciones` (EVAL-REGISTRO), y la tabla resumen en `informes` (EVAL-INFORME), según 07/BUS-REGISTRO.
+4. **Entregar solo la tabla resumen** (EVAL-INFORME): la que da `informe` de la herramienta de 11/REG-LOCAL, con las estrellas y el orden que calcula. Sin preguntas ni detalle.
+5. **Cuando el titular pregunta por una vacante:** si hace falta, preguntarle lo que pueda cambiar el resultado (EVAL-PREGUNTAS); después, entregar el detalle.
+6. **Si le interesa:** generar el CV (09) a partir del detalle.
 
 No se gastan preguntas ni detalle en vacantes que el titular no pidió.
 
-**Desde Web:** se evalúa una vacante que el titular nombra o pega, con los pasos 2, 4 y 5. Si la instantánea trae su evaluación y sigue vigente (EVAL-REGISTRO), se usa esa. Si no, se evalúa con la descripción leída en su anuncio oficial (07/BUS-ACCESO-WEB) o con la que pegó el titular. Web no registra: si el titular quiere conservarla, la observación, los requisitos y la evaluación van en una nota para Code (00, «Cambios a los registros»), que Code aplica según 07/BUS-PUNTUAL.
+**Desde Web:** se evalúa una vacante que el titular nombra o pega, con los pasos 2, 5 y 6. Si la instantánea trae su evaluación y sigue vigente (EVAL-REGISTRO), se usa esa. Si no, se evalúa con la descripción leída en su anuncio oficial (07/BUS-ACCESO-WEB) o con la que pegó el titular, y el agente calcula el encaje con la línea «Pesos del encaje» de EVAL-ACUERDOS, como indica EVAL-ENCAJE. Web no registra: si el titular quiere conservarla, la observación, los requisitos y la evaluación van en una nota para Code (00, «Cambios a los registros»), que Code aplica según 07/BUS-PUNTUAL. La evaluación de la nota trae los núcleos con su categoría y no trae estrellas: Code las calcula al registrar.
 
 ## EVAL-REQUISITOS — Extracción y tipo
 
@@ -142,7 +142,7 @@ Las condiciones vienen de 04, tal como el titular las declaró: un criterio de 0
 - **Viajes sin límite en 04:** no son condición; solo se anotan si el anuncio los menciona.
 - **Montos:** se comparan según 04/PREF-COMPENSACION («Cómo comparar»).
 - **Resultado:**
-  - **Excluida:** alguna condición no cumple. La evaluación se detiene y no se calcula el encaje, salvo que el titular lo pida.
+  - **Excluida:** alguna condición no cumple. La evaluación se detiene: no se eligen núcleos ni se calcula el encaje (EVAL-ENCAJE).
   - **Sin exclusiones:** se continúa y se listan los pendientes. Un pendiente no impide postular: el titular lo aclara en el proceso.
 
 ## EVAL-ANTIGUEDAD — Tiempo publicada
@@ -163,7 +163,7 @@ Dimensión aparte: no modifica el encaje ni las condiciones. Se calcula al armar
 
 **A. Para el titular.** Solo cuando pregunta por una vacante y antes de entregar el detalle:
 
-- Se pregunta por hechos que no están en 02, solo si la respuesta puede cambiar el nivel, la cobertura o el conteo de requisitos «solo académicos». Si no cambiaría nada, no se pregunta.
+- Se pregunta por hechos que no están en 02, solo si la respuesta puede cambiar las estrellas (por la categoría de un núcleo, EVAL-ENCAJE), la cobertura o el conteo de requisitos «solo académicos». Si no cambiaría nada, no se pregunta.
 - Todas las preguntas van en un solo bloque, ordenadas por impacto.
 - Las respuestas valen para el resto de la sesión y se juntan, con fecha, como **propuestas para 02**. No se recalculan otras vacantes salvo que el titular las pida.
 
@@ -220,7 +220,7 @@ El esquema está en 11. Sirve para no volver a evaluar una vacante que reaparece
 - **Una fila por evaluación,** incluidas las excluidas. No se registran las vacantes no evaluadas por no tener relación con las familias de 05.
 - **Reutilización:** una vacante que reaparece usa su última evaluación si la observación evaluada sigue teniendo el conjunto vigente de habilidades (11/REG-IDENTIDAD) y si `version_perfil` y `version_evaluacion` son iguales o posteriores a «Evaluaciones vigentes desde» de 02 y de 08, respectivamente. Las versiones se comparan número por número (1.10 es posterior a 1.9). Si 04 cambió después de `fecha_evaluacion`, se reevalúan las condiciones. Si algo cambió, se agrega una fila nueva.
 - **Aclaraciones:** si las preguntas A cambian el resultado, se actualiza la misma fila; git conserva la versión anterior (11/REG-LOCAL, «Historial y respaldo»).
-- **Núcleos:** el detalle de una vacante evaluada antes usa los núcleos guardados en `nucleos`, para no contradecir las estrellas guardadas.
+- **Núcleos:** las estrellas salen siempre de los núcleos guardados en `nucleos` (EVAL-ENCAJE), así que el detalle de una vacante evaluada antes usa esos mismos núcleos.
 - **No se guardan** las categorías por requisito (el detalle las regenera con `habilidades_vacante` y 02), la familia ROL, la antigüedad (se calcula) ni notas.
 
 ## EVAL-PENDIENTES

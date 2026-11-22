@@ -1,6 +1,6 @@
 # 07 — Método de búsqueda
 
-**Versión:** 1.8 — 2026-10-29 — BUS-ACCESO-CODE reconoce también por su `Retry-After` el bloqueo de las IP de la nube.
+**Versión:** 1.9 — 2026-11-22 — `informe` ordena la tabla resumen y la evaluación de una nota de Web se registra sin estrellas (BUS-REGISTRO, BUS-PUNTUAL).
 **Estado:** método de la plantilla. Queda listo con la región de 04 y las fichas de 06, en el paso 7 de `/configurar` (Empresas).
 
 ## BUS-ALCANCE — Responsabilidad
@@ -169,7 +169,7 @@ Si la herramienta rechaza la entrada, no escribe nada y dice todos los errores: 
 | `observaciones` | `importar`: una fila por vacante listada, con `tipo_fuente` `Oficial`, la vigencia del script o la decidida y su URL. `fecha_verificacion` va sin hora: la del script es la de inicio, no la de cada lectura. El `motivo` agrega la región decidida con su motivo y cada cambio como «antes → ahora» (11/REG-IDENTIDAD). Las del paso 7, con `agregar`: la evidencia de su detalle y su URL |
 | `habilidades_vacante` | `agregar`. Solo vacantes relacionadas con detalle leído y no excluidas por «Tipo de puesto» (BUS-REGLAS), una fila por requisito con su tipo (08/EVAL-REQUISITOS). Si el conjunto no cambió respecto de lo registrado, no se agregan filas (11/REG-IDENTIDAD) |
 | `evaluaciones` | `agregar`. Una fila por evaluación nueva o rehecha (08/EVAL-REGISTRO) |
-| `informes` | `agregar`. Una fila por vacante de la tabla resumen (08/EVAL-INFORME), en su orden: `busqueda_id`, `vacante_id` y la `evaluacion_id` que muestra la tabla. Las demás columnas las calcula `informe` |
+| `informes` | `agregar`. Una fila por vacante de la tabla resumen (08/EVAL-INFORME), en cualquier orden, porque `informe` las ordena: `busqueda_id`, `vacante_id` y la `evaluacion_id` que muestra la tabla. Las demás columnas las calcula `informe` |
 
 Las vacantes no relacionadas quedan en `vacantes` y `observaciones`, sin requisitos ni evaluación.
 
@@ -190,4 +190,4 @@ Leer el anuncio oficial de una vacante, o de unas pocas que el titular nombra, s
 | `busquedas` | Una fila por comprobación. `fecha_hora`: la de la lectura. `solicitud_alcance`: «Comprobación puntual» y las vacantes pedidas. `recursos_versiones`: las de los módulos usados, que la nota de Web trae. `fuentes_consultas_filtros`: las URL leídas y cómo se leyeron; desde Web, «Herramienta de lectura web del chat». `cobertura_limitaciones`: «Comprobación puntual, sin listado» y lo que no se pudo leer. `no_revisado_pendientes`: lo que quedó sin leer, o `Ninguno`. `comparacion_anterior`: «No comparable: comprobación puntual» |
 | `vacantes` | Solo si la vacante no está registrada: los campos leídos, `primera_deteccion` = fecha de la lectura. Su empresa necesita un EMP-ID en 06 (11/REG-CAMPOS) |
 | `observaciones` | Una fila por vacante leída. `fecha_verificacion`: la de la lectura, con hora si se conoce. `tipo_fuente`: `Oficial` si se leyó en su anuncio oficial; `Aportada por el titular` si el titular pegó el anuncio porque no se encontró en el portal o no se pudo leer, sin `url_fuente`, con vigencia `No verificable` y el motivo «Anuncio pegado por el titular» |
-| `habilidades_vacante` y `evaluaciones` | Si la vacante se evaluó, según 08/EVAL-REGISTRO |
+| `habilidades_vacante` y `evaluaciones` | Si la vacante se evaluó, según 08/EVAL-REGISTRO. `evaluaciones` va sin `encaje`: la herramienta lo calcula desde `nucleos` y rechaza la columna. Si una nota de Web trae estrellas, como las de una versión anterior de 08, no se copian |
