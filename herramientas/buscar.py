@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
-"""ChambaKit: listado y detalle de vacantes por empresa (canal Code, 07/BUS-ACCESO-CODE).
+"""ChambaKit: listado y detalle de vacantes por empresa y por bolsa de empleo (canal Code, 07/BUS-ACCESO-CODE).
 
 Uso:
-    python3 -I herramientas/buscar.py [EMP-ID ...] [--salida archivo.json] [--sin-remotas] [--copia CARPETA]
+    python3 -I herramientas/buscar.py [EMP-ID | BOL-ID ...] [--salida archivo.json] [--sin-remotas] [--copia CARPETA]
 
-Las empresas se nombran por su ID de 06; por defecto, todas las del catálogo (CAT-EMPRESAS). La región,
-el alcance del remoto y la zona horaria salen del bloque de 04/PREF-UBICACION; la plataforma, el portal
-y la consulta de cada empresa, del bloque de «### Configuración» de su ficha en 06.
+Las empresas y las bolsas se nombran por su ID de 06; por defecto, todas las de sus catálogos (CAT-EMPRESAS y
+CAT-BOLSAS). La región, el alcance del remoto y la zona horaria salen del bloque de 04/PREF-UBICACION; la plataforma,
+el portal y la consulta de cada empresa, del bloque de «### Configuración» de su ficha en 06; el adaptador y el país
+de cada bolsa, del de la suya, y sus términos de búsqueda, del bloque de 05/HAB-TERMINOS.
 
-Si el bloque de 04 falta o no cumple sus reglas, el catálogo está vacío, un EMP-ID no está en él o
+Si el bloque de 04 falta o no cumple sus reglas, los dos catálogos están vacíos, un ID no está en ellos o
 --sin-remotas dejaría vacía la búsqueda de un titular que solo acepta remoto, termina con código 2 sin
-buscar nada. Una empresa sin configuración usable, con una plataforma sin adaptador o cuyo portal falla
-sale como [FALLO] y las demás siguen; entonces termina con código 1.
+buscar nada. Una empresa o una bolsa sin configuración usable, sin adaptador o cuyo sitio falla sale como [FALLO]
+y las demás siguen; también una bolsa con el bloque de 05 sin llenar. Entonces termina con código 1.
 
-Cada adaptador lista las vacantes de los países de la región, o las de la consulta de la ficha, y las
-remotas con el filtro de su plataforma según el alcance del remoto; lee el detalle de cada una con
-comprobación de ID y solo usa rutas que permite el robots.txt del sitio. El JSON va a --salida o a
-stdout; el resumen y las líneas «revisar», a stderr. El script no evalúa ni escribe en los registros:
-entrega los datos para los pasos 4-9 de 07/BUS-PASOS. Solo biblioteca estándar.
+Cada adaptador de empresa lista las vacantes de los países de la región, o las de la consulta de la ficha, y las
+remotas con el filtro de su plataforma según el alcance del remoto; lee el detalle de cada una con comprobación de
+ID. Cada adaptador de bolsa lista cada término de búsqueda en cada lugar de la región de su país y, si el alcance
+del remoto lo incluye, en todo el país con su filtro remoto. Solo se usan rutas que permite el robots.txt del
+sitio. El JSON va a --salida o a stdout, con las empresas en «empresas» y las bolsas en «bolsas»; el resumen y las
+líneas «revisar», a stderr. El script no evalúa ni escribe en los registros: entrega los datos para los pasos 4-9
+de 07/BUS-PASOS. Solo biblioteca estándar.
 """
 import argparse
 import datetime as dt
@@ -41,9 +44,10 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chr
 def usar_copia(ruta):
     """La copia de la que se leen el 04 y el 06: la del script o, con --copia, otra, como la copia de prueba del
     mantenedor (CONTRIBUTING, «Titulares de prueba»)."""
-    global RAIZ, MODULO_04, MODULO_06
+    global RAIZ, MODULO_04, MODULO_05, MODULO_06
     RAIZ = os.path.abspath(ruta)
     MODULO_04 = os.path.join(RAIZ, "04_PREFERENCIAS_LABORALES.md")
+    MODULO_05 = os.path.join(RAIZ, "05_MAPA_HABILIDADES_Y_ROLES.md")
     MODULO_06 = os.path.join(RAIZ, "06_EMPRESAS_OBJETIVO.md")
 
 
@@ -88,12 +92,17 @@ def error(mensaje):
     sys.exit(2)
 
 
-def leer(ruta, para):
+def leer(ruta, para, fallo=False):
+    """El texto de un módulo. Si no se puede leer, termina con código 2 o, con fallo, levanta Fallo: lo que solo
+    necesita una fuente, como los términos de una bolsa, no detiene las demás."""
     try:
         with open(ruta, encoding="utf-8") as f:
             return f.read()
     except OSError as e:
-        error(f"{ruta}: no se pudo leer el módulo, de donde salen {para} ({e.strerror}).")
+        mensaje = f"{ruta}: no se pudo leer el módulo, de donde salen {para} ({e.strerror})."
+        if fallo:
+            raise Fallo(mensaje) from e
+        error(mensaje)
 
 
 def seccion(md, titulo, nivel="##"):
@@ -202,31 +211,46 @@ def paises_reconocidos(tabla, paises):
     return reconocidos
 
 
-def leer_catalogo(ruta):
-    """{EMP-ID: texto de su ficha, o None si falta} en el orden de CAT-EMPRESAS."""
-    md = leer(ruta, "las empresas")
-    catalogo = seccion(md, "CAT-EMPRESAS")
-    if catalogo is None:
+def leer_catalogos(ruta):
+    """({EMP-ID: texto de su ficha, o None si falta}, {BOL-ID: ídem}) en el orden de CAT-EMPRESAS y de CAT-BOLSAS.
+    Una copia anterior al catálogo de bolsas no tiene CAT-BOLSAS: no tiene bolsas."""
+    md = leer(ruta, "las empresas y las bolsas de empleo")
+    empresas = seccion(md, "CAT-EMPRESAS")
+    if empresas is None:
         error(f"{ruta}: falta la sección CAT-EMPRESAS, el catálogo de empresas.")
-    ids = re.findall(r"^\|\s*(EMP-[A-Z0-9]+(?:-[A-Z0-9]+)*)\s*\|", catalogo, re.M)
-    if not ids:
-        error(f"{ruta}: el catálogo (CAT-EMPRESAS) no tiene empresas; agrégalas con `/configurar`, paso 7 "
-              "(Empresas).")
-    return {eid: seccion(md, eid) for eid in dict.fromkeys(ids)}
+
+    def fichas(catalogo, prefijo):
+        ids = re.findall(rf"^\|\s*({prefijo}-[A-Z0-9]+(?:-[A-Z0-9]+)*)\s*\|", catalogo or "", re.M)
+        return {i: seccion(md, i) for i in dict.fromkeys(ids)}
+
+    catalogos = fichas(empresas, "EMP"), fichas(seccion(md, "CAT-BOLSAS"), "BOL")
+    if not any(catalogos):
+        error(f"{ruta}: el catálogo (CAT-EMPRESAS) no tiene empresas, ni CAT-BOLSAS bolsas de empleo; agrégalas con "
+              "`/configurar`, paso 7 (Empresas).")
+    return catalogos
 
 
-def leer_ficha(eid, ficha):
-    """Bloque de «### Configuración» de la ficha (06/FICHA-PLANTILLA). Sin él, la empresa sale como [FALLO]."""
+def configuracion(fid, ficha, plantilla):
+    """El bloque de «### Configuración» de una ficha de 06, como objeto. plantilla: la sección de 06 que lo describe.
+    Sin él, la empresa o la bolsa sale como [FALLO]."""
     if ficha is None:
-        raise Fallo(f"falta su ficha en 06, la sección «## {eid} — <nombre>»")
+        raise Fallo(f"falta su ficha en 06, la sección «## {fid} — <nombre>»")
     bloque = bloque_json(seccion(ficha, "Configuración", "###"))
     if bloque is None:
-        raise Fallo("su ficha no tiene el bloque ```json de «### Configuración» (06/FICHA-PLANTILLA)")
+        raise Fallo(f"su ficha no tiene el bloque ```json de «### Configuración» (06/{plantilla})")
     try:
         conf = json.loads(bloque)
     except ValueError as e:
         raise Fallo(f"el bloque de «### Configuración» de su ficha no es JSON válido ({e})") from e
-    if not isinstance(conf, dict) or not isinstance(conf.get("plataforma"), str):
+    if not isinstance(conf, dict):
+        raise Fallo(f"el bloque de «### Configuración» de su ficha debe ser un objeto (06/{plantilla})")
+    return conf
+
+
+def leer_ficha(eid, ficha):
+    """Bloque de «### Configuración» de la ficha (06/FICHA-PLANTILLA). Sin él, la empresa sale como [FALLO]."""
+    conf = configuracion(eid, ficha, "FICHA-PLANTILLA")
+    if not isinstance(conf.get("plataforma"), str):
         raise Fallo("el bloque de «### Configuración» debe ser un objeto con plataforma, portal y consulta")
     if not (isinstance(conf.get("portal"), str) and re.match(r"https?://", conf["portal"])):
         raise Fallo(f"el portal de su ficha debe ser una URL http(s); dice {conf.get('portal')!r}")
@@ -1683,6 +1707,200 @@ def oraclerecruitingcloud(eid, conf, pref, remotas):
     return r
 
 
+# --- Bolsas de empleo ------------------------------------------------------------
+# Una bolsa se busca por término de búsqueda (05/HAB-TERMINOS) y lugar (04/PREF-UBICACION), no por empresa. Su
+# ficha en 06 (CAT-BOLSAS) solo dice su adaptador y su país.
+
+def leer_terminos(ruta):
+    """{ROL-ID: {"terminos": [...], "titulos": [...]}} del bloque de 05/HAB-TERMINOS. Si falta o está sin llenar,
+    falla la bolsa y no la búsqueda: las empresas no lo usan."""
+    llenar = "llénalo con `/configurar`, paso 5 (Habilidades y roles)"
+    bloque = bloque_json(seccion(leer(ruta, "los términos de búsqueda", fallo=True), "HAB-TERMINOS"))
+    if bloque is None:
+        raise Fallo(f"{ruta}: falta el bloque de términos de búsqueda (```json) en la sección HAB-TERMINOS; {llenar}")
+    try:
+        familias = json.loads(bloque)
+    except ValueError as e:
+        raise Fallo(f"{ruta}: el bloque de HAB-TERMINOS no es JSON válido ({e})") from e
+    if not isinstance(familias, dict) or not all(
+            re.fullmatch(r"ROL-\d+", rol) and isinstance(f, dict) and lista_de_textos(f.get("terminos"))
+            and lista_de_textos(f.get("titulos")) for rol, f in familias.items()):
+        raise Fallo(f'{ruta}, HAB-TERMINOS: el bloque debe ser un objeto: ROL-ID → {{"terminos": [...], '
+                    '"titulos": [...]}, con listas de textos')
+    if not any(f["terminos"] for f in familias.values()):
+        raise Fallo(f"{ruta}, HAB-TERMINOS: el bloque está sin llenar (no tiene ningún término de búsqueda); {llenar}")
+    return familias
+
+
+def leer_ficha_bolsa(bid, ficha):
+    """Bloque de «### Configuración» de la ficha de una bolsa (06/CAT-BOLSAS): su adaptador y su país."""
+    conf = configuracion(bid, ficha, "CAT-BOLSAS")
+    if not isinstance(conf.get("adaptador"), str):
+        raise Fallo("el bloque de «### Configuración» debe ser un objeto con adaptador y pais (06/CAT-BOLSAS)")
+    if not (isinstance(conf.get("pais"), str) and re.fullmatch(r"[A-Z]{2}", conf["pais"])):
+        raise Fallo(f"el pais de su ficha debe ser un código ISO de dos letras mayúsculas (06/CAT-BOLSAS); dice "
+                    f"{conf.get('pais')!r}")
+    return conf
+
+
+def slug(texto_libre):
+    """Un término o un lugar como lo escribe una URL: minúsculas, sin acentos y con guiones: «municipio-a2» de
+    «Municipio Á2»."""
+    return re.sub(r"[^a-z0-9]+", "-", normalizar(texto_libre)).strip("-")
+
+
+def lugares_de_bolsa(pref, pais):
+    """Los lugares de la región de 04 en el país de la bolsa, como slugs: cada nombre de un grupo con nombres, cada
+    división de uno de división completa, y None (todo el país) por un grupo de país completo."""
+    lugares = []
+    for g in pref["localidades"]:
+        if g["pais"] == pais:
+            for n in g["nombres"] or g["divisiones"] or [None]:
+                lugar = slug(n) if n else None
+                if lugar not in lugares:
+                    lugares.append(lugar)
+    return lugares
+
+
+def resultado_bolsa(bid, acceso):
+    """resultado() de una bolsa: con bolsa_id en lugar de empresa_id."""
+    r = resultado(bid, acceso)
+    del r["empresa_id"]
+    return {"bolsa_id": bid, **r}
+
+
+# --- OCC Mundial ------------------------------------------------------------------
+# Listado: GET https://www.occ.com.mx/empleos/de-<término>/[en-<lugar>/][tipo-home-office-remoto/]?page=<n>&sort=2,
+# en HTML. Sin login ni cookies; con pausas entre peticiones (ADR 0010).
+
+OCC_SITIO = "https://www.occ.com.mx"
+OCC_REMOTO = "tipo-home-office-remoto"
+OCC_PAGINAS = 100  # tope de páginas de un listado; si se alcanza, la paginación cambió
+OCC_PAUSA = 2  # segundos entre peticiones a OCC, como en la investigación del sitio
+
+
+def occ_url(termino, lugar, remoto, pagina=1):
+    """URL de una página del listado, de la más nueva a la más vieja (sort=2). lugar None: todo el país."""
+    ruta = f"/empleos/de-{termino}/" + (f"en-{lugar}/" if lugar else "") + (f"{OCC_REMOTO}/" if remoto else "")
+    return f"{OCC_SITIO}{ruta}?" + (f"page={pagina}&" if pagina > 1 else "") + "sort=2"
+
+
+def occ_tarjetas(h):
+    """Las tarjetas de una página del listado: id (data-id), título, empresa, sueldo y ubicación literales."""
+    tarjetas = []
+    for t in re.split(r'<li class="vacancy-card', h)[1:]:
+        jid = re.search(r"""data-id=['"](\d+)['"]""", t)
+        titulo = re.search(r"vacancy-card__title[^>]*>(.*?)</h2>", t, re.S)
+        if not (jid and titulo):
+            raise Fallo("el listado de OCC cambió de forma (una tarjeta sin data-id o sin título)")
+
+        def parrafo(clase):
+            m = re.search(rf'{clase}"[^>]*>(.*?)</p>', t, re.S)
+            return (texto(m.group(1)) or None) if m else None
+
+        lugar = re.search(r'vacancy-card__location"[^>]*>(.*?)</p>', t, re.S)
+        partes = [texto(x) for x in re.findall(r"<span[^>]*>(.*?)</span>", lugar.group(1), re.S)] if lugar else []
+        tarjetas.append({"id": jid.group(1), "titulo": texto(titulo.group(1)),
+                         "empresa": parrafo("vacancy-card__company-text"), "sueldo": parrafo("vacancy-card__salary"),
+                         "ubicacion": partes[0] if partes else None})
+    return tarjetas
+
+
+def occ_pedir(url):
+    """pedir() de una página de OCC, con una pausa antes, para no cargar el sitio: la primera petición a OCC siempre
+    es su robots.txt."""
+    time.sleep(OCC_PAUSA)
+    return pedir(url, como_json=False)
+
+
+def occ_listar(termino, lugar, remoto):
+    """(tarjetas sin repetir ni fijas, total publicado) de un listado. Las fijas son las tarjetas que se repiten al
+    inicio de cada página y no cuentan en el total; con una sola página no se distinguen y no se descarta ninguna.
+    Termina en la primera página sin tarjetas nuevas o, desde la segunda, al reunir el total: en la primera, las fijas
+    pueden completarlo. Una primera página sin data-total-offers
+    es un fallo, no un listado vacío: puede ser un reto anti-bot servido con 200."""
+    paginas, total = [], None
+    for p in range(1, OCC_PAGINAS + 1):
+        url = occ_url(termino, lugar, remoto, p)
+        h = occ_pedir(url)
+        if total is None:
+            m = re.search(r'data-total-offers="(\d+)"', h)
+            if not m:
+                raise Fallo(f"la primera página de {url} no trae data-total-offers: puede ser un reto anti-bot o un "
+                            "cambio del sitio, no un listado vacío")
+            total = int(m.group(1))
+        tarjetas = occ_tarjetas(h)
+        antes = len(occ_sin_fijas(paginas))
+        paginas.append(tarjetas)
+        unicas = occ_sin_fijas(paginas)
+        if not tarjetas or len(unicas) == antes or (p > 1 and len(unicas) == total):
+            return unicas, total
+    raise Fallo("el listado de OCC no termina: la paginación del sitio pudo haber cambiado")
+
+
+def occ_sin_fijas(paginas):
+    """Las tarjetas de las páginas, sin repetir y sin las fijas: el prefijo de IDs que comparten todas las páginas
+    con tarjetas, si son varias."""
+    llenas = [[t["id"] for t in p] for p in paginas if p]
+    fijas = 0
+    if len(llenas) > 1:
+        while all(len(p) > fijas and p[fijas] == llenas[0][fijas] for p in llenas):
+            fijas += 1
+    unicas = {}
+    for p in paginas:
+        for t in p[fijas:]:
+            unicas.setdefault(t["id"], t)
+    return list(unicas.values())
+
+
+def occ_vacante(pref, bid, pais, t, remoto, url):
+    """Vacante desde su tarjeta. La fecha de la tarjeta es relativa («Hace 2 días») y no llena fecha_publicacion; la
+    modalidad es la del filtro con que se listó."""
+    v = vacante(pref, None, t["id"], t["titulo"], f"{OCC_SITIO}/empleo/oferta/{t['id']}", [t["ubicacion"]],
+                f"Remoto (filtro {OCC_REMOTO} de OCC)" if remoto else None, None, "Confirmada abierta",
+                "En el listado oficial de la bolsa (07/BUS-VIGENCIA); detalle sin leer", url, None, None, {pais})
+    del v["empresa_id"]
+    return {"bolsa_id": bid, **v, "empresa_literal": t["empresa"], "sueldo_literal": t["sueldo"]}
+
+
+def occ(bid, conf, pref, familias, remotas):
+    """Adaptador de OCC Mundial (06/CAT-BOLSAS): un listado por cada término de búsqueda de 05 y cada lugar de la
+    región de 04 en el país de la bolsa, más todo el país con el filtro remoto si el alcance del remoto lo incluye."""
+    pais = conf["pais"]
+    terminos = list(dict.fromkeys(slug(t) for f in familias.values() for t in f["terminos"]))
+    lugares = lugares_de_bolsa(pref, pais)
+    alcance = pref["remoto"]["alcance"]
+    sin_remoto = sin_remotas(pref, remotas) or (
+        None if alcance == "cualquiera" or pais in pref["remoto"]["paises"]
+        else f"No aplica: el alcance del remoto de 04 no incluye {pais}")
+    if not lugares and sin_remoto:
+        raise Fallo(f"ni la región ni el alcance del remoto de 04 incluyen {pais}, el país de la bolsa: no hay nada "
+                    "que buscar en ella")
+    # Una URL de muestra por cada forma del listado, con lugar y con el filtro remoto, y con toda su consulta
+    comprobar_robots(OCC_SITIO, [occ_url("x", "x", False, 2), occ_url("x", None, True, 2)])
+    r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar")
+    vistas = set()
+    revisadas = []
+    # Los listados remotos, de todos los términos, van primero: el listado sin filtro no dice la modalidad, y una
+    # vacante ya vista no se vuelve a ver
+    consultas = ([] if sin_remoto else [(termino, None, True) for termino in terminos]) + [
+        (termino, lugar, False) for termino in terminos for lugar in lugares]
+    for termino, lugar, remoto in consultas:
+        tarjetas, total = occ_listar(termino, lugar, remoto)
+        url = occ_url(termino, lugar, remoto)
+        ids = {t["id"] for t in tarjetas}
+        donde = f"todo {pais}, remoto" if remoto else f"en {lugar}" if lugar else f"todo {pais}"
+        listado(r, f"«{termino}», {donde}: GET {url}", total, ids, vistas)
+        if remoto:
+            revisadas.append(f"«{termino}»: {len(ids)} únicos de {total}")
+        for t in tarjetas:
+            if t["id"] not in vistas:
+                vistas.add(t["id"])
+                repartir(r, occ_vacante(pref, bid, pais, t, remoto, url), pref, de_remotas=remoto)
+    r["remotas_revision"] = sin_remoto or f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas)
+    return r
+
+
 # --- Principal --------------------------------------------------------------
 
 # Un adaptador por plataforma de reclutamiento (06/CAT-PLATAFORMAS). Uno nuevo es una función
@@ -1690,6 +1908,9 @@ def oraclerecruitingcloud(eid, conf, pref, remotas):
 # antes de pedir nada pasa por comprobar_robots(); se registra aquí con el nombre que lleva la ficha en «plataforma».
 ADAPTADORES = {"workday": workday, "eightfold": eightfold, "workable": workable, "smartrecruiters": smartrecruiters,
                "oraclerecruitingcloud": oraclerecruitingcloud}
+# Un adaptador por bolsa de empleo (06/CAT-BOLSAS): una función (bid, conf, pref, familias, remotas), con las familias
+# de 05/HAB-TERMINOS, que devuelve resultado_bolsa(); se registra con el nombre que lleva la ficha en «adaptador».
+BOLSAS = {"occ": occ}
 
 
 def imprimir_revisar(vacantes):
@@ -1724,13 +1945,54 @@ def nombre_en_revisar(v):
     return v["job_id"] if v["job_id"] not in (None, "No publicado") else v["url_oficial"] or v["url_fuente"]
 
 
+def informar(fid, r):
+    """La línea de una empresa o una bolsa en stderr, con su cobertura y sus líneas «revisar»."""
+    if "error" in r:
+        print(f"[FALLO] {fid}: {r['error']}", file=sys.stderr)
+        return
+    en_region = sum(v["region_relacionada"] in ("Dentro", "Incluye") for v in r["vacantes"])
+    # completa = None: la fuente no publica total (07/BUS-COBERTURA); se declara con su verificación
+    estado = "OK" if r["completa"] else "SIN TOTAL" if r["completa"] is None else "INCOMPLETA"
+    cuenta = (f"{r['unicos']}/{r['total_reportado']}" if r["total_reportado"] is not None
+              else f"{r['unicos']} (sin total publicado)")
+    print(f"[{estado}] {fid}: {cuenta} únicos; {en_region} en la región; remotas fuera de la región: "
+          f"{len(r['remotas_fuera_de_region'])} ({r['remotas_revision']})", file=sys.stderr)
+    if r.get("verificacion_cobertura"):
+        print(f"    cobertura: {r['verificacion_cobertura']}", file=sys.stderr)
+    for nota in r["revisar"]:
+        print(f"    revisar: {nota}", file=sys.stderr)
+    imprimir_revisar(r["vacantes"] + r["remotas_fuera_de_region"])
+
+
+def buscar_empresa(eid, ficha, pref, remotas):
+    """El resultado de una empresa, con el adaptador de su plataforma."""
+    conf = leer_ficha(eid, ficha)
+    adaptador = ADAPTADORES.get(conf["plataforma"].strip().lower())
+    if adaptador is None:
+        raise Fallo(f"la plataforma {conf['plataforma']!r} no tiene adaptador en el script (hay: "
+                    f"{', '.join(ADAPTADORES)}); para agregar uno, 06/CAT-REGLAS")
+    return adaptador(eid, conf, pref, remotas)
+
+
+def buscar_bolsa(bid, ficha, pref, remotas):
+    """El resultado de una bolsa, con su adaptador y los términos de 05."""
+    conf = leer_ficha_bolsa(bid, ficha)
+    adaptador = BOLSAS.get(conf["adaptador"].strip().lower())
+    if adaptador is None:
+        raise Fallo(f"el adaptador {conf['adaptador']!r} no existe en el script (hay: {', '.join(BOLSAS)}; "
+                    "06/CAT-BOLSAS)")
+    return adaptador(bid, conf, pref, leer_terminos(MODULO_05), remotas)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
-                                 epilog=f"Plataformas con adaptador: {', '.join(ADAPTADORES)}.")
-    ap.add_argument("empresas", nargs="*", metavar="EMP-ID", help="IDs de 06 (por defecto, todo el catálogo)")
+                                 epilog=f"Plataformas con adaptador: {', '.join(ADAPTADORES)}. Bolsas de empleo con "
+                                        f"adaptador: {', '.join(BOLSAS)}.")
+    ap.add_argument("ids", nargs="*", metavar="ID", help="IDs EMP- y BOL- de 06 (por defecto, los dos catálogos)")
     ap.add_argument("--salida", help="archivo JSON de salida (por defecto, stdout)")
     ap.add_argument("--sin-remotas", action="store_true", help="omitir el listado de vacantes remotas")
-    ap.add_argument("--copia", metavar="CARPETA", help="leer el 04 y el 06 de otra copia (por defecto, la del script)")
+    ap.add_argument("--copia", metavar="CARPETA",
+                    help="leer el 04, el 05 y el 06 de otra copia (por defecto, la del script)")
     a = ap.parse_args()
     if a.copia is not None:
         if not os.path.isdir(a.copia):
@@ -1738,44 +2000,29 @@ def main():
         usar_copia(a.copia)
     pref = leer_preferencias(MODULO_04)
     pref["reconocidos"] = paises_reconocidos(leer_tabla_de_paises(TABLA_DE_PAISES), pref["paises"])
-    catalogo = leer_catalogo(MODULO_06)
-    pedidas = [e.upper() for e in a.empresas] or list(catalogo)
-    desconocidas = [e for e in pedidas if e not in catalogo]
+    empresas, bolsas = leer_catalogos(MODULO_06)
+    pedidas = [i.upper() for i in a.ids] or [*empresas, *bolsas]
+    desconocidas = [i for i in pedidas if i not in empresas and i not in bolsas]
     if desconocidas:
-        ap.error(f"{', '.join(desconocidas)} no está en el catálogo de 06; opciones: {', '.join(catalogo)}")
+        ap.error(f"{', '.join(desconocidas)} no está en los catálogos de 06; opciones: "
+                 f"{', '.join([*empresas, *bolsas])}")
     if a.sin_remotas and not pref["localidades"]:
         ap.error("04 solo acepta remoto (localidades vacía): con --sin-remotas no habría nada que buscar")
     ahora = dt.datetime.now(pref["tz"])
     res = {"script": f"herramientas/buscar.py v{VERSION}", "fecha_hora": ahora.strftime("%Y-%m-%d %H:%M"),
-           "zona_horaria": pref["zona_horaria"], "empresas": []}
+           "zona_horaria": pref["zona_horaria"], "empresas": [], "bolsas": []}
     fallos = 0
-    for eid in pedidas:
+    # Las empresas primero y después las bolsas, cada una en su lista de la salida
+    for fid in sorted(pedidas, key=lambda i: i in bolsas):
+        es_bolsa = fid in bolsas
         try:
-            conf = leer_ficha(eid, catalogo[eid])
-            adaptador = ADAPTADORES.get(conf["plataforma"].strip().lower())
-            if adaptador is None:
-                raise Fallo(f"la plataforma {conf['plataforma']!r} no tiene adaptador en el script (hay: "
-                            f"{', '.join(ADAPTADORES)}); para agregar uno, 06/CAT-REGLAS")
-            r = adaptador(eid, conf, pref, not a.sin_remotas)
+            r = (buscar_bolsa(fid, bolsas[fid], pref, not a.sin_remotas) if es_bolsa
+                 else buscar_empresa(fid, empresas[fid], pref, not a.sin_remotas))
         except Fallo as e:
             fallos += 1
-            r = {"empresa_id": eid, "error": str(e)}
-        res["empresas"].append(r)
-        if "error" in r:
-            print(f"[FALLO] {eid}: {r['error']}", file=sys.stderr)
-            continue
-        en_region = sum(v["region_relacionada"] in ("Dentro", "Incluye") for v in r["vacantes"])
-        # completa = None: la fuente no publica total (07/BUS-COBERTURA); se declara con su verificación
-        estado = "OK" if r["completa"] else "SIN TOTAL" if r["completa"] is None else "INCOMPLETA"
-        cuenta = (f"{r['unicos']}/{r['total_reportado']}" if r["total_reportado"] is not None
-                  else f"{r['unicos']} (sin total publicado)")
-        print(f"[{estado}] {eid}: {cuenta} únicos; {en_region} en la región; remotas fuera de la región: "
-              f"{len(r['remotas_fuera_de_region'])} ({r['remotas_revision']})", file=sys.stderr)
-        if r.get("verificacion_cobertura"):
-            print(f"    cobertura: {r['verificacion_cobertura']}", file=sys.stderr)
-        for nota in r["revisar"]:
-            print(f"    revisar: {nota}", file=sys.stderr)
-        imprimir_revisar(r["vacantes"] + r["remotas_fuera_de_region"])
+            r = {"bolsa_id" if es_bolsa else "empresa_id": fid, "error": str(e)}
+        res["bolsas" if es_bolsa else "empresas"].append(r)
+        informar(fid, r)
     salida = json.dumps(res, ensure_ascii=False, indent=1)
     if a.salida:
         with open(a.salida, "w", encoding="utf-8") as f:

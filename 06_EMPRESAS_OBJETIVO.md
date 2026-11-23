@@ -1,6 +1,6 @@
 # 06 — Empresas objetivo y fichas
 
-**Versión:** 1.8 — 2026-11-22 — FICHA-PLANTILLA: «Sedes y región» anota si el portal escribe la división de cada localidad.
+**Versión:** 1.9 — 2026-11-22 — CAT-BOLSAS: catálogo de bolsas de empleo, con IDs `BOL-##`, y el adaptador de OCC Mundial.
 **Estado:** plantilla sin empresas. Las agrega el paso 7 de `/configurar` (Empresas), cada una con su ficha y la configuración de su plataforma de reclutamiento.
 
 ## CAT-EMPRESAS — Catálogo
@@ -177,6 +177,58 @@ Lo que pone cada plataforma en el bloque de configuración de una ficha y cómo 
 ### Plataformas sin adaptador
 
 - **Avature:** la plantilla no trae adaptador, porque cada portal define los suyos: el filtro de país es un campo propio del sitio cuyas opciones se cargan aparte, el listado no siempre muestra la ubicación ni un total exacto, y las etiquetas del detalle cambian de un sitio a otro. Para una empresa en Avature se construye el adaptador en esta copia (CAT-REGLAS).
+
+## CAT-BOLSAS — Bolsas de empleo
+
+| ID | Bolsa | Versión de ficha | Fecha de comprobación |
+| --- | --- | --- | --- |
+
+Una bolsa de empleo es un sitio donde los empleadores publican sus vacantes y donde se postula, como OCC Mundial; un agregador no lo es (07/BUS-REGLAS). El script de búsqueda la recorre por término de búsqueda (05/HAB-TERMINOS) y lugar (04/PREF-UBICACION), no por empresa, y sin argumentos busca en todas las filas de esta tabla además de las de CAT-EMPRESAS.
+
+- **Una bolsa = una fila + una ficha** `## BOL-<##> — <Nombre de la bolsa>` en este archivo, con IDs que no se reutilizan (`BOL-01`, `BOL-02`…).
+- **Solo bolsas con adaptador:** las que lista `python3 -I herramientas/buscar.py --help`, cada una descrita abajo. Una bolsa sin adaptador requiere su propia investigación (robots.txt, términos de uso y señales anti-bot) antes de construirlo.
+- **La ficha solo lleva la bolsa:** su primera línea dice `**Ficha <versión>** — comprobada el <fecha>.`, y su `### Configuración` lleva el bloque que lee el script. Nada del perfil: los términos van en 05 y los lugares en 04.
+
+  ```json
+  {
+    "adaptador": "occ",
+    "pais": "<código>"
+  }
+  ```
+
+  | Campo | Qué lleva |
+  | --- | --- |
+  | `adaptador` | El nombre de su adaptador, en minúsculas |
+  | `pais` | El código ISO 3166-1 alfa-2 del país de la bolsa: se buscan los lugares de la región de 04 en ese país y, si el alcance del remoto lo incluye, todo el país con el filtro remoto. Si no hay ninguno de los dos, la bolsa sale como `[FALLO]` |
+
+- **Comprobación:** al dar de alta una bolsa, correr el script solo con su ID; esa búsqueda de prueba no se registra.
+
+### OCC Mundial
+
+- **`adaptador`:** `occ`. **`pais`:** `MX`.
+- **Hosts:** `www.occ.com.mx`.
+- **Acceso:** sin login, sin cookies y con 2 s de pausa antes de cada petición. El `robots.txt` permite el listado, con su consulta y su filtro de modalidad.
+- **Listado:** `GET https://www.occ.com.mx/empleos/de-<término>/[en-<lugar>/][tipo-home-office-remoto/]?page=<n>&sort=2`, en HTML; `sort=2` ordena de la más nueva a la más vieja, y la página 1 va sin `page`. El término y el lugar van como slug: minúsculas, sin acentos y con guiones (`de-analista-de-datos`, `en-ciudad-a`).
+  - **Búsquedas:** una por cada término de 05 y cada lugar de la región de 04 en el país de la bolsa: cada nombre de un grupo con `nombres`, cada división de un grupo de división completa, y sin `en-<lugar>` por un grupo de país completo. Si el alcance del remoto incluye ese país, también una por término en todo el país con `tipo-home-office-remoto/`; todas estas van antes que las de lugar.
+  - **Marcador:** el total de la consulta en `data-total-offers` del `<h1>`. Si la primera página no lo trae, la bolsa sale como `[FALLO]` y no como un listado vacío: puede ser un reto anti-bot servido con 200.
+  - **Tarjetas:** cada `<li class="vacancy-card…" data-id=…>`. El ItemList JSON-LD de la página omite las tarjetas «Recomendada», así que no sirve como fuente de IDs.
+  - **Tarjetas fijas:** cuando la consulta tiene varias páginas, unas tarjetas se repiten al inicio de cada una y no respetan los filtros ni cuentan en el total; se descuentan. Fija es solo la que se repite: con una sola página no se distinguen y no se descarta ninguna, aunque la primera diga «Recomendada».
+  - **Fin y cobertura:** el recorrido termina en la primera página sin tarjetas nuevas o, desde la segunda página, al reunir el total; en la primera no, porque las fijas pueden completarlo. Los IDs únicos, sin las fijas, deben igualar `data-total-offers`.
+- **Modalidad:** las tarjetas no la dicen; sale del filtro con que se listó la vacante. Las de un listado remoto llevan `Remoto (filtro tipo-home-office-remoto de OCC)`, y las demás, ninguna.
+- **Vigencia:** aparecer en el listado de la bolsa es la evidencia (07/BUS-VIGENCIA): `Confirmada abierta`.
+
+| Columna | Campo de la tarjeta |
+| --- | --- |
+| `bolsa_id` | El ID de la bolsa en esta tabla |
+| `job_id` | `data-id` |
+| `titulo` | `vacancy-card__title`, literal |
+| `empresa_literal` | `vacancy-card__company-text`, literal, también «Empresa confidencial» |
+| `sueldo_literal` | `vacancy-card__salary`, literal |
+| `url_oficial` | `https://www.occ.com.mx/empleo/oferta/<data-id>` |
+| `ubicacion_literal` | El primer texto de `vacancy-card__location`, como «Alcaldía, Estado» |
+| `modalidad_literal` | La del filtro con que se listó (arriba) |
+| `fecha_publicacion` | Vacía: la fecha de la tarjeta es relativa («Hace 2 semanas»), y la antigüedad sale de la primera detección (07/BUS-FECHAS) |
+| `observaciones.url_fuente` | URL de la primera página del listado que la trajo |
 
 ## FICHA-PLANTILLA — Contenido de cada ficha
 

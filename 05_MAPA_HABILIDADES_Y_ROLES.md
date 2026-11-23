@@ -1,6 +1,6 @@
 # 05 — Mapa de habilidades y roles
 
-**Versión:** 1.0 — 2026-10-17 — Plantilla inicial.
+**Versión:** 1.1 — 2026-11-22 — HAB-TERMINOS: términos de búsqueda por familia ROL para las bolsas de empleo.
 **Estado:** plantilla sin llenar. El paso 5 de `/configurar` (Habilidades y roles) construye la matriz de evidencias y las familias de roles desde 02 y 04.
 
 ## HAB-USO — Responsabilidad
@@ -56,6 +56,27 @@ Una o más familias `ROL-##` por cada ruta de 04/PREF-FUNCIONES: la función de 
 | «pendiente» | | | |
 
 No agregar familias fuera de las rutas de 04 solo porque el maestro tenga habilidades relacionadas.
+
+## HAB-TERMINOS — Términos de búsqueda
+
+Con qué palabras se buscan las familias ROL en una bolsa de empleo (06/CAT-BOLSAS), que lista sus vacantes por término y no por empresa. El bloque de abajo lo lee el script de búsqueda (07): busca cada término en cada lugar de la región de 04 y, si 04 acepta remoto en el país de la bolsa, en todo el país con su filtro remoto. No trae valores: se llena desde HAB-ROLES con la aprobación del titular. Si el bloque falta o no tiene ningún término, el script reporta cada bolsa como `[FALLO]` y busca igual en las empresas.
+
+```json
+{}
+```
+
+**Campos del bloque:** una clave por familia, con su ID de HAB-ROLES (`ROL-##`), y como valor un objeto con dos listas:
+
+| Campo | Qué lleva |
+| --- | --- |
+| `terminos` | Lo que se escribe en el buscador de la bolsa, como «analista de datos», más los que agregue el titular, como el nombre de una herramienta que los anuncios ponen en el título. Puede quedar vacía en una familia que no se busca en bolsas |
+| `titulos` | Las frases que, en el título de una vacante, indican la familia. Cuentan sin mayúsculas ni acentos |
+
+**Reglas:**
+
+- Los términos no llevan el lugar: el lugar sale de 04/PREF-UBICACION.
+- Un término repetido en dos familias, o escrito con otras mayúsculas o acentos, se busca una sola vez.
+- El titular agrega o quita términos, y cada cambio va con su fuente y su fecha en HAB-FUENTES (`HAB-U##`). El agente puede proponer cambios según el rendimiento de cada término (07), pero nunca los aplica sin permiso.
 
 ## HAB-VOCABULARIO — Base interna
 

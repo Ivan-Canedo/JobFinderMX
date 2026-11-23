@@ -3,12 +3,13 @@
 Uso:
     python3 -I -B -m unittest discover -s herramientas/pruebas
 
-Cada prueba arma una copia ficticia con el script, un 04 y un 06. La configuración que falta se
-prueba por la línea de comandos, porque el script se detiene antes de cualquier petición. La
-clasificación de ubicaciones y cada adaptador se prueban corriendo main() con un portal falso de su
-plataforma (Workday, Eightfold, Workable, SmartRecruiters u Oracle Recruiting Cloud) en lugar de la
-red: los anuncios y los lugares son ficticios, con los códigos XA, XB, XC y XD, que la norma ISO
-reserva y no son países.
+Cada prueba arma una copia ficticia con el script, un 04, un 06 y, si busca en una bolsa de empleo, un 05.
+La configuración que falta se prueba por la línea de comandos, porque el script se detiene antes de
+cualquier petición. La clasificación de ubicaciones y cada adaptador se prueban corriendo main() con un
+portal falso de su plataforma (Workday, Eightfold, Workable, SmartRecruiters u Oracle Recruiting Cloud) en
+lugar de la red. La bolsa OCC Mundial se prueba con OccFalso, que reemplaza la red misma (urlopen), para
+ejercitar el pedir() real que distinguirá sus señales anti-bot. Los anuncios y los lugares son ficticios,
+con los códigos XA, XB, XC y XD, que la norma ISO reserva y no son países.
 """
 import contextlib
 import datetime as dt
@@ -18,6 +19,7 @@ import io
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -64,12 +66,34 @@ def ficha(eid, configuracion):
     return f"## {eid} — Empresa ficticia\n\n### Configuración\n\n```json\n{texto}\n```\n\n### Identidad\n\n- Ficticia.\n"
 
 
-def modulo_06(fichas):
+def modulo_06(fichas, bolsas=None):
+    """06 con esas fichas de empresa y, si se dan, el catálogo de bolsas con sus fichas; sin bolsas, sin la sección
+    CAT-BOLSAS, como una copia anterior a ella."""
     filas = "".join(f"| {eid} | Empresa ficticia | Objetivo | 0.1 | 2026-10-16 |\n" for eid in fichas)
-    return ("# 06 — Empresas objetivo y fichas\n\n## CAT-EMPRESAS — Catálogo\n\n"
-            "| ID | Empresa | Estado | Versión de ficha | Fecha de comprobación |\n"
-            "| --- | --- | --- | --- | --- |\n" + filas + "\n## CAT-REGLAS — Mantenimiento\n\n- Reglas.\n\n"
-            + "\n".join(fichas.values()))
+    texto = ("# 06 — Empresas objetivo y fichas\n\n## CAT-EMPRESAS — Catálogo\n\n"
+             "| ID | Empresa | Estado | Versión de ficha | Fecha de comprobación |\n"
+             "| --- | --- | --- | --- | --- |\n" + filas + "\n## CAT-REGLAS — Mantenimiento\n\n- Reglas.\n\n")
+    if bolsas is not None:
+        texto += ("## CAT-BOLSAS — Bolsas de empleo\n\n| ID | Bolsa | Versión de ficha | Fecha de comprobación |\n"
+                  "| --- | --- | --- | --- |\n"
+                  + "".join(f"| {bid} | Bolsa ficticia | 0.1 | 2026-11-22 |\n" for bid in bolsas) + "\n")
+    return texto + "\n".join(fichas.values()) + "\n" + "\n".join((bolsas or {}).values())
+
+
+def ficha_bolsa(bid, configuracion):
+    texto = configuracion if isinstance(configuracion, str) else json.dumps(configuracion, indent=2)
+    return f"## {bid} — Bolsa ficticia\n\n### Configuración\n\n```json\n{texto}\n```\n"
+
+
+def terminos(**familias):
+    """Bloque de 05/HAB-TERMINOS: ROL-ID → (términos, títulos)."""
+    return {rol.replace("_", "-"): {"terminos": list(t), "titulos": list(ti)} for rol, (t, ti) in familias.items()}
+
+
+def modulo_05(bloque):
+    texto = bloque if isinstance(bloque, str) else json.dumps(bloque, ensure_ascii=False, indent=2)
+    return (f"# 05 — Mapa de habilidades y roles\n\n## HAB-ROLES — Familias\n\n- Familias.\n\n"
+            f"## HAB-TERMINOS — Términos de búsqueda\n\nTérminos.\n\n```json\n{texto}\n```\n\n## HAB-FUENTES\n\n- F.\n")
 
 
 class CopiaFicticia(unittest.TestCase):
@@ -84,9 +108,11 @@ class CopiaFicticia(unittest.TestCase):
     def tearDown(self):
         self._tmp.cleanup()
 
-    def escribir(self, modulo_04_texto=None, modulo_06_texto=None):
+    def escribir(self, modulo_04_texto=None, modulo_06_texto=None, modulo_05_texto=None):
         if modulo_04_texto is not None:
             (self.dir / "04_PREFERENCIAS_LABORALES.md").write_text(modulo_04_texto, encoding="utf-8")
+        if modulo_05_texto is not None:
+            (self.dir / "05_MAPA_HABILIDADES_Y_ROLES.md").write_text(modulo_05_texto, encoding="utf-8")
         if modulo_06_texto is not None:
             (self.dir / "06_EMPRESAS_OBJETIVO.md").write_text(modulo_06_texto, encoding="utf-8")
 
@@ -1861,6 +1887,342 @@ class ComprobacionesDeOracle(ConPortalFalso):
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertIn("[FALLO] EMP-ACME: ", r.stderr)
         self.assertIn("/hcmUI/CandidateExperience/", r.stderr)
+
+
+class OccFalso:
+    """OCC Mundial ficticio a nivel de red: reemplaza urllib.request.urlopen, así que se ejercita el pedir() real.
+    Sirve robots.txt y el listado en HTML.
+
+    Cada anuncio es un dict con id, titulo, ubicacion, empresa, sueldo, clase (las clases extra de su tarjeta, como
+    vacancy-card--recomendada) y en: las consultas que lo traen, como
+    (término, lugar) con los slugs de la URL; lugar «remoto» es todo el país con el filtro tipo-home-office-remoto, y
+    None, todo el país sin filtro. Como el sitio real: por_pagina tarjetas de la consulta por página y su total en
+    data-total-offers del <h1>; si la consulta tiene más de una página, las fijas (anuncios que no son de la consulta
+    ni cuentan en el total) se repiten al inicio de cada página; la página siguiente a la última llega sin tarjetas
+    ni marcador. reto: toda página del listado es el reto «Just a moment…» de Cloudflare, servido con 200."""
+
+    SITIO = "https://www.occ.com.mx"
+    RETO = ('<!DOCTYPE html><html><head><title>Just a moment...</title></head><body>'
+            '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script></body></html>')
+
+    def __init__(self, anuncios, fijas=(), por_pagina=20, reto=False, robots="User-agent: *\nDisallow: /cuenta/\n"):
+        self.anuncios, self.fijas, self.por_pagina = list(anuncios), list(fijas), por_pagina
+        self.reto, self.robots = reto, robots
+        self.pedidas, self.listados = [], []
+
+    def tarjeta(self, a):
+        return (f'<li class="vacancy-card {a.get("clase", "")}" data-id=\'{a["id"]}\' data-lc="ListOffers">'
+                f'<h2 class="vacancy-card__title"><a href="/empleo/oferta/{a["id"]}-puesto">'
+                f'{html.escape(a["titulo"])}</a></h2>'
+                f'<p class="vacancy-card__company-text">{html.escape(a.get("empresa", "Empresa confidencial"))}</p>'
+                f'<p class="vacancy-card__salary">{html.escape(a.get("sueldo", "Sueldo no mostrado"))}</p>'
+                f'<p class="vacancy-card__location"><span>{html.escape(a["ubicacion"])}</span><span>Hace 2 días</span>'
+                "</p></li>\n")
+
+    def __call__(self, req, timeout=None):
+        url = req.full_url
+        self.pedidas.append(url)
+        u = urllib.parse.urlsplit(url)
+        if f"{u.scheme}://{u.netloc}" != self.SITIO:
+            raise AssertionError(f"petición inesperada: {url}")
+        if u.path == "/robots.txt":
+            return io.BytesIO(self.robots.encode())
+        m = re.fullmatch(r"/empleos/de-([^/]+)/(?:en-([^/]+)/)?(tipo-home-office-remoto/)?", u.path)
+        if not m:
+            raise AssertionError(f"petición inesperada: {url}")
+        q = urllib.parse.parse_qs(u.query)
+        if q.get("sort") != ["2"]:
+            raise AssertionError(f"el listado debe ir ordenado por fecha (sort=2): {url}")
+        termino, lugar, pagina = m.group(1), "remoto" if m.group(3) else m.group(2), int(q.get("page", ["1"])[0])
+        self.listados.append((termino, lugar, pagina))
+        if self.reto:
+            return io.BytesIO(self.RETO.encode())
+        de_consulta = [a for a in self.anuncios if (termino, lugar) in a["en"]]
+        paginas = max(1, -(-len(de_consulta) // self.por_pagina))
+        if pagina > paginas:
+            return io.BytesIO(b'<html><body><h1 class="title">0 empleos</h1><ul></ul></body></html>')
+        tarjetas = (self.fijas if paginas > 1 else []) + de_consulta[(pagina - 1) * self.por_pagina:
+                                                                       pagina * self.por_pagina]
+        return io.BytesIO((f'<html><body><h1 class="title" data-total-offers="{len(de_consulta)}">{len(de_consulta)} '
+                           f'empleos</h1><ul>{"".join(self.tarjeta(a) for a in tarjetas)}</ul></body></html>').encode())
+
+
+def anuncio_occ(jid, ubicacion, *en, titulo="Analista de datos", **campos):
+    return {"id": jid, "titulo": titulo, "ubicacion": ubicacion, "en": list(en), **campos}
+
+
+class ConOccFalso(CopiaFicticia):
+    BOLSA = ficha_bolsa("BOL-01", {"adaptador": "occ", "pais": "XA"})
+
+    def buscar_bolsa(self, bloque_04, occ, bloque_05, *argumentos, empresas=None, bolsas=None, codigo_esperado=0):
+        """Corre main() del script de la copia con OCC falso como red. empresas: {EMP-ID: portal falso} que se buscan
+        junto a la bolsa, con su portal tras la misma red; bolsas: las fichas del catálogo de bolsas (por defecto,
+        BOL-01 en OCC). Devuelve la salida JSON completa y stderr."""
+        empresas = empresas or {}
+        self.escribir(modulo_04(bloque_04),
+                      modulo_06({eid: ficha(eid, {"plataforma": p.PLATAFORMA, "portal": p.PORTAL, "consulta": None})
+                                 for eid, p in empresas.items()}, bolsas or {"BOL-01": self.BOLSA}),
+                      None if bloque_05 is None else modulo_05(bloque_05))
+        especificacion = importlib.util.spec_from_file_location("buscar_copia", self.dir / "herramientas" / "buscar.py")
+        script = importlib.util.module_from_spec(especificacion)
+        especificacion.loader.exec_module(script)
+        for p in empresas.values():
+            p.script = script
+
+        def red(req, timeout=None):
+            if req.full_url.startswith(OccFalso.SITIO):
+                return occ(req, timeout)
+            portal = next(p for p in empresas.values() if req.full_url.startswith(getattr(p, "HOST", "-")))
+            cuerpo = json.loads(req.data) if req.data else None
+            respuesta = portal(req.full_url, cuerpo, como_json=req.get_header("Accept") == "application/json")
+            return io.BytesIO((respuesta if isinstance(respuesta, str) else json.dumps(respuesta)).encode())
+
+        self.esperas = []
+        entorno = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_REMOTE"}
+        salida, errores, codigo = io.StringIO(), io.StringIO(), 0
+        with mock.patch.object(sys, "argv", ["buscar.py", *argumentos]), \
+                mock.patch.object(script.urllib.request, "urlopen", red), \
+                mock.patch.object(script.time, "sleep", self.esperas.append), \
+                mock.patch.dict(os.environ, entorno, clear=True), \
+                contextlib.redirect_stdout(salida), contextlib.redirect_stderr(errores):
+            try:
+                script.main()
+            except SystemExit as e:
+                codigo = e.code
+        self.assertEqual(codigo, codigo_esperado, errores.getvalue())
+        self.assertNotIn("Traceback", errores.getvalue())
+        return json.loads(salida.getvalue()), errores.getvalue()
+
+
+class BolsaOcc(ConOccFalso):
+    EN_A1 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])])
+    TERMINOS = terminos(ROL_01=(["analista de datos"], ["analista de datos"]))
+
+    def test_cada_vacante_sale_con_su_bolsa_y_los_campos_literales_de_su_tarjeta(self):
+        occ = OccFalso([anuncio_occ("101", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"),
+                                    empresa="Empresa confidencial", sueldo="$20,000 - $25,000 Mensual")])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        self.assertEqual(salida["empresas"], [])
+        r = salida["bolsas"][0]
+        self.assertEqual(r["bolsa_id"], "BOL-01")
+        v = r["vacantes"][0]
+        self.assertEqual({k: v[k] for k in ("bolsa_id", "job_id", "titulo", "empresa_literal", "sueldo_literal",
+                                            "ubicacion_literal", "region_relacionada", "modalidad_literal",
+                                            "fecha_publicacion", "url_oficial", "estado_vigencia")},
+                         {"bolsa_id": "BOL-01", "job_id": "101", "titulo": "Analista de datos",
+                          "empresa_literal": "Empresa confidencial", "sueldo_literal": "$20,000 - $25,000 Mensual",
+                          "ubicacion_literal": "Ciudad A1, Estado A", "region_relacionada": "Dentro",
+                          "modalidad_literal": None, "fecha_publicacion": None,
+                          "url_oficial": OccFalso.SITIO + "/empleo/oferta/101",
+                          "estado_vigencia": "Confirmada abierta"})
+        self.assertNotIn("empresa_id", v)
+        # Con una sola página, la siguiente llega sin tarjetas y termina el recorrido
+        self.assertEqual(occ.listados, [("analista-de-datos", "ciudad-a1", 1), ("analista-de-datos", "ciudad-a1", 2)])
+        self.assertIn("[OK] BOL-01: 1/1 únicos; 1 en la región", errores)
+        self.assertNotIn("revisar", errores)
+
+    def test_la_cobertura_cuadra_al_descontar_las_tarjetas_fijas_de_cada_pagina(self):
+        consulta = ("analista-de-datos", "ciudad-a1")
+        fijas = [anuncio_occ(f"9{i}", "Ciudad Z, Estado Z", titulo="Recomendada", clase="vacancy-card--recomendada")
+                 for i in range(2)]
+        de_consulta = [anuncio_occ(str(100 + i), "Ciudad A1, Estado A", consulta) for i in range(7)]
+        occ = OccFalso(de_consulta, fijas=fijas, por_pagina=3)
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual((r["total_reportado"], r["unicos"], r["completa"]), (7, 7, True))
+        self.assertEqual(sorted(v["job_id"] for v in r["vacantes"]), [str(100 + i) for i in range(7)])
+        self.assertEqual(r["fuera_de_region"], [])
+        # Con las 7 reunidas en la página 3, no pide la 4
+        self.assertEqual(occ.listados, [(*consulta, 1), (*consulta, 2), (*consulta, 3)])
+        self.assertIn("[OK] BOL-01: 7/7 únicos", errores)
+        # Una pausa antes de cada petición a OCC, salvo la primera (robots.txt)
+        self.assertEqual(self.esperas, [2, 2, 2])
+
+    def test_con_una_sola_pagina_no_se_descarta_ninguna_tarjeta(self):
+        # La primera puede llevar «Recomendada» y ser de la consulta: con una página no se distingue de una fija
+        occ = OccFalso([anuncio_occ("101", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"),
+                                    clase="vacancy-card--recomendada"),
+                        anuncio_occ("102", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"))])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual((r["total_reportado"], r["unicos"], r["completa"]), (2, 2, True))
+        self.assertEqual([v["job_id"] for v in r["vacantes"]], ["101", "102"])
+
+    def test_el_recorrido_termina_en_la_primera_pagina_sin_tarjetas_aunque_no_llegue_al_total(self):
+        consulta = ("analista-de-datos", "ciudad-a1")
+
+        class OccQueSeQuedaCorto(OccFalso):
+            def __call__(self, req, timeout=None):
+                respuesta = super().__call__(req, timeout)
+                cuerpo = respuesta.read().decode()
+                return io.BytesIO(cuerpo.replace('data-total-offers="4"', 'data-total-offers="5"').encode())
+
+        occ = OccQueSeQuedaCorto([anuncio_occ(str(100 + i), "Ciudad A1, Estado A", consulta) for i in range(4)],
+                                 por_pagina=2)
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual((r["total_reportado"], r["unicos"], r["completa"]), (5, 4, False))
+        self.assertEqual(occ.listados, [(*consulta, 1), (*consulta, 2), (*consulta, 3)])
+        self.assertIn("[INCOMPLETA] BOL-01: 4/5 únicos", errores)
+
+    def test_una_primera_pagina_sin_su_marcador_es_un_fallo_y_no_un_listado_vacio(self):
+        occ = OccFalso([anuncio_occ("101", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"))], reto=True)
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1)
+        r = salida["bolsas"][0]
+        self.assertEqual(set(r), {"bolsa_id", "error"})
+        self.assertIn("data-total-offers", r["error"])
+        self.assertIn("[FALLO] BOL-01: ", errores)
+        self.assertEqual(occ.listados, [("analista-de-datos", "ciudad-a1", 1)])
+
+    def busquedas(self, bloque_04, bloque_05=None):
+        """Las consultas (término, lugar) que pidió el script, en orden, con OCC sin vacantes."""
+        occ = OccFalso([])
+        self.buscar_bolsa(bloque_04, occ, bloque_05 or self.TERMINOS)
+        return [(t, l) for t, l, _ in occ.listados]
+
+    def test_hay_una_busqueda_por_cada_termino_y_lugar_y_las_remotas_van_primero(self):
+        bloque_05 = terminos(ROL_01=(["Analista de datos", "power bi"], []),
+                             ROL_02=(["Científico de datos", "analista  de  datos"], []))
+        bloque_04 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1", "Municipio Á2"]),
+                                  grupo("XB", nombres=["Ciudad B1"])], alcance="cualquiera")
+        terminos_05 = ("analista-de-datos", "power-bi", "cientifico-de-datos")
+        self.assertEqual(self.busquedas(bloque_04, bloque_05),
+                         [(t, "remoto") for t in terminos_05]
+                         + [(t, l) for t in terminos_05 for l in ("ciudad-a1", "municipio-a2")])
+
+    def test_un_grupo_de_division_completa_busca_en_cada_division_y_uno_de_pais_completo_en_todo_el_pais(self):
+        self.assertEqual(self.busquedas(preferencias([grupo("XA", ["Estado A", "Estado A2"])])),
+                         [("analista-de-datos", "estado-a"), ("analista-de-datos", "estado-a2")])
+        self.assertEqual(self.busquedas(preferencias([grupo("XA")])), [("analista-de-datos", None)])
+
+    def test_sin_remoto_en_04_no_se_pide_ningun_listado_remoto(self):
+        casos = {"ninguno": preferencias([grupo("XA", nombres=["Ciudad A1"])]),
+                 "otros países": preferencias([grupo("XA", nombres=["Ciudad A1"])], alcance="paises",
+                                              paises_remoto=["XB"])}
+        for caso, bloque in casos.items():
+            with self.subTest(caso):
+                self.assertEqual(self.busquedas(bloque), [("analista-de-datos", "ciudad-a1")])
+
+    def test_con_sin_remotas_no_se_pide_el_listado_remoto(self):
+        occ = OccFalso([])
+        salida, errores = self.buscar_bolsa(preferencias([grupo("XA", nombres=["Ciudad A1"])], alcance="cualquiera"),
+                                            occ, self.TERMINOS, "--sin-remotas")
+        self.assertEqual([(t, l) for t, l, _ in occ.listados], [("analista-de-datos", "ciudad-a1")])
+        self.assertEqual(salida["bolsas"][0]["remotas_revision"], "Omitida (--sin-remotas)")
+
+    def test_solo_remoto_en_el_pais_de_la_bolsa_busca_solo_el_listado_remoto(self):
+        bloque = preferencias([], alcance="paises", paises_remoto=["XA"])
+        self.assertEqual(self.busquedas(bloque), [("analista-de-datos", "remoto")])
+
+    def test_si_04_no_busca_nada_en_el_pais_de_la_bolsa_la_bolsa_es_un_fallo(self):
+        occ = OccFalso([])
+        salida, errores = self.buscar_bolsa(preferencias([grupo("XB", nombres=["Ciudad B1"])]), occ, self.TERMINOS,
+                                            codigo_esperado=1)
+        self.assertIn("XA", salida["bolsas"][0]["error"])
+        self.assertEqual(occ.pedidas, [])
+
+    def test_una_vacante_que_aparece_con_varios_terminos_o_lugares_cuenta_una_vez(self):
+        bloque_04 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1", "Ciudad A2"])], alcance="cualquiera")
+        bloque_05 = terminos(ROL_01=(["analista de datos", "power bi"], []))
+        todas = [("analista-de-datos", "remoto"), ("analista-de-datos", "ciudad-a1"), ("power-bi", "ciudad-a2")]
+        occ = OccFalso([
+            # La remota de la región también sale en los listados por lugar: la dice el filtro remoto
+            anuncio_occ("101", "Ciudad A1, Estado A", *todas),
+            anuncio_occ("102", "Ciudad A2, Estado A", ("power-bi", "ciudad-a2"), ("analista-de-datos", "ciudad-a1")),
+            anuncio_occ("103", "Ciudad Z, Estado Z", ("analista-de-datos", "remoto"), ("power-bi", "remoto")),
+            anuncio_occ("104", "Ciudad Y, Estado Y", ("power-bi", "ciudad-a2"))])
+        salida, errores = self.buscar_bolsa(bloque_04, occ, bloque_05)
+        r = salida["bolsas"][0]
+        self.assertEqual((r["total_reportado"], r["unicos"], r["completa"]), (4, 4, True))
+        modalidades = {v["job_id"]: v["modalidad_literal"] for v in r["vacantes"] + r["remotas_fuera_de_region"]}
+        self.assertEqual(modalidades, {"101": "Remoto (filtro tipo-home-office-remoto de OCC)", "102": None,
+                                       "103": "Remoto (filtro tipo-home-office-remoto de OCC)"})
+        self.assertEqual([v["job_id"] for v in r["remotas_fuera_de_region"]], ["103"])
+        self.assertEqual(r["fuera_de_region"], ["Ciudad Y, Estado Y"])
+        self.assertIn("[OK] BOL-01: 4/4 únicos; 2 en la región; remotas fuera de la región: 1", errores)
+
+    def test_con_el_bloque_de_05_vacio_o_sin_llenar_falla_solo_la_bolsa_y_las_empresas_se_buscan_igual(self):
+        en_xa = {"id": "R-1", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]}
+        casos = {"vacío": {}, "sin términos": terminos(ROL_01=([], ["analista de datos"])),
+                 "sin sección": "sin sección", "sin 05": None}
+        for caso, bloque_05 in casos.items():
+            with self.subTest(caso):
+                (self.dir / "05_MAPA_HABILIDADES_Y_ROLES.md").unlink(missing_ok=True)
+                occ = OccFalso([])
+                if bloque_05 == "sin sección":
+                    self.escribir(modulo_05_texto="# 05\n\n## HAB-ROLES\n\n- Familias.\n")
+                    bloque_05 = None
+                salida, errores = self.buscar_bolsa(self.EN_A1, occ, bloque_05,
+                                                    empresas={"EMP-ACME": WorkdayFalso([en_xa])}, codigo_esperado=1)
+                self.assertEqual(occ.pedidas, [])
+                self.assertIn("05_MAPA_HABILIDADES_Y_ROLES.md", salida["bolsas"][0]["error"])
+                self.assertIn("[FALLO] BOL-01: ", errores)
+                if caso != "sin 05":
+                    self.assertIn("HAB-TERMINOS", salida["bolsas"][0]["error"])
+                    self.assertIn("/configurar", salida["bolsas"][0]["error"])
+                self.assertIn("[OK] EMP-ACME: 1/1 únicos", errores)
+                self.assertEqual([v["job_id"] for v in salida["empresas"][0]["vacantes"]], ["R-1"])
+
+    def test_un_bloque_de_05_mal_formado_falla_solo_la_bolsa_con_un_mensaje_claro(self):
+        casos = {"JSON inválido": '{"ROL-01": {},}', "lista": '["analista de datos"]',
+                 "sin titulos": '{"ROL-01": {"terminos": ["analista"]}}',
+                 "clave que no es ROL": '{"Analistas": {"terminos": ["analista"], "titulos": []}}'}
+        for caso, texto in casos.items():
+            with self.subTest(caso):
+                salida, errores = self.buscar_bolsa(self.EN_A1, OccFalso([]), texto, codigo_esperado=1)
+                self.assertIn("HAB-TERMINOS", salida["bolsas"][0]["error"])
+
+    def test_los_ids_eligen_empresas_y_bolsas_y_sin_ellos_se_recorren_los_dos_catalogos(self):
+        en_xa = {"id": "R-1", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]}
+        for argumentos, empresas, bolsas in (((), ["EMP-ACME"], ["BOL-01"]), (("bol-01",), [], ["BOL-01"]),
+                                             (("EMP-ACME",), ["EMP-ACME"], [])):
+            with self.subTest(argumentos):
+                salida, _ = self.buscar_bolsa(self.EN_A1, OccFalso([]), self.TERMINOS, *argumentos,
+                                              empresas={"EMP-ACME": WorkdayFalso([en_xa])})
+                self.assertEqual([r["empresa_id"] for r in salida["empresas"]], empresas)
+                self.assertEqual([r["bolsa_id"] for r in salida["bolsas"]], bolsas)
+
+    def test_un_id_desconocido_falla_y_nombra_las_empresas_y_las_bolsas_que_hay(self):
+        self.escribir(modulo_04(self.EN_A1),
+                      modulo_06({"EMP-ACME": ficha("EMP-ACME", {"plataforma": "workday", "portal": "https://x"})},
+                                {"BOL-01": self.BOLSA}), modulo_05(self.TERMINOS))
+        r = self.correr("BOL-02")
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertEqual(r.stdout, "")
+        for texto in ("BOL-02", "EMP-ACME", "BOL-01"):
+            self.assertIn(texto, r.stderr)
+
+    def test_una_ficha_de_bolsa_sin_configuracion_usable_sale_como_fallo(self):
+        casos = {"sin adaptador": {"pais": "XA"}, "adaptador desconocido": {"adaptador": "otra", "pais": "XA"},
+                 "país inválido": {"adaptador": "occ", "pais": "País A"}, "sin ficha": None}
+        for caso, conf in casos.items():
+            with self.subTest(caso):
+                bolsas = {"BOL-01": "" if conf is None else ficha_bolsa("BOL-01", conf)}
+                salida, errores = self.buscar_bolsa(self.EN_A1, OccFalso([]), self.TERMINOS, bolsas=bolsas,
+                                                    codigo_esperado=1)
+                self.assertIn("[FALLO] BOL-01: ", errores)
+                self.assertIn("06", salida["bolsas"][0]["error"])
+
+    def test_si_la_primera_pagina_llena_el_total_con_las_fijas_sigue_a_la_siguiente(self):
+        # 2 fijas + 3 de la consulta en la página 1 suman el total de 5: sin la página 2 no se distinguen las fijas
+        consulta = ("analista-de-datos", "ciudad-a1")
+        fijas = [anuncio_occ(f"9{i}", "Ciudad Z, Estado Z", titulo="Recomendada") for i in range(2)]
+        occ = OccFalso([anuncio_occ(str(100 + i), "Ciudad A1, Estado A", consulta) for i in range(5)], fijas=fijas,
+                       por_pagina=3)
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual((r["total_reportado"], r["unicos"], r["completa"]), (5, 5, True))
+        self.assertEqual(sorted(v["job_id"] for v in r["vacantes"]), [str(100 + i) for i in range(5)])
+        self.assertEqual(r["fuera_de_region"], [])
+
+    def test_una_vacante_que_trae_el_filtro_remoto_de_otro_termino_sale_remota(self):
+        bloque_04 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])], alcance="cualquiera")
+        bloque_05 = terminos(ROL_01=(["analista de datos", "power bi"], []))
+        occ = OccFalso([anuncio_occ("101", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"),
+                                    ("power-bi", "remoto"))])
+        salida, _ = self.buscar_bolsa(bloque_04, occ, bloque_05)
+        v = salida["bolsas"][0]["vacantes"][0]
+        self.assertEqual(v["modalidad_literal"], "Remoto (filtro tipo-home-office-remoto de OCC)")
 
 
 if __name__ == "__main__":
