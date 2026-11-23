@@ -17,12 +17,15 @@ y las demás siguen; también una bolsa con el bloque de 05 sin llenar. Entonces
 Cada adaptador de empresa lista las vacantes de los países de la región, o las de la consulta de la ficha, y las
 remotas con el filtro de su plataforma según el alcance del remoto; lee el detalle de cada una con comprobación de
 ID. Cada adaptador de bolsa lista cada término de búsqueda en cada lugar de la región de su país y, si el alcance
-del remoto lo incluye, en todo el país con su filtro remoto. Solo se usan rutas que permite el robots.txt del
+del remoto lo incluye, en todo el país con su filtro remoto; clasifica cada vacante por su título como «encaja»,
+«dudosa» (con su línea «revisar título») o «ruido», que no se entrega, y reporta el rendimiento de cada término
+(05/HAB-TERMINOS, «Filtro por título»). Solo se usan rutas que permite el robots.txt del
 sitio. El JSON va a --salida o a stdout, con las empresas en «empresas» y las bolsas en «bolsas»; el resumen y las
 líneas «revisar», a stderr. El script no evalúa ni escribe en los registros: entrega los datos para los pasos 4-9
 de 07/BUS-PASOS. Solo biblioteca estándar.
 """
 import argparse
+import collections
 import datetime as dt
 import html
 import http.client
@@ -400,7 +403,8 @@ def palabra(nombre):
 
 
 def nombra(s, nombres):
-    """La ubicación normalizada s contiene alguno de los nombres como palabra o frase completa."""
+    """El texto normalizado s, una ubicación o un título, contiene alguno de los nombres como palabra o frase
+    completa."""
     return any(re.search(palabra(n), s) for n in nombres if n.strip())
 
 
@@ -1762,11 +1766,57 @@ def lugares_de_bolsa(pref, pais):
     return lugares
 
 
-def resultado_bolsa(bid, acceso):
-    """resultado() de una bolsa: con bolsa_id en lugar de empresa_id."""
+def resultado_bolsa(bid, acceso, terminos):
+    """resultado() de una bolsa: con bolsa_id en lugar de empresa_id y los términos usados; su rendimiento y la
+    clasificación de los títulos los agrega contar_rendimiento()."""
     r = resultado(bid, acceso)
     del r["empresa_id"]
-    return {"bolsa_id": bid, **r}
+    return {"bolsa_id": bid, **r, "terminos": terminos}
+
+
+def terminos_de_bolsa(familias):
+    """{slug: término} de 05, cada término una vez: el primero que se escribió de cada slug, porque dos términos
+    con el mismo slug son la misma búsqueda (05/HAB-TERMINOS, «Reglas»)."""
+    terminos = {}
+    for f in familias.values():
+        for t in f["terminos"]:
+            terminos.setdefault(slug(t), " ".join(t.split()))
+    return terminos
+
+
+# Palabras que no cuentan para que un título traiga las de un término: «analista de datos» pide «analista» y «datos»
+VACIAS = frozenset("a al con de del e el en la las lo los o para por u un una y".split())
+
+
+def clasificar_titulo(titulo, familias, terminos):
+    """(clase, familias ROL, término) de una vacante de bolsa por su título (05/HAB-TERMINOS, «Filtro por título»):
+    «encaja» si contiene una frase de titulos de alguna familia, con esas familias; «dudosa» si no, pero trae todas las
+    palabras significativas de un término de búsqueda, en cualquier orden, con ese término; y «ruido» en otro caso."""
+    s = normalizar(titulo)
+    roles = [rol for rol, f in familias.items() if nombra(s, f["titulos"])]
+    if roles:
+        return "encaja", roles, None
+    for t in terminos:
+        palabras = [p for p in re.findall(r"[^\W_]+", normalizar(t)) if p not in VACIAS]
+        if palabras and all(nombra(s, [p]) for p in palabras):
+            return "dudosa", [], t
+    return "ruido", [], None
+
+
+def contar_rendimiento(r, ids_por_termino, clases, candidatas):
+    """El rendimiento de cada término: las vacantes distintas que trajo, cuántas encajan, cuántas son dudosas y
+    cuántas son candidatas (encajan o dudosas, y se entregan por su región o el alcance del remoto). Una vacante
+    traída por varios términos cuenta en cada uno, con su única clase."""
+    def por_clase(ids):
+        cuenta = collections.Counter(clases[i] for i in ids)
+        return {"encajan": cuenta["encaja"], "dudosas": cuenta["dudosa"], "ruido": cuenta["ruido"]}
+
+    r["rendimiento"] = {}
+    for t, ids in ids_por_termino.items():
+        c = por_clase(ids)
+        r["rendimiento"][t] = {"traidas": len(ids), "encajan": c["encajan"], "dudosas": c["dudosas"],
+                               "candidatas": len(ids & candidatas)}
+    r["clasificacion_titulos"] = por_clase(clases)
 
 
 # --- OCC Mundial ------------------------------------------------------------------
@@ -1867,7 +1917,7 @@ def occ(bid, conf, pref, familias, remotas):
     """Adaptador de OCC Mundial (06/CAT-BOLSAS): un listado por cada término de búsqueda de 05 y cada lugar de la
     región de 04 en el país de la bolsa, más todo el país con el filtro remoto si el alcance del remoto lo incluye."""
     pais = conf["pais"]
-    terminos = list(dict.fromkeys(slug(t) for f in familias.values() for t in f["terminos"]))
+    terminos = terminos_de_bolsa(familias)
     lugares = lugares_de_bolsa(pref, pais)
     alcance = pref["remoto"]["alcance"]
     sin_remoto = sin_remotas(pref, remotas) or (
@@ -1878,8 +1928,11 @@ def occ(bid, conf, pref, familias, remotas):
                     "que buscar en ella")
     # Una URL de muestra por cada forma del listado, con lugar y con el filtro remoto, y con toda su consulta
     comprobar_robots(OCC_SITIO, [occ_url("x", "x", False, 2), occ_url("x", None, True, 2)])
-    r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar")
-    vistas = set()
+    r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar",
+                        list(terminos.values()))
+    # clases: la clase de cada vacante ya vista, por su ID; sus claves son las vistas de listado()
+    clases, candidatas = {}, set()
+    ids_por_termino = {t: set() for t in terminos.values()}
     revisadas = []
     # Los listados remotos, de todos los términos, van primero: el listado sin filtro no dice la modalidad, y una
     # vacante ya vista no se vuelve a ver
@@ -1889,14 +1942,25 @@ def occ(bid, conf, pref, familias, remotas):
         tarjetas, total = occ_listar(termino, lugar, remoto)
         url = occ_url(termino, lugar, remoto)
         ids = {t["id"] for t in tarjetas}
+        ids_por_termino[terminos[termino]] |= ids
         donde = f"todo {pais}, remoto" if remoto else f"en {lugar}" if lugar else f"todo {pais}"
-        listado(r, f"«{termino}», {donde}: GET {url}", total, ids, vistas)
+        listado(r, f"«{termino}», {donde}: GET {url}", total, ids, clases.keys())
         if remoto:
             revisadas.append(f"«{termino}»: {len(ids)} únicos de {total}")
         for t in tarjetas:
-            if t["id"] not in vistas:
-                vistas.add(t["id"])
-                repartir(r, occ_vacante(pref, bid, pais, t, remoto, url), pref, de_remotas=remoto)
+            if t["id"] in clases:
+                continue
+            clase, roles, en_titulo = clasificar_titulo(t["titulo"], familias, terminos.values())
+            clases[t["id"]] = clase
+            # El ruido solo se cuenta: no se entrega ni deja su ubicación en fuera_de_region
+            if clase == "ruido":
+                continue
+            v = {**occ_vacante(pref, bid, pais, t, remoto, url), "clasificacion_titulo": clase, "familias_rol": roles}
+            if en_titulo:
+                v["termino_en_titulo"] = en_titulo
+            if repartir(r, v, pref, de_remotas=remoto):
+                candidatas.add(t["id"])
+    contar_rendimiento(r, ids_por_termino, clases, candidatas)
     r["remotas_revision"] = sin_remoto or f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas)
     return r
 
@@ -1932,6 +1996,9 @@ def imprimir_revisar(vacantes):
     dichas = set()
     for v in vacantes:
         nombre = nombre_en_revisar(v)
+        if v.get("clasificacion_titulo") == "dudosa":
+            print(f"    revisar título: {nombre} «{v['titulo']}»: trae las palabras de «{v['termino_en_titulo']}», "
+                  "pero ninguna frase de titulos de 05/HAB-TERMINOS", file=sys.stderr)
         if v["estado_vigencia"] != "Confirmada abierta" or "detalle no consultado" in (v["motivo"] or ""):
             print(f"    revisar vigencia: {nombre} {v['motivo']}", file=sys.stderr)
         for nota in v.get("revisar", []):
@@ -1955,8 +2022,13 @@ def informar(fid, r):
     estado = "OK" if r["completa"] else "SIN TOTAL" if r["completa"] is None else "INCOMPLETA"
     cuenta = (f"{r['unicos']}/{r['total_reportado']}" if r["total_reportado"] is not None
               else f"{r['unicos']} (sin total publicado)")
+    titulos = ""
+    if "clasificacion_titulos" in r:
+        c = r["clasificacion_titulos"]
+        titulos = (f"; títulos: {c['encajan']} encaja{'' if c['encajan'] == 1 else 'n'}, {c['dudosas']} "
+                   f"dudosa{'' if c['dudosas'] == 1 else 's'}, {c['ruido']} ruido")
     print(f"[{estado}] {fid}: {cuenta} únicos; {en_region} en la región; remotas fuera de la región: "
-          f"{len(r['remotas_fuera_de_region'])} ({r['remotas_revision']})", file=sys.stderr)
+          f"{len(r['remotas_fuera_de_region'])} ({r['remotas_revision']}){titulos}", file=sys.stderr)
     if r.get("verificacion_cobertura"):
         print(f"    cobertura: {r['verificacion_cobertura']}", file=sys.stderr)
     for nota in r["revisar"]:

@@ -2225,5 +2225,77 @@ class BolsaOcc(ConOccFalso):
         self.assertEqual(v["modalidad_literal"], "Remoto (filtro tipo-home-office-remoto de OCC)")
 
 
+class FiltroPorTitulo(ConOccFalso):
+    EN_A1 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])])
+    TERMINOS = terminos(ROL_01=(["analista de datos"], ["analista de datos", "analista bi"]),
+                        ROL_02=(["power bi"], ["desarrollador power bi"]))
+
+    def test_cada_vacante_se_clasifica_por_su_titulo_y_el_ruido_solo_se_cuenta(self):
+        consulta = ("analista-de-datos", "ciudad-a1")
+        titulos = {"101": "Analista de Datos Sr.", "102": "Desarrollador Power BI / Analista BI",
+                   # Todas las palabras significativas del término, en otro orden o sin «de»: dudosas
+                   "103": "Analista de Estrategia y Datos", "104": "Analista Comercial (Datos)",
+                   # Le falta «datos»: ruido
+                   "105": "Analista contable", "106": "Ejecutivo de ventas"}
+        occ = OccFalso([anuncio_occ(j, "Ciudad A1, Estado A", consulta, titulo=t) for j, t in titulos.items()])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual({v["job_id"]: (v["clasificacion_titulo"], v["familias_rol"]) for v in r["vacantes"]},
+                         {"101": ("encaja", ["ROL-01"]), "102": ("encaja", ["ROL-01", "ROL-02"]),
+                          "103": ("dudosa", []), "104": ("dudosa", [])})
+        self.assertEqual([v["job_id"] for v in r["vacantes"]], ["101", "102", "103", "104"])
+        # El ruido cuenta en la cobertura, pero no se entrega ni deja su ubicación
+        self.assertEqual((r["total_reportado"], r["unicos"], r["completa"]), (6, 6, True))
+        self.assertEqual((r["remotas_fuera_de_region"], r["fuera_de_region"]), ([], []))
+        self.assertEqual(r["clasificacion_titulos"], {"encajan": 2, "dudosas": 2, "ruido": 2})
+        self.assertIn("[OK] BOL-01: 6/6 únicos; 4 en la región; remotas fuera de la región: 0 (No aplica: 04 no "
+                      "acepta remoto); títulos: 2 encajan, 2 dudosas, 2 ruido", errores)
+        lineas = [linea for linea in errores.splitlines() if "revisar título" in linea]
+        self.assertEqual(len(lineas), 2, errores)
+        self.assertIn("revisar título: 103 «Analista de Estrategia y Datos»", lineas[0])
+        self.assertIn("«analista de datos»", lineas[0])
+        self.assertIn("revisar título: 104 «Analista Comercial (Datos)»", lineas[1])
+        for ruido in ("105", "106"):
+            self.assertNotIn(ruido, errores)
+
+    def test_el_rendimiento_por_termino_cuadra_con_lo_listado(self):
+        bloque_04 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])], alcance="cualquiera")
+        bloque_05 = terminos(ROL_01=(["Analista de datos", "analista  de  datos"], ["analista de datos"]),
+                             ROL_02=(["power bi"], ["power bi"]))
+        analista, power = ("analista-de-datos", "ciudad-a1"), ("power-bi", "ciudad-a1")
+        occ = OccFalso([
+            # Repetida entre los dos términos, encaja solo con ROL-01: cuenta en el rendimiento de los dos
+            anuncio_occ("101", "Ciudad A1, Estado A", analista, power),
+            anuncio_occ("102", "Ciudad A1, Estado A", analista, titulo="Analista de Estrategia y Datos"),
+            # Encaja, pero fuera de la región: no es candidata
+            anuncio_occ("103", "Ciudad Y, Estado Y", analista),
+            anuncio_occ("104", "Ciudad A1, Estado A", power, titulo="Recepcionista"),
+            # Remota fuera de la región, en el alcance: candidata
+            anuncio_occ("105", "Ciudad Z, Estado Z", ("power-bi", "remoto"), titulo="Consultor Power BI"),
+            # Dudosa fuera de la región: ni candidata ni línea «revisar título»
+            anuncio_occ("106", "Ciudad Y, Estado Y", power, titulo="Especialista BI Power Platform")])
+        salida, errores = self.buscar_bolsa(bloque_04, occ, bloque_05)
+        r = salida["bolsas"][0]
+        self.assertEqual(r["terminos"], ["Analista de datos", "power bi"])
+        self.assertEqual(r["rendimiento"], {
+            "Analista de datos": {"traidas": 3, "encajan": 2, "dudosas": 1, "candidatas": 2},
+            "power bi": {"traidas": 4, "encajan": 2, "dudosas": 1, "candidatas": 2}})
+        self.assertEqual(r["unicos"], 6)
+        self.assertEqual(r["clasificacion_titulos"], {"encajan": 3, "dudosas": 2, "ruido": 1})
+        candidatas = sorted(v["job_id"] for v in r["vacantes"] + r["remotas_fuera_de_region"])
+        self.assertEqual(candidatas, ["101", "102", "105"])
+        self.assertEqual(sorted(r["fuera_de_region"]), ["Ciudad Y, Estado Y"])
+        self.assertIn("títulos: 3 encajan, 2 dudosas, 1 ruido", errores)
+        self.assertIn("revisar título: 102 ", errores)
+        self.assertNotIn("106", errores)
+
+    def test_una_bolsa_sin_vacantes_reporta_cada_termino_en_cero(self):
+        salida, errores = self.buscar_bolsa(self.EN_A1, OccFalso([]), self.TERMINOS)
+        r = salida["bolsas"][0]
+        cero = {"traidas": 0, "encajan": 0, "dudosas": 0, "candidatas": 0}
+        self.assertEqual(r["rendimiento"], {"analista de datos": cero, "power bi": cero})
+        self.assertIn("títulos: 0 encajan, 0 dudosas, 0 ruido", errores)
+
+
 if __name__ == "__main__":
     unittest.main()
