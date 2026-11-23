@@ -1,6 +1,6 @@
 # 11 — Esquema de registros
 
-**Versión:** 1.9 — 2026-11-22 — Vacantes de bolsas de empleo: `bolsa_id`, `empresa_literal` y `sueldo_literal` en `vacantes`, `Bolsa de empleo` en `tipo_fuente`, su identidad (REG-IDENTIDAD), su rendimiento y su detalle en `busquedas`, las que les falta el detalle en `informes` y el estado de las bolsas con `estado-bolsas` (REG-CAMPOS, REG-ESQUEMA, REG-LOCAL).
+**Versión:** 1.9 — 2026-11-23 — Vacantes de bolsas de empleo: `bolsa_id`, `empresa_literal` y `sueldo_literal` en `vacantes`, `Bolsa de empleo` en `tipo_fuente` y sus términos en `motivo`, su identidad (REG-IDENTIDAD), su rendimiento, su detalle y su comparación por términos comunes en `busquedas`, las que les falta el detalle en `informes` y el estado de las bolsas con `estado-bolsas` (REG-CAMPOS, REG-ESQUEMA, REG-LOCAL).
 **Estado:** esquema de la plantilla. El paso 8 de `/configurar` (Registros) crea el archivo de registros desde el bloque de REG-ESQUEMA.
 
 ## Responsabilidad
@@ -103,7 +103,7 @@ Las tablas de cada pestaña explican sus columnas; el bloque de REG-ESQUEMA las 
 | busqueda_id | ID | Sí | Debe existir en `busquedas`. Una comprobación puntual también abre su fila en `busquedas` |
 | fecha_verificacion | Fecha | Sí | Hora opcional, solo si se conoce |
 | estado_vigencia | Lista cerrada | Sí | `Confirmada abierta` / `No verificable` / `Cerrada` |
-| motivo | Texto | Sí | Lo que se vio: botón de postular activo, mensaje de cierre, error 404… Si la fuente muestra un texto breve pertinente, se cita literal, p. ej. «This job is no longer accepting applications» |
+| motivo | Texto | Sí | Lo que se vio: botón de postular activo, mensaje de cierre, error 404… Si la fuente muestra un texto breve pertinente, se cita literal, p. ej. «This job is no longer accepting applications». El de una vacante de bolsa que registra `importar` termina con los términos que la trajeron, en una forma fija que lee la comparación (07/BUS-COBERTURA): `; traída por «término», «término»` |
 | url_fuente | URL | Si existe | URL exacta que se consultó |
 | tipo_fuente | Lista cerrada | Sí | `Oficial` / `Bolsa de empleo` / `Agregador` / `Buscador` / `Aportada por el titular`. `Bolsa de empleo`: el listado o el anuncio de una bolsa de 06/CAT-BOLSAS, que es fuente oficial para sus vacantes (07/BUS-VIGENCIA) |
 
@@ -178,7 +178,7 @@ La observación es la evidencia fechada (REG-DECISIONES). La evidencia mínima d
 | fuentes_consultas_filtros | Multivalor | Sí | Sitio, consulta y filtros. Una bolsa nombra los términos de búsqueda que usó: `términos: «término», «término»` |
 | cobertura_limitaciones | Texto | Sí | Páginas revisadas, totales mostrados y límites. Una bolsa agrega sus títulos y el rendimiento de cada término, en una forma fija que la herramienta vuelve a leer: `títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas, E encajan, D dudosas, C candidatas; «término»: …`, siempre con esas palabras, aunque un número sea 1 (07/BUS-REGISTRO). Después, su detalle, que lee `estado-bolsas` (REG-LOCAL): `detalle de la bolsa: C candidatas, A anteriores, P pedidos, L leídos («id», «id»), sin bloqueo`, con `L leídos (ninguno)` si no leyó ninguno y, en lugar de `sin bloqueo`, `freno activo`, `bloqueo en el listado, petición N (tipo)` o `bloqueo en el detalle, petición N (tipo)` |
 | no_revisado_pendientes | Texto | Sí | `Ninguno` si no queda nada |
-| comparacion_anterior | Texto | Sí | `Sin búsqueda comparable` la primera vez. «No observada esta vez» no significa «cerrada» |
+| comparacion_anterior | Texto | Sí | `Sin búsqueda comparable` la primera vez. «No observada esta vez» no significa «cerrada». Una bolsa se compara por los términos comunes, y las vacantes que solo traía un término quitado salen como no comparables (07/BUS-COBERTURA) |
 
 ### `informes`
 

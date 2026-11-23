@@ -72,6 +72,7 @@ configuración, el archivo u openpyxl, o se pide una pestaña o búsqueda inexis
 y dice qué falla.
 """
 import argparse
+import collections
 import datetime as dt
 import json
 import math
@@ -532,10 +533,11 @@ CAMPOS_DE_EMPRESA = ("acceso", "consultas", "total_reportado", "unicos", "comple
 CAMPOS_DE_VACANTE = ("job_id", "titulo", "url_oficial", "ubicacion_literal", "modalidad_literal", "region_relacionada",
                      "ubicaciones_por_revisar", "fecha_publicacion", "estado_vigencia", "motivo", "url_fuente",
                      "departamento", "descripcion")
-# Una bolsa trae además sus términos, su rendimiento y su detalle, y cada vacante, lo literal de su tarjeta y su clase
-# por título (07/BUS-BOLSAS).
+# Una bolsa trae además sus términos, su rendimiento y su detalle, y cada vacante, lo literal de su tarjeta, su clase
+# por título y los términos que la trajeron (07/BUS-BOLSAS).
 CAMPOS_DE_BOLSA = CAMPOS_DE_EMPRESA + ("terminos", "rendimiento", "clasificacion_titulos", "detalle")
-CAMPOS_DE_VACANTE_DE_BOLSA = CAMPOS_DE_VACANTE + ("empresa_literal", "sueldo_literal", "clasificacion_titulo")
+CAMPOS_DE_VACANTE_DE_BOLSA = CAMPOS_DE_VACANTE + ("empresa_literal", "sueldo_literal", "clasificacion_titulo",
+                                                  "terminos")
 # Las dos listas de la salida: la columna de vacantes que nombra su fuente y los campos de cada una y de sus vacantes.
 LISTAS_DE_LA_SALIDA = {"empresas": ("empresa_id", CAMPOS_DE_EMPRESA, CAMPOS_DE_VACANTE),
                        "bolsas": ("bolsa_id", CAMPOS_DE_BOLSA, CAMPOS_DE_VACANTE_DE_BOLSA)}
@@ -613,7 +615,7 @@ def por_revisar(v):
 def fuente(fid, r):
     """El elemento de una empresa o una bolsa en fuentes_consultas_filtros: acceso, los términos de una bolsa, listados
     con sus conteos y remotas (07/BUS-REGISTRO)."""
-    terminos = [f"términos: {', '.join(f'«{t}»' for t in r['terminos'])}"] if "terminos" in r else []
+    terminos = [f"términos: {comillas(r['terminos'])}"] if "terminos" in r else []
     partes = [r["acceso"], *terminos, *r["consultas"]] + ([f"remotas: {r['remotas_revision']}"]
                                                           if r["remotas_revision"] else [])
     return f"{fid}: " + "; ".join(partes).replace(" | ", " / ")
@@ -661,27 +663,108 @@ def cobertura(fid, r, vacantes, conservadas):
     return f"{fid}: {texto}" + "".join(f"; revisar: {nota}" for nota in r["revisar"])
 
 
+def comillas(terminos):
+    """La lista de términos en la forma de los registros: «término», «término»."""
+    return ", ".join(f"«{t}»" for t in terminos)
+
+
+def de_comillas(texto):
+    """Los términos de una lista hecha con comillas()."""
+    return re.findall(r"«([^»]*)»", texto)
+
+
+def traida_por(terminos):
+    """La forma fija que cierra el motivo de la observación de una vacante de bolsa: los términos que la trajeron, que
+    lee la comparación por términos comunes (07/BUS-COBERTURA)."""
+    return f"; traída por {comillas(terminos)}"
+
+
+LISTA_DE_TERMINOS = r"«[^»]*»(?:, «[^»]*»)*"
+# La forma fija de traida_por(), al final del motivo
+TRAIDA_POR = re.compile(rf"; traída por ({LISTA_DE_TERMINOS})$")
+# El elemento de una bolsa en fuentes_consultas_filtros (fuente()): su acceso, «términos: …» y cada listado como
+# «término», <dónde>: GET <URL> (conteos), como lo escribe listado() de buscar.py
+FORMA_DE_BOLSA = re.compile(rf"(?P<acceso>.*?); términos: (?P<terminos>{LISTA_DE_TERMINOS})(?P<resto>.*)")
+DONDE_DEL_LISTADO = re.compile(r"; «[^»]*», (.*?): GET ")
+Bolsa = collections.namedtuple("Bolsa", "acceso terminos lugares")
+
+
+def forma_de_bolsa(fid, elemento):
+    """La Bolsa del elemento de una bolsa en fuentes_consultas_filtros, o None si no es de esa bolsa o no listó. Los
+    lugares son el «dónde» de cada listado: «en <lugar>», «todo <país>, remoto»…"""
+    m = elemento.startswith(f"{fid}: ") and FORMA_DE_BOLSA.fullmatch(elemento[len(fid) + 2:])
+    if not m:
+        return None
+    return Bolsa(m["acceso"], de_comillas(m["terminos"]), frozenset(DONDE_DEL_LISTADO.findall(m["resto"])))
+
+
+def bloqueada_en_el_listado(fid, cobertura):
+    """Si la cobertura_limitaciones de una búsqueda dice que fid se bloqueó en su listado: sus listados quedaron
+    incompletos y no se comparan (07/BUS-COBERTURA)."""
+    return any((m := DETALLE_DE_BOLSA.search(e)) and m["en"] == "listado"
+               for e in cobertura.split(" | ") if e.startswith(f"{fid}: "))
+
+
 def comparacion(registradas, fid, r, de_la_fuente, actuales, cambios):
     """El elemento de una empresa o una bolsa en comparacion_anterior, contra la última búsqueda comparable
     (07/BUS-COBERTURA): la que listó la misma fuente con el mismo acceso y las mismas consultas, salvo los conteos.
-    de_la_fuente: las vacantes canónicas de esa fuente. None si no hay."""
-    firma = CUENTAS.sub("#", fuente(fid, r))
-    comparables = [b for b in registradas["busquedas"]
-                   if any(CUENTAS.sub("#", e) == firma for e in b["fuentes_consultas_filtros"].split(" | "))]
+    Una bolsa se compara por sus términos comunes: la comparable listó los mismos lugares con el mismo acceso y con
+    algún término que esta volvió a usar, y una vacante que solo traían términos quitados no cuenta como no observada,
+    sino como no comparable. de_la_fuente: las vacantes canónicas de esa fuente. None si no hay."""
+    propia = fuente(fid, r)
+    if "terminos" in r:
+        actual = forma_de_bolsa(fid, propia)
+        if not actual or (r["detalle"]["bloqueo"] or {}).get("en") == "listado":
+            return None
+
+        def comparable(e, b):
+            antes = forma_de_bolsa(fid, e)
+            return bool(antes and (antes.acceso, antes.lugares) == (actual.acceso, actual.lugares)
+                        and set(antes.terminos) & set(actual.terminos)
+                        and not bloqueada_en_el_listado(fid, b["cobertura_limitaciones"]))
+    else:
+        firma = CUENTAS.sub("#", propia)
+
+        def comparable(e, b):
+            return CUENTAS.sub("#", e) == firma
+    comparables = [(b, e) for b in registradas["busquedas"] for e in b["fuentes_consultas_filtros"].split(" | ")
+                   if comparable(e, b)]
     if not comparables:
         return None
-    anterior = max(comparables, key=lambda b: (b["fecha_hora"], b["busqueda_id"]))["busqueda_id"]
+    b, elemento = max(comparables, key=lambda x: (x[0]["fecha_hora"], x[0]["busqueda_id"]))
+    anterior = b["busqueda_id"]
     # Una vacante que esa búsqueda vio cerrada (07/BUS-PASOS, paso 7) ya no se espera en el listado.
-    previas = list(dict.fromkeys(o["vacante_id"] for o in registradas["observaciones"]
-                                 if o["busqueda_id"] == anterior and o["vacante_id"] in de_la_fuente
-                                 and o["estado_vigencia"] != "Cerrada"))
+    observadas = [o for o in registradas["observaciones"]
+                  if o["busqueda_id"] == anterior and o["vacante_id"] in de_la_fuente]
+    previas = list(dict.fromkeys(o["vacante_id"] for o in observadas if o["estado_vigencia"] != "Cerrada"))
+    no_observadas = [v for v in previas if v not in actuales]
 
     def lista(ids):
         return ", ".join(ids) or "ninguno"
 
-    texto = (f"{fid}, contra {anterior}: nuevos {lista([v for v in actuales if v not in previas])}; "
+    encabezado, no_comparables = f"{fid}, contra {anterior}", None
+    if "terminos" in r:
+        antes, ahora = forma_de_bolsa(fid, elemento).terminos, r["terminos"]
+        quitados = [t for t in antes if t not in ahora]
+        if set(antes) != set(ahora):
+            comunes, nuevos = [t for t in ahora if t in antes], [t for t in ahora if t not in antes]
+            cambio = [f"{nombre}: {comillas(ts)}" for nombre, ts in (("quitados", quitados), ("nuevos", nuevos)) if ts]
+            encabezado += f", en los términos comunes {comillas(comunes)} ({'; '.join(cambio)})"
+        if quitados:
+            # Los términos que trajeron cada vacante en la anterior; ninguno si su observación no los anota, y
+            # entonces no se sabe si la trajo un término común
+            traidas = collections.defaultdict(set)
+            for o in observadas:
+                if m := TRAIDA_POR.search(o["motivo"]):
+                    traidas[o["vacante_id"]] |= set(de_comillas(m[1]))
+            no_comparables = [v for v in no_observadas if not traidas.get(v, set()) & set(ahora)]
+            no_observadas = [v for v in no_observadas if v not in no_comparables]
+
+    texto = (f"{encabezado}: nuevos {lista([v for v in actuales if v not in previas])}; "
              f"ya conocidos {lista([v for v in actuales if v in previas])}; no observados esta vez, sin declararlos "
-             f"cerrados: {lista([v for v in previas if v not in actuales])}")
+             f"cerrados: {lista(no_observadas)}")
+    if no_comparables is not None:
+        texto += f"; no comparables, sin un término común que las trajera: {lista(no_comparables)}"
     if cambios:
         texto += "; cambios: " + ", ".join(f"{v} ({', '.join(c)})" for v, c in cambios.items())
     return texto
@@ -817,6 +900,8 @@ def importar(esquema, salida, decisiones):
                 registrada.update(cambio)
                 cambios.setdefault(vacante_id, {}).update(cambio)
                 revisar_filas.append(("vacantes", registrada, etiqueta))
+            if campo == "bolsa_id":
+                motivo += traida_por(v["terminos"])
             nuevas["observaciones"].append({
                 "observacion_id": observacion_id, "vacante_id": vacante_id, "busqueda_id": busqueda_id,
                 "fecha_verificacion": fecha, "estado_vigencia": estado, "motivo": motivo,

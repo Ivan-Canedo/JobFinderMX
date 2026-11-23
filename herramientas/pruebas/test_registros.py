@@ -1263,10 +1263,10 @@ class ConOccEnLaCopia(CopiaFicticia):
         self.escribir(test_buscar.modulo_04(EN_A1), modulo_06_con_fichas({}, {"BOL-01": self.BOLSA}))
         self.ok("crear")
 
-    def buscar(self, anuncios, *ids, empresas=None, codigo_esperado=0):
-        """Corre buscar.py de la copia contra OCC falso (y el portal de cada empresa) y devuelve la ruta de su
-        salida JSON."""
-        salida, _ = self.buscar_en_red(EN_A1, OccFalso(anuncios), TERMINOS, *(ids or ["BOL-01"]), empresas=empresas,
+    def buscar(self, anuncios, *ids, empresas=None, codigo_esperado=0, terminos=TERMINOS, reto=False):
+        """Corre buscar.py de la copia contra OCC falso (y el portal de cada empresa), con esos términos en 05 y el
+        reto de OCC falso, y devuelve la ruta de su salida JSON."""
+        salida, _ = self.buscar_en_red(EN_A1, OccFalso(anuncios, reto=reto), terminos, *(ids or ["BOL-01"]), empresas=empresas,
                                        codigo_esperado=codigo_esperado)
         ruta = self.sesion / f"busqueda_{len(list(self.sesion.iterdir()))}.json"
         ruta.write_text(json.dumps(salida, ensure_ascii=False), encoding="utf-8")
@@ -1459,6 +1459,110 @@ class ImportarBolsa(ConOccEnLaCopia):
         vacantes = (self.dir / "instantanea" / "vacantes.md").read_text(encoding="utf-8")
         self.assertIn(f"## {ids['101']} · 101 · BOL-01 · «Analista de datos»", vacantes)
         self.assertIn("- **empresa_literal:** Empresa confidencial", vacantes)
+
+
+# «analista de datos» y «cientifico de datos» en la primera búsqueda; «analista de datos» y «ingeniero de datos» en la
+# segunda: uno común, uno quitado y uno nuevo.
+ANTES = terminos(ROL_01=(["analista de datos", "cientifico de datos"],
+                         ["analista de datos", "cientifico de datos", "ingeniero de datos"]))
+DESPUES = terminos(ROL_01=(["analista de datos", "ingeniero de datos"],
+                           ["analista de datos", "cientifico de datos", "ingeniero de datos"]))
+
+
+def de_los_terminos(jid, titulo, *slugs):
+    """Un anuncio de OCC en Ciudad A1 que traen esos términos (sus slugs)."""
+    return anuncio_occ(jid, "Ciudad A1, Estado A", *((s, "ciudad-a1") for s in slugs), titulo=titulo)
+
+
+class ComparacionDeBolsas(ConOccEnLaCopia):
+    """comparacion_anterior de una bolsa cuyos términos cambiaron: solo cuentan los términos comunes (07/BUS-COBERTURA).
+    """
+
+    def dos_busquedas(self, primera, segunda):
+        r = self.importar(self.buscar(primera, terminos=ANTES), self.decisiones())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.importar(self.buscar(segunda, terminos=DESPUES), self.decisiones())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return {v["job_id"]: v["vacante_id"] for v in self.leer("vacantes")}, self.leer("busquedas")[-1]
+
+    def test_solo_cuentan_como_no_observadas_las_que_trajo_un_termino_comun(self):
+        ids, busqueda = self.dos_busquedas(
+            [de_los_terminos("201", "Analista de datos", "analista-de-datos"),
+             de_los_terminos("202", "Cientifico de datos", "cientifico-de-datos"),
+             de_los_terminos("203", "Analista de datos Sr.", "analista-de-datos", "cientifico-de-datos"),
+             de_los_terminos("204", "Cientifico de datos Sr.", "cientifico-de-datos")],
+            [de_los_terminos("204", "Cientifico de datos Sr.", "analista-de-datos"),
+             de_los_terminos("205", "Ingeniero de datos", "ingeniero-de-datos")])
+        # 201 y 203 las trajo «analista de datos», que se volvió a usar; 202 solo el quitado; 204 sigue, ahora por
+        # otro término; 205 la trae el término nuevo.
+        self.assertEqual(busqueda["comparacion_anterior"],
+                         "BOL-01, contra BUS-0001, en los términos comunes «analista de datos» (quitados: «cientifico "
+                         f"de datos»; nuevos: «ingeniero de datos»): nuevos {ids['205']}; ya conocidos {ids['204']}; "
+                         f"no observados esta vez, sin declararlos cerrados: {ids['201']}, {ids['203']}; "
+                         f"no comparables, sin un término común que las trajera: {ids['202']}")
+
+    def test_la_observacion_anota_los_terminos_que_trajeron_la_vacante(self):
+        self.importar(self.buscar([de_los_terminos("201", "Analista de datos", "analista-de-datos",
+                                                   "cientifico-de-datos")], terminos=ANTES), self.decisiones())
+        [o] = self.leer("observaciones")
+        self.assertTrue(o["motivo"].endswith("; traída por «analista de datos», «cientifico de datos»"), o["motivo"])
+
+    def test_los_terminos_cierran_el_motivo_aunque_cambie_un_campo(self):
+        primera = [de_los_terminos("201", "Analista de datos", "analista-de-datos"),
+                   de_los_terminos("202", "Analista de datos Sr.", "analista-de-datos")]
+        self.importar(self.buscar(primera, terminos=ANTES), self.decisiones())
+        cambiada = [de_los_terminos("201", "Analista de datos II", "analista-de-datos", "cientifico-de-datos")]
+        r = self.importar(self.buscar(cambiada, terminos=ANTES), self.decisiones())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        o = self.leer("observaciones")[-1]
+        self.assertIn("titulo: «Analista de datos» → «Analista de datos II»", o["motivo"])
+        self.assertTrue(o["motivo"].endswith("; traída por «analista de datos», «cientifico de datos»"), o["motivo"])
+        # En la tercera, sin «cientifico de datos», la 201 la trajo un término común
+        r = self.importar(self.buscar([], terminos=DESPUES), self.decisiones())
+        self.assertIn("no observados esta vez, sin declararlos cerrados: VAC-0001; no comparables",
+                      self.leer("busquedas")[-1]["comparacion_anterior"])
+
+    def test_una_bolsa_bloqueada_en_el_listado_no_es_comparable(self):
+        """Sin remoto en 04, «analista de datos» lista Ciudad A1 completa antes del reto en «ingeniero de datos»: los
+        lugares coinciden, pero los términos que no se listaron no pueden dar no observadas."""
+        self.importar(self.buscar([de_los_terminos("201", "Analista de datos", "analista-de-datos")],
+                                  terminos=ANTES), self.decisiones())
+        r = self.importar(self.buscar([], terminos=DESPUES, reto={"ingeniero-de-datos"}, codigo_esperado=1),
+                          self.decisiones(pendientes="BOL-01: [FALLO] reto en el listado"))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.leer("busquedas")[-1]["comparacion_anterior"], "Sin búsqueda comparable")
+
+    def test_sin_terminos_comunes_no_hay_busqueda_comparable(self):
+        r = self.importar(self.buscar([de_los_terminos("202", "Cientifico de datos", "cientifico-de-datos")],
+                                      terminos=terminos(ROL_01=(["cientifico de datos"], ["cientifico de datos"]))),
+                          self.decisiones())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.importar(self.buscar([de_los_terminos("201", "Analista de datos", "analista-de-datos")]),
+                          self.decisiones())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.leer("busquedas")[-1]["comparacion_anterior"], "Sin búsqueda comparable")
+
+    def anterior_sin_sus_terminos(self):
+        """Una primera búsqueda cuya observación se registró antes de anotar los términos que trajeron la vacante."""
+        self.importar(self.buscar([de_los_terminos("201", "Analista de datos", "analista-de-datos")], terminos=ANTES),
+                      self.decisiones())
+        [o] = self.leer("observaciones")
+        self.ok("actualizar", entrada={"observaciones": [
+            {"observacion_id": o["observacion_id"], "motivo": o["motivo"].split("; traída por")[0]}]})
+
+    def test_sin_los_terminos_de_cada_vacante_compara_todo_si_no_se_quito_ningun_termino(self):
+        self.anterior_sin_sus_terminos()
+        mas = terminos(ROL_01=(["analista de datos", "cientifico de datos", "ingeniero de datos"],
+                               ["analista de datos"]))
+        self.assertEqual(self.importar(self.buscar([], terminos=mas), self.decisiones()).returncode, 0)
+        self.assertIn("no observados esta vez, sin declararlos cerrados: VAC-0001",
+                      self.leer("busquedas")[-1]["comparacion_anterior"])
+
+    def test_sin_los_terminos_de_cada_vacante_no_compara_ninguna_si_se_quito_un_termino(self):
+        self.anterior_sin_sus_terminos()
+        self.assertEqual(self.importar(self.buscar([], terminos=DESPUES), self.decisiones()).returncode, 0)
+        self.assertIn("no observados esta vez, sin declararlos cerrados: ninguno; no comparables, sin un término común "
+                      "que las trajera: VAC-0001", self.leer("busquedas")[-1]["comparacion_anterior"])
 
 
 class ReanudacionDeBolsas(ConOccEnLaCopia):

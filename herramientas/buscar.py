@@ -2188,6 +2188,9 @@ def occ(bid, conf, pref, familias, remotas, previo):
         r["completa"] = False
         en_el_listado = e
     contar_rendimiento(r, ids_por_termino, clases, candidatas)
+    # Los términos que trajeron cada vacante, para comparar solo por los términos comunes (07/BUS-COBERTURA)
+    for v in r["vacantes"] + r["remotas_fuera_de_region"]:
+        v["terminos"] = [t for t, ids in ids_por_termino.items() if v["job_id"] in ids]
     r["remotas_revision"] = sin_remoto or f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas)
     # Primero las que encajan y después las dudosas; en cada grupo, de la más nueva a la más vieja (el orden del
     # listado desempata)
