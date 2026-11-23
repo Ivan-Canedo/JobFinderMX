@@ -29,7 +29,7 @@ Explícaselo al titular al empezar, en tus palabras y sin alargarlo:
    - **Remoto público:** no ofrezcas la nube. Dile que su copia lleva sus datos personales (su perfil, su CV y sus registros), cómo volver privado el repositorio («Settings» → «General» → «Danger Zone» → «Change visibility») y que vuelva a invocar `/conectar-nube` cuando lo esté. Detente.
    - **Otro servicio** (GitLab, Bitbucket…): dile en dos líneas que Code en la nube solo trabaja con repositorios de GitHub, así que puede mover su copia a un repositorio privado de GitHub o seguir con Code local. Detente.
    - **Sin remoto:** sigue el paso 2 de `/conectar-web`, que crea el repositorio privado y sube su copia.
-   - **Salidas:** donde esos puntos o el paso 2 te manden al paso 3 o al paso 4 de `/conectar-web`, sigue aquí con el punto 4.
+   - **Salidas:** donde esos puntos o el paso 2 te manden al paso 3 de `/conectar-web`, sigue aquí con el punto 4.
 4. **Rama:** `git branch --show-current`. Las sesiones en la nube integran sus cambios en `main` (11/REG-LOCAL, «Historial y respaldo»). Si su rama tiene otro nombre, díselo en una línea y pregúntale si la renombras a `main`, local y en GitHub, antes de seguir.
 5. **Empresas:** lee CAT-EMPRESAS de `06_EMPRESAS_OBJETIVO.md`. Si no tiene ninguna, dile que la lista de dominios queda vacía por ahora y que la prueba del paso 4 solo comprobará la preparación de la sesión; cuando agregue empresas (paso 7 de `/configurar`), el agente le da el dominio de cada una (07/BUS-CANALES, «Empresa nueva»).
 

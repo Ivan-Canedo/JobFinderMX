@@ -32,8 +32,9 @@ Revisa todo antes de cambiar nada. Si algo falla, detente y dile al titular qué
 
 1. Lista las versiones publicadas: `git ls-remote --tags --refs <url> 'v*'`. Ordénalas por número, no como texto (`v1.10` va después de `v1.9`).
 2. El destino es la más reciente. Si el titular pidió otra, debe estar en la lista y ser más nueva que la base.
-3. Si la base ya es la más reciente, díselo y termina.
-4. Dile al titular de qué versión a cuál va a pasar, y que al final le propones un solo commit que puede revisar antes.
+3. **Copia 1.x:** si la base es 1.x y el destino es v3.0 o posterior, detente. Desde v3.0, la herramienta de registros ya no lee la hoja de Google que una copia 1.x pudo tener, y las acciones de v2.0 la necesitan. Explícaselo en una línea y proponle actualizar primero a v2.2, como destino elegido (punto 2), y, después de su commit, volver a escribir `/actualizar` para llegar a la más reciente.
+4. Si la base ya es la más reciente, díselo y termina.
+5. Dile al titular de qué versión a cuál va a pasar, y que al final le propones un solo commit que puede revisar antes.
 
 ## Paso 3: Traer las versiones
 

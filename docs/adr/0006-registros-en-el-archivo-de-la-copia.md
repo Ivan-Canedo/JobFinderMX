@@ -18,3 +18,5 @@ Se retira la hoja de Google: escribirla con el conector de Sheets obligaba al mo
 - Las tendencias (10) se analizan solo en Code.
 - Sale la columna `canal` de `busquedas`, que el ADR 0005 había conservado: nada filtra ya por ella, y `fuentes_consultas_filtros` dice cómo se leyó cada fuente. Las copias existentes la pierden en la migración.
 - Las copias que ya usan la hoja necesitan una migración al archivo, con comparación de conteos.
+
+**Reemplazado en parte en v3.0:** se retira la migración desde la hoja. `migrar` solo pone al día archivos de registros de versiones anteriores, y una copia 1.x pasa primero a v2.2, cuyas acciones de v2.0 todavía la migran. Las demás decisiones siguen vigentes.

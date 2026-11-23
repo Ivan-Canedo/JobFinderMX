@@ -1,6 +1,6 @@
 # 01 — Mapa y estado del proyecto
 
-**Versión:** 1.9 — 2026-10-28 — «Fuera del proyecto» suma `/conectar-nube`, que el paso 9 de `/configurar` ofrece antes que `/conectar-web`.
+**Versión:** 1.10 — 2026-11-23 — «Fuera del proyecto»: `/conectar-web` ya no reconecta proyectos que leían la hoja de Google.
 
 ## ESTADO — Punto de continuidad
 
@@ -20,7 +20,7 @@
 | 08 Evaluación | 1.5 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): queda listo con las condiciones de 04 y las familias de 05 |
 | 09 Generación de CV | 1.4 | Sin llenar | `/configurar`, paso 6 (CV base): color del CV |
 | 10 Tendencias | 1.1 | Sin llenar | `/configurar`, paso 8 (Registros): queda listo cuando existen los registros |
-| 11 Esquema de registros | 1.9 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
+| 11 Esquema de registros | 1.10 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
 
 **Orden sugerido:**
 
@@ -79,7 +79,7 @@ No están en el conocimiento del proyecto. Si una sesión los necesita, hay que 
 - **`AGENTS.md` y `CLAUDE.md`:** instrucciones para el agente que trabaja esta carpeta en el canal Code, el único lugar donde se editan los módulos. `CLAUDE.md` solo remite a `AGENTS.md`.
 - **`.claude/skills/configurar/`:** la skill `/configurar`, que configura la copia paso a paso según la tabla ESTADO.
 - **`.claude/skills/actualizar/` y `CAMBIOS.md`:** la skill `/actualizar`, que lleva a la copia los cambios de una versión más nueva de la plantilla sin tocar sus datos, y la lista de lo que trae cada versión. Se invoca a mano: nada avisa al abrir la copia.
-- **`.claude/skills/conectar-web/`:** la skill `/conectar-web`, que conecta un proyecto de claude.ai con el repositorio privado de GitHub de la copia, para que lea los módulos y la instantánea, o reconecta un proyecto que leía la hoja de Google. La ofrece el paso 9 de `/configurar`, en otra conversación.
+- **`.claude/skills/conectar-web/`:** la skill `/conectar-web`, que conecta un proyecto de claude.ai con el repositorio privado de GitHub de la copia, para que lea los módulos y la instantánea. La ofrece el paso 9 de `/configurar`, en otra conversación.
 - **`.claude/skills/conectar-nube/`:** la skill `/conectar-nube`, que prepara la copia para Code en la nube: su repositorio privado de GitHub y el entorno de la nube con la lista de dominios desde 06, y una búsqueda de prueba. La ofrece el paso 9 de `/configurar`, antes que `/conectar-web`, en otra conversación.
 - **`.agents/skills/`:** un puntero por skill, con su mismo nombre y descripción, que remite a la skill completa de `.claude/skills/`. Existen para que otros agentes, que leen esa carpeta y no `.claude/skills/` (Antigravity, Gemini CLI), encuentren `/configurar`, `/actualizar`, `/conectar-web` y `/conectar-nube`; las skills se editan en `.claude/skills/` y el puntero solo cambia si cambia su nombre o su descripción.
 - **`.markdownlint-cli2.jsonc`:** reglas de formato Markdown que se revisan en Code tras editar (AGENTS.md).

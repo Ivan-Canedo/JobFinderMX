@@ -37,10 +37,10 @@ evaluaciones, que sale de sus nucleos (08/EVAL-ENCAJE), lo dan leer, informe y l
   cada «revisar título» de una bolsa, si la dudosa se conserva; una descartada no se registra. Una empresa o bolsa en
   [FALLO] se nombra en no_revisado_pendientes; de una bolsa detenida por una señal anti-bot se registra lo que
   entregó. Da el busqueda_id y una línea «VAC-ID · título · departamento» por vacante de la búsqueda.
-- migrar: pasa a esta versión una hoja de Google descargada como .xlsx o el archivo de registros de una versión
-  anterior (ADR 0006). Lee los valores de cada pestaña por el nombre de sus columnas, quita las calculadas, como
-  el encaje guardado de evaluaciones, y las que el esquema ya no tiene (canal), agrega vacías las que el archivo
-  anterior no tenía (bolsa_id, empresa_literal y sueldo_literal de vacantes), aplica las correcciones,
+- migrar: pone al día el archivo de registros de una versión anterior (ADR 0006). Lee los valores de cada pestaña
+  por el nombre de sus columnas, quita las calculadas, como el encaje guardado de evaluaciones, y las que el esquema
+  ya no tiene (canal), agrega vacías las que el archivo anterior no tenía (bolsa_id, empresa_literal y
+  sueldo_literal de vacantes), aplica las correcciones,
   {pestaña: {ID o "fila N": {columna: texto}}}, y comprueba cada fila como agregar. Escribe el archivo completo y
   da, por pestaña, las filas de la entrada y las del archivo escrito, más las columnas quitadas y agregadas, las filas
   corregidas y las pestañas ignoradas. Solo lee la entrada. No sobrescribe un archivo de registros con filas,
@@ -1009,7 +1009,7 @@ def estado_bolsas(esquema):
             "generado": dt.datetime.now(leer_zona_horaria()).strftime("%Y-%m-%d %H:%M"), "bolsas": bolsas}
 
 
-# --- migrar: la hoja descargada o un archivo de registros 1.x (ADR 0006) ----------
+# --- migrar: un archivo de registros de una versión anterior (ADR 0006) ----------
 
 # Las columnas que el esquema ya no tiene, por pestaña: migrar las quita.
 RETIRADAS = {"busquedas": ("canal",)}
@@ -1018,8 +1018,8 @@ AGREGADAS = {"vacantes": ("bolsa_id", "empresa_literal", "sueldo_literal")}
 
 
 def texto_de_celda(valor):
-    """Una celda de la entrada como el texto que guarda el archivo. La hoja guardaba texto, pero una celda editada a
-    mano puede llegar como fecha o número."""
+    """Una celda de la entrada como el texto que guarda el archivo. La herramienta escribe texto, pero una celda
+    editada a mano puede llegar como fecha o número."""
     if valor is None:
         return ""
     if isinstance(valor, dt.datetime):
@@ -1044,26 +1044,16 @@ def tiene_filas(ruta):
         libro.close()
 
 
-def encabezado(celda, formula):
-    """El nombre de una columna de la entrada. En la hoja, el de cada calculada de informes era una fórmula,
-    ={"nombre";MAP(…)}: si el archivo no guarda su valor, el nombre sale de la fórmula."""
-    m = celda is None and isinstance(formula, str) and re.match(r'=\{"(\w+)";', formula)
-    return m.group(1) if m else texto_de_celda(celda).strip()
-
-
 def leer_para_migrar(esquema, ruta):
-    """Las filas de la entrada, {pestaña: [(fila en la hoja, {columna guardada: texto})]}, con las columnas quitadas
-    y las agregadas de cada pestaña y las pestañas que el esquema no tiene. De la hoja descargada se leen los valores,
-    no las fórmulas. Rechaza la entrada si le falta una pestaña o una columna que no sea de AGREGADAS, o trae una que
-    el esquema no conoce."""
+    """Las filas de la entrada, {pestaña: [(fila en la entrada, {columna guardada: texto})]}, con las columnas
+    quitadas y las agregadas de cada pestaña y las pestañas que el esquema no tiene. Rechaza la entrada si le falta
+    una pestaña o una columna que no sea de AGREGADAS, o trae una que el esquema no conoce."""
     try:
         libro = biblioteca_xlsx().load_workbook(ruta, data_only=True)
-        formulas = biblioteca_xlsx().load_workbook(ruta, read_only=True)
     except OSError as e:
         error(f"{ruta}: no se pudo leer ({e.strerror}).")
     except Exception as e:
-        error(f"{ruta}: no se pudo abrir como .xlsx ({e}). Descarga la hoja con Archivo → Descargar → Microsoft "
-              "Excel (.xlsx).")
+        error(f"{ruta}: no se pudo abrir como .xlsx ({e}).")
     from openpyxl.utils import get_column_letter
     errores, filas, quitadas, agregadas = [], {}, {}, {}
     for p in esquema["pestanas"]:
@@ -1072,8 +1062,7 @@ def leer_para_migrar(esquema, ruta):
             errores.append(f"{nombre}: falta la pestaña en {ruta}.")
             continue
         valores = libro[nombre].iter_rows(values_only=True)
-        fila_1 = next(formulas[nombre].iter_rows(max_row=1, values_only=True), ())
-        en_la_entrada = [encabezado(v, f) for v, f in zip(next(valores, ()), fila_1 + (None,) * len(columnas))]
+        en_la_entrada = [texto_de_celda(v).strip() for v in next(valores, ())]
         se_quitan = [c["nombre"] for c in p["columnas"] if c["nombre"] not in columnas] + list(RETIRADAS.get(nombre, ()))
         agregadas[nombre] = [c for c in AGREGADAS.get(nombre, ()) if c in columnas and c not in en_la_entrada]
         errores += [f"{nombre}: falta la columna {c}." for c in columnas
@@ -1095,7 +1084,6 @@ def leer_para_migrar(esquema, ruta):
             filas[nombre].append((n, {c: fila[posicion[c]] if posicion.get(c, len(fila)) < len(fila) else ""
                                       for c in columnas}))
         quitadas[nombre] = [c for c in se_quitan if c in en_la_entrada]
-    formulas.close()
     if errores:
         rechazar(errores)
     ignoradas = [n for n in libro.sheetnames if n not in filas]
@@ -1149,11 +1137,9 @@ def corregir(esquema, filas, correcciones):
 
 
 def migrar(esquema, entrada, correcciones):
-    """Escribe el archivo de registros desde una hoja descargada como .xlsx o pone al día el archivo de una versión
-    anterior de la copia: sin las columnas calculadas de informes ni las retiradas, con las agregadas vacías, y con
-    cada fila comprobada como en agregar después de
-    aplicarle las correcciones. Con un solo error no escribe nada. Solo lee la entrada, salvo que sea el archivo
-    mismo."""
+    """Pone al día el archivo de registros de una versión anterior de la copia: sin las columnas calculadas ni las
+    retiradas, con las agregadas vacías, y con cada fila comprobada como en agregar después de aplicarle las
+    correcciones. Con un solo error no escribe nada. Solo lee la entrada, salvo que sea el archivo mismo."""
     ruta = ruta_archivo(esquema)
     if not os.path.isfile(entrada):
         error(f"{entrada}: no existe el archivo que se migra.")
@@ -1601,8 +1587,8 @@ def main():
     o.add_argument("salida", metavar="SALIDA.json", help="la salida JSON de herramientas/buscar.py")
     o.add_argument("decisiones", metavar="DECISIONES.json",
                    help="alcance, versiones, pendientes y la decisión de cada línea «revisar»")
-    o = ordenes.add_parser("migrar", help="pasa a esta versión una hoja descargada o un archivo de registros anterior")
-    o.add_argument("entrada", metavar="ENTRADA.xlsx", help="la hoja descargada como .xlsx o el archivo de registros 1.x")
+    o = ordenes.add_parser("migrar", help="pone al día un archivo de registros de una versión anterior")
+    o.add_argument("entrada", metavar="ENTRADA.xlsx", help="el archivo de registros de una versión anterior")
     o.add_argument("--correcciones", metavar="CORRECCIONES.json",
                    help='{pestaña: {ID o "fila N": {columna: texto}}}, aplicadas antes de comprobar')
     ordenes.add_parser("instantanea", help="regenera la instantánea completa que lee el canal Web")

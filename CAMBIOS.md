@@ -2,6 +2,16 @@
 
 Qué trae cada versión de la plantilla y qué hace `/actualizar` en la copia al llegar a ella. Lo escribe el mantenedor (`CONTRIBUTING.md`, «Versión de la plantilla»); en la copia no se edita.
 
+## v3.0 — 2026-11-23
+
+### Qué cambió
+
+- Sale lo que quedaba de la hoja de Google, que se retiró en v2.0 y ya nadie usa: `/conectar-web` solo conecta tu proyecto de claude.ai con tu repositorio, y `herramientas/registros.py migrar` solo pone al día archivos de registros de versiones anteriores. Si tu copia es 1.x, `/actualizar` te propone pasar primero a v2.2 y, después, a esta versión.
+
+### En la copia
+
+Sin acciones.
+
 ## v2.3 — 2026-11-22
 
 ### Qué cambió
