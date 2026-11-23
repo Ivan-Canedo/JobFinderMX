@@ -1986,11 +1986,17 @@ def occ_listar(termino, lugar, remoto, peticiones):
     inicio de cada página y no cuentan en el total; con una sola página no se distinguen y no se descarta ninguna.
     Termina en la primera página sin tarjetas nuevas o, desde la segunda, al reunir el total: en la primera, las fijas
     pueden completarlo. Una primera página sin data-total-offers no es un listado vacío: es la señal anti-bot si es
-    un reto servido con 200 y, si no, un fallo."""
+    un reto servido con 200 y, si no, un fallo. Si la señal llega después de la primera página, la excepción lleva en
+    «parcial» lo ya leído, (tarjetas, total), para entregarlo (ADR 0010)."""
     paginas, total = [], None
     for p in range(1, OCC_PAGINAS + 1):
         url = occ_url(termino, lugar, remoto, p)
-        h = occ_pedir(url, peticiones, "listado")
+        try:
+            h = occ_pedir(url, peticiones, "listado")
+        except SenalAntiBot as e:
+            if paginas:
+                e.parcial = (occ_sin_fijas(paginas), total)
+            raise
         if total is None:
             m = re.search(r'data-total-offers="(\d+)"', h)
             if not m:
@@ -2209,7 +2215,9 @@ def occ(bid, conf, pref, familias, remotas, previo):
     # Los términos que trajeron cada vacante, para comparar solo por los términos comunes (07/BUS-COBERTURA)
     for v in r["vacantes"] + r["remotas_fuera_de_region"]:
         v["terminos"] = [t for t, ids in ids_por_termino.items() if v["job_id"] in ids]
-    r["remotas_revision"] = sin_remoto or f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas)
+    r["remotas_revision"] = sin_remoto or (f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas) if revisadas
+                                           else f"Filtro {OCC_REMOTO} en todo {pais}: sin revisar, por la señal "
+                                                "anti-bot")
     # Primero las que encajan y después las dudosas; en cada grupo, de la más nueva a la más vieja (el orden del
     # listado desempata)
     orden = sorted((v for v in r["vacantes"] + r["remotas_fuera_de_region"] if v["job_id"] in candidatas),
@@ -2232,28 +2240,45 @@ def occ_listados(r, pref, bid, pais, familias, terminos, consultas, clases, cand
     """Recorre los listados de la bolsa: suma cada uno al resultado y clasifica sus vacantes por título. Llena
     clases, candidatas, ids_por_termino y revisadas, que quedan con lo listado si una señal anti-bot lo corta."""
     for termino, lugar, remoto in consultas:
-        tarjetas, total = occ_listar(termino, lugar, remoto, peticiones)
-        url = occ_url(termino, lugar, remoto)
-        ids = {t["id"] for t in tarjetas}
-        ids_por_termino[terminos[termino]] |= ids
-        donde = f"todo {pais}, remoto" if remoto else f"en {lugar}" if lugar else f"todo {pais}"
-        listado(r, f"«{termino}», {donde}: GET {url}", total, ids, clases.keys())
-        if remoto:
-            revisadas.append(f"«{termino}»: {len(ids)} únicos de {total}")
-        for t in tarjetas:
-            if t["id"] in clases:
-                continue
-            clase, roles, en_titulo = clasificar_titulo(t["titulo"], familias, terminos.values())
-            clases[t["id"]] = clase
-            # El ruido solo se cuenta: no se entrega ni deja su ubicación en fuera_de_region
-            if clase == "ruido":
-                continue
-            v = {**occ_vacante(pref, bid, pais, t, remoto, url), "clasificacion_titulo": clase, "familias_rol": roles,
-                 "_cuando": t["cuando"]}
-            if en_titulo:
-                v["termino_en_titulo"] = en_titulo
-            if repartir(r, v, pref, de_remotas=remoto):
-                candidatas.add(t["id"])
+        senal = None
+        try:
+            (tarjetas, total), cortado = occ_listar(termino, lugar, remoto, peticiones), ""
+        except SenalAntiBot as e:
+            if not getattr(e, "parcial", None):
+                raise
+            # Las páginas leídas antes de la señal se entregan; la consulta queda incompleta
+            (tarjetas, total), cortado, senal = e.parcial, " (cortado por la señal anti-bot)", e
+        occ_sumar_listado(r, pref, bid, pais, familias, terminos, clases, candidatas, ids_por_termino, revisadas,
+                          termino, lugar, remoto, tarjetas, total, cortado)
+        if senal:
+            raise senal
+
+
+def occ_sumar_listado(r, pref, bid, pais, familias, terminos, clases, candidatas, ids_por_termino, revisadas, termino,
+                      lugar, remoto, tarjetas, total, cortado):
+    """Suma al resultado las tarjetas de una consulta y clasifica sus vacantes por título; cortado: la nota de una
+    consulta que la señal anti-bot dejó a medias, o vacía."""
+    url = occ_url(termino, lugar, remoto)
+    ids = {t["id"] for t in tarjetas}
+    ids_por_termino[terminos[termino]] |= ids
+    donde = f"todo {pais}, remoto" if remoto else f"en {lugar}" if lugar else f"todo {pais}"
+    listado(r, f"«{termino}», {donde}: GET {url}{cortado}", total, ids, clases.keys())
+    if remoto:
+        revisadas.append(f"«{termino}»: {len(ids)} únicos de {total}{cortado}")
+    for t in tarjetas:
+        if t["id"] in clases:
+            continue
+        clase, roles, en_titulo = clasificar_titulo(t["titulo"], familias, terminos.values())
+        clases[t["id"]] = clase
+        # El ruido solo se cuenta: no se entrega ni deja su ubicación en fuera_de_region
+        if clase == "ruido":
+            continue
+        v = {**occ_vacante(pref, bid, pais, t, remoto, url), "clasificacion_titulo": clase, "familias_rol": roles,
+             "_cuando": t["cuando"]}
+        if en_titulo:
+            v["termino_en_titulo"] = en_titulo
+        if repartir(r, v, pref, de_remotas=remoto):
+            candidatas.add(t["id"])
 
 
 # --- Principal --------------------------------------------------------------

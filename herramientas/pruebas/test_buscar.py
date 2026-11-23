@@ -1900,7 +1900,8 @@ class OccFalso:
     data-total-offers del <h1>; si la consulta tiene más de una página, las fijas (anuncios que no son de la consulta
     ni cuentan en el total) se repiten al inicio de cada página; la página siguiente a la última llega sin tarjetas
     ni marcador. reto: toda página del listado es el reto «Just a moment…» de Cloudflare, servido con 200; con un
-    conjunto de slugs de términos, solo las de esos términos.
+    conjunto de slugs de términos, solo las de esos términos. reto_desde_pagina: las páginas del listado desde esa
+    son el reto servido con 403, como lo vio la prueba real (ticket 09).
 
     El detalle (/empleo/oferta/<id>) trae el JobPosting del anuncio en JSON-LD, con el «};» final que deja el sitio
     real, y su canonical. publicada: su DatePosted. detalle: lo que responde en su lugar: «404», «abuso» (HTTP 403 con
@@ -1912,9 +1913,10 @@ class OccFalso:
     RETO = ('<!DOCTYPE html><html><head><title>Just a moment...</title></head><body>'
             '<script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script></body></html>')
 
-    def __init__(self, anuncios, fijas=(), por_pagina=20, reto=False, robots="User-agent: *\nDisallow: /cuenta/\n"):
+    def __init__(self, anuncios, fijas=(), por_pagina=20, reto=False, robots="User-agent: *\nDisallow: /cuenta/\n",
+                 reto_desde_pagina=None):
         self.anuncios, self.fijas, self.por_pagina = list(anuncios), list(fijas), por_pagina
-        self.reto, self.robots = reto, robots
+        self.reto, self.robots, self.reto_desde_pagina = reto, robots, reto_desde_pagina
         self.pedidas, self.listados, self.detalles, self.cabeceras = [], [], [], []
 
     def tarjeta(self, a):
@@ -1983,6 +1985,8 @@ class OccFalso:
         self.listados.append((termino, lugar, pagina))
         if self.reto is True or termino in (self.reto or ()):
             return io.BytesIO(self.RETO.encode())
+        if self.reto_desde_pagina and pagina >= self.reto_desde_pagina:
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, io.BytesIO(self.RETO.encode()))
         de_consulta = [a for a in self.anuncios if (termino, lugar) in a["en"]]
         paginas = max(1, -(-len(de_consulta) // self.por_pagina))
         if pagina > paginas:
@@ -2511,6 +2515,32 @@ class DetalleHastaLaSenal(ConOccFalso):
         fallo = next(linea for linea in errores.splitlines() if linea.startswith("[FALLO] BOL-01: "))
         self.assertIn("en el listado", fallo)
         self.assertIn("0 de 1 detalles", fallo)
+
+    def test_un_reto_en_la_segunda_pagina_entrega_la_primera_ya_leida(self):
+        # La prueba real (ticket 09): robots.txt y la página 1 pasaron, la página 2 del listado remoto dio el reto
+        remoto_xa = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])], alcance="cualquiera")
+        occ = OccFalso([anuncio_occ(str(700 + i), "Ciudad A1, Estado A", ("analista-de-datos", "remoto"))
+                        for i in range(25)], reto_desde_pagina=2)
+        salida, errores = self.buscar_bolsa(remoto_xa, occ, self.TERMINOS, codigo_esperado=1)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.listados, [("analista-de-datos", "remoto", 1), ("analista-de-datos", "remoto", 2)])
+        self.assertEqual(occ.detalles, [])
+        entregadas = [v["job_id"] for v in r["vacantes"] + r["remotas_fuera_de_region"]]
+        self.assertEqual(sorted(entregadas), [str(700 + i) for i in range(20)])
+        self.assertEqual((r["unicos"], r["total_reportado"], r["completa"]), (20, 25, False))
+        self.assertEqual(r["rendimiento"]["analista de datos"]["traidas"], 20)
+        self.assertEqual(r["detalle"]["bloqueo"], {"en": "listado", "peticion": 3, "tipo": "reto de Cloudflare, HTTP 403",
+                                                   "url": occ.pedidas[-1]})
+        self.assertIn("«analista-de-datos»: 20 únicos de 25 (cortado", r["remotas_revision"])
+        self.assertIn("20/25 únicos", errores)
+
+    def test_un_bloqueo_antes_del_listado_remoto_no_deja_su_revision_a_medias(self):
+        remoto_xa = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])], alcance="cualquiera")
+        occ = OccFalso([self.anuncio("751")], robots=None)
+        salida, _ = self.buscar_bolsa(remoto_xa, occ, self.TERMINOS, codigo_esperado=1)
+        revision = salida["bolsas"][0]["remotas_revision"]
+        self.assertFalse(revision.rstrip().endswith(","), revision)
+        self.assertIn("sin revisar", revision)
 
     def test_las_empresas_se_buscan_igual_con_la_bolsa_bloqueada(self):
         en_xa = {"id": "R-1", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]}
