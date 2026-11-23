@@ -22,7 +22,7 @@ avisar() {
 }
 
 cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/..}" || {
-    echo "Hook de la nube de ChambaKit: no se encontró la carpeta de la copia; no se instaló nada."
+    echo "Hook de la nube de JobFinderMX: no se encontró la carpeta de la copia; no se instaló nada."
     exit 0
 }
 
@@ -56,9 +56,9 @@ fi
 [ "$salida" = /dev/null ] || rm -f "$salida"
 
 if [ ${#avisos[@]} -eq 0 ]; then
-    echo "Hook de la nube de ChambaKit: herramientas y .venv listos."
+    echo "Hook de la nube de JobFinderMX: herramientas y .venv listos."
 else
-    echo "Hook de la nube de ChambaKit: falló una parte de la preparación."
+    echo "Hook de la nube de JobFinderMX: falló una parte de la preparación."
     for aviso in "${avisos[@]}"; do
         echo "- $aviso"
     done

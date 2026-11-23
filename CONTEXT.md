@@ -1,11 +1,11 @@
-# ChambaKit
+# JobFinderMX
 
-Plantilla de instrucciones, módulos y herramientas para que un agente de IA apoye la búsqueda laboral de una persona: perfil, CV, búsqueda, evaluación de vacantes y tendencias.
+Plantilla de instrucciones, módulos y herramientas para que un agente de IA apoye la búsqueda laboral de una persona: perfil, CV, búsqueda, evaluación de vacantes y tendencias. «MX» dice que está probada con perfiles de México, no que esté limitada a ese país.
 
 ## Personas y repositorios
 
 **Titular**:
-La persona que busca trabajo y usa su copia de ChambaKit con sus propios datos.
+La persona que busca trabajo y usa su copia de JobFinderMX con sus propios datos.
 _Avoid_: usuario, candidato
 
 **Mantenedor**:
@@ -13,7 +13,7 @@ Quien desarrolla y publica la plantilla.
 _Avoid_: usuario, autor
 
 **Plantilla**:
-El repositorio público de ChambaKit, sin datos de ningún titular.
+El repositorio público de JobFinderMX, sin datos de ningún titular.
 _Avoid_: template, repo base
 
 **Copia**:
@@ -39,7 +39,7 @@ _Avoid_: migración, sincronización, merge
 ## Uso
 
 **Canal**:
-Dónde se usa ChambaKit: Code (un agente con terminal sobre la copia, sea Claude Code, Antigravity u otro, en el equipo del titular o en la nube) o Web (un proyecto de claude.ai). Los separa si se llega a los portales y a los scripts, no qué agente se usa ni dónde corre. Solo Code hace búsquedas y escribe los registros; Web consulta y hace comprobaciones puntuales.
+Dónde se usa JobFinderMX: Code (un agente con terminal sobre la copia, sea Claude Code, Antigravity u otro, en el equipo del titular o en la nube) o Web (un proyecto de claude.ai). Los separa si se llega a los portales y a los scripts, no qué agente se usa ni dónde corre. Solo Code hace búsquedas y escribe los registros; Web consulta y hace comprobaciones puntuales.
 _Avoid_: modo, entorno, Local, canal Nube
 
 **Code local**:

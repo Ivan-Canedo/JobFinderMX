@@ -1,4 +1,4 @@
-# Contribuir a ChambaKit
+# Contribuir a JobFinderMX
 
 Guía para quien mantiene la plantilla o le propone cambios. El titular de una copia no la necesita: sus instrucciones están en `AGENTS.md`.
 
@@ -7,7 +7,7 @@ Guía para quien mantiene la plantilla o le propone cambios. El titular de una c
 Un clon de la plantilla se ve igual para el mantenedor que para un titular que la clonó en lugar de crear su copia. Los distingue una marca que vive solo en la configuración local de git (`.git/config`), que no se publica ni viaja en un clon. Ponla en cada clon donde trabajes la plantilla:
 
 ```sh
-git config --local chambakit.mantenedor true
+git config --local plantilla.mantenedor true
 ```
 
 Con la marca, el agente trabaja como mantenedor (`AGENTS.md`, «Al iniciar»); sin ella, como en la copia de un titular.
@@ -75,7 +75,7 @@ Para ver la plantilla como la ve un titular nuevo, trabaja en un clon de prueba 
 git clone . "$(mktemp -d)/clon"
 ```
 
-El clon de prueba solo lleva lo que ya tiene commit. Para probar cambios sin commit, duplica la carpeta y quítale la marca al duplicado con `git -C <clon> config --local --unset chambakit.mantenedor`.
+El clon de prueba solo lleva lo que ya tiene commit. Para probar cambios sin commit, duplica la carpeta y quítale la marca al duplicado con `git -C <clon> config --local --unset plantilla.mantenedor`.
 
 Al abrir el clon de prueba en VS Code con Claude Code, el agente debe ofrecer `/configurar`. Marca como sintéticos los datos de prueba y bórralos al terminar, incluidos el archivo de registros, la instantánea y cualquier proyecto web o repositorio de prueba.
 

@@ -1,6 +1,6 @@
-# ChambaKit
+# JobFinderMX
 
-ChambaKit es una plantilla para buscar trabajo con Claude. Tu copia guarda tu perfil, tu CV y tu método de búsqueda en archivos Markdown, y Claude trabaja sobre ellos desde Claude Code, en VS Code y, si quieres, también en la nube o desde un proyecto de claude.ai.
+JobFinderMX es una plantilla para buscar trabajo con Claude. Tu copia guarda tu perfil, tu CV y tu método de búsqueda en archivos Markdown, y Claude trabaja sobre ellos desde Claude Code, en VS Code y, si quieres, también en la nube o desde un proyecto de claude.ai.
 
 No es una aplicación: son instrucciones, módulos y unos scripts de Python. Claude te entrevista para llenar los módulos y después los usa para buscar vacantes, evaluarlas y adaptar tu CV.
 
@@ -22,7 +22,7 @@ Claude nunca postula ni contacta a nadie por ti.
 - **VS Code** con la extensión **Claude Code**.
 - **Una cuenta de claude.ai** con plan Pro, Max, Team o Enterprise, con la que inicias sesión en Claude Code. El plan gratuito no incluye Claude Code.
 - **Tu CV actual**, en PDF o DOCX, y, si lo tienes, el PDF de tu perfil de LinkedIn. Sin CV también se puede: Claude te entrevista sección por sección.
-- **Opcional, una cuenta de GitHub:** para crear tu copia con «Use this template» y usar ChambaKit en la nube o desde claude.ai. Sin ella, usa el ZIP.
+- **Opcional, una cuenta de GitHub:** para crear tu copia con «Use this template» y usar JobFinderMX en la nube o desde claude.ai. Sin ella, usa el ZIP.
 
 Lo demás lo instala `/configurar` cuando hace falta, siempre con tu permiso: Python, Node y markdownlint-cli2 al empezar; LibreOffice, poppler y la fuente Carlito al generar tu primer CV; y, al crear tus registros, la biblioteca `openpyxl`, en un entorno virtual dentro de tu copia.
 
@@ -99,7 +99,7 @@ Necesita que tu copia sea un repositorio de git sin cambios pendientes. Si la cr
 
 ## Dónde se usa
 
-ChambaKit tiene dos canales, y Code se usa en tu equipo o en la nube:
+JobFinderMX tiene dos canales, y Code se usa en tu equipo o en la nube:
 
 - **Code local:** Claude Code en VS Code, sobre la carpeta de tu copia.
 - **Code en la nube:** el mismo Claude Code, en claude.ai/code o en la pestaña Code de la app de Claude, también desde el teléfono. Cada sesión trabaja sobre tu repositorio privado de GitHub, se prepara sola al abrirse y, al cerrar, sube tus cambios con tu permiso. Solo llega a los portales que agregues a la lista de dominios de tu entorno de la nube, y las empresas de Workable se buscan en tu equipo, porque Workable bloquea la nube. Para empezar, escribe `/conectar-nube` en Code local.
@@ -113,7 +113,7 @@ ChambaKit tiene dos canales, y Code se usa en tu equipo o en la nube:
 | Archivo del CV | Lo genera, en PDF y DOCX | Se genera en Code; aquí se puede adaptar el texto |
 | Registros | Los escribe en el archivo de tu copia | Lee su instantánea; lo que quieras conservar queda como nota para Code |
 
-**Registros:** viven en el archivo `ChambaKit_Registros.xlsx` de tu copia, que el agente escribe con un script. Cada escritura regenera la instantánea, una copia en Markdown en la carpeta `instantanea/` que lee el proyecto web. El respaldo y el historial del archivo son los commits de tu copia.
+**Registros:** viven en el archivo `Registros.xlsx` de tu copia, que el agente escribe con un script. Cada escritura regenera la instantánea, una copia en Markdown en la carpeta `instantanea/` que lee el proyecto web. El respaldo y el historial del archivo son los commits de tu copia.
 
 **Proyecto web:** lee tus módulos y la instantánea desde tu repositorio privado de GitHub. Al final, `/configurar` te ofrece conectarlo. Cada vez que el agente sube tus cambios, pulsas «Sync» en el proyecto para que los reciba; el agente te lo recuerda.
 

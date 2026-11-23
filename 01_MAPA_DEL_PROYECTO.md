@@ -1,16 +1,16 @@
 # 01 — Mapa y estado del proyecto
 
-**Versión:** 1.10 — 2026-11-23 — «Fuera del proyecto»: `/conectar-web` ya no reconecta proyectos que leían la hoja de Google.
+**Versión:** 1.11 — 2026-11-23 — La plantilla se llama JobFinderMX, en la versión 3.0, y el archivo de registros, `Registros.xlsx`.
 
 ## ESTADO — Punto de continuidad
 
-**Versión de la plantilla:** 2.3, de <https://github.com/Ivan-Canedo/ChambaKit> — la de ChambaKit de la que salió esta copia o a la que se actualizó por última vez. En la copia, solo `/actualizar` la cambia.
+**Versión de la plantilla:** 3.0, de <https://github.com/Ivan-Canedo/JobFinderMX> — la de JobFinderMX de la que salió esta copia o a la que se actualizó por última vez. En la copia, solo `/actualizar` la cambia.
 
 **Estados:** «Sin llenar» espera el paso de `/configurar` que nombra su fila; «Configurado» ya lo pasó.
 
 | Módulo | Versión | Estado | Siguiente paso sugerido |
 | --- | --- | --- | --- |
-| 00 Instrucciones | 1.5 | Sin llenar | `/configurar`, paso 8 (Registros): crea el archivo de registros |
+| 00 Instrucciones | 1.6 | Sin llenar | `/configurar`, paso 8 (Registros): crea el archivo de registros |
 | 02 Perfil maestro | 1.0 | Sin llenar | `/configurar`, paso 3 (Perfil maestro): extrae la trayectoria del CV actual y entrevista lo que falte |
 | 03 CV base | 1.0 | Sin llenar | `/configurar`, paso 6 (CV base): redacta el CV en español e inglés desde 02 |
 | 04 Preferencias | 1.3 | Sin llenar | `/configurar`, paso 4 (Preferencias): región, modalidad, sueldo y exclusiones |
@@ -20,7 +20,7 @@
 | 08 Evaluación | 1.5 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): queda listo con las condiciones de 04 y las familias de 05 |
 | 09 Generación de CV | 1.4 | Sin llenar | `/configurar`, paso 6 (CV base): color del CV |
 | 10 Tendencias | 1.1 | Sin llenar | `/configurar`, paso 8 (Registros): queda listo cuando existen los registros |
-| 11 Esquema de registros | 1.10 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
+| 11 Esquema de registros | 1.11 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
 
 **Orden sugerido:**
 
@@ -50,7 +50,7 @@ La numeración no impone orden.
 | 09_GENERACION_DE_CV.md | Flujo, CV-SINTESIS, controles, plantilla y color del CV | Procedimiento y diseño de CV |
 | 10_ANALISIS_DE_TENDENCIAS.md | Reglas de tendencias | Método |
 | 11_ESQUEMAS_DE_REGISTROS.md | Esquema de los registros, con su bloque (REG-ESQUEMA), y cómo se crea y se usa el archivo de registros | Esquema de datos |
-| Archivo de registros: `ChambaKit_Registros.xlsx` (00, «Registros») | Pestañas vacantes, observaciones, habilidades_vacante, documentos, busquedas, evaluaciones e informes. Vive en la copia y solo lo escribe el canal Code; el proyecto no lo recibe, sino su instantánea | **Datos operativos** |
+| Archivo de registros: `Registros.xlsx` (00, «Registros») | Pestañas vacantes, observaciones, habilidades_vacante, documentos, busquedas, evaluaciones e informes. Vive en la copia y solo lo escribe el canal Code; el proyecto no lo recibe, sino su instantánea | **Datos operativos** |
 | `instantanea/`: `informes.md` y `vacantes.md` | Copia en Markdown de los registros para el canal Web: las últimas 10 búsquedas con su tabla resumen y las vacantes evaluadas no cerradas. La regenera la herramienta de 11/REG-LOCAL con cada escritura; la plantilla no la trae | Vista, nunca se edita a mano (11/REG-INSTANTANEA) |
 
 ## OPERACIONES — Qué consultar

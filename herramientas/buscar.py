@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ChambaKit: listado y detalle de vacantes por empresa y por bolsa de empleo (canal Code, 07/BUS-ACCESO-CODE).
+"""JobFinderMX: listado y detalle de vacantes por empresa y por bolsa de empleo (canal Code, 07/BUS-ACCESO-CODE).
 
 Uso:
     python3 -I herramientas/buscar.py [EMP-ID | BOL-ID ...] [--salida archivo.json] [--sin-remotas] [--copia CARPETA]
@@ -1821,7 +1821,7 @@ def resultado_bolsa(bid, acceso, terminos):
 
 # El estado de las bolsas que da `registros.py estado-bolsas` (11/REG-LOCAL) y lee --estado; su formato y versión son
 # los de FORMATO_DEL_ESTADO de registros.py: si cambian, cambian en los dos
-FORMATO_DEL_ESTADO = ("chambakit-estado-bolsas", 1)
+FORMATO_DEL_ESTADO = ("estado-bolsas", 1)
 # Búsquedas seguidas bloqueadas en su primera petición de detalle con las que ya no se piden detalles (ADR 0010)
 FRENO = 2
 

@@ -1,6 +1,6 @@
 # 11 — Esquema de registros
 
-**Versión:** 1.10 — 2026-11-23 — `migrar` solo pone al día archivos de registros de versiones anteriores: ya no lee hojas de Google descargadas (REG-LOCAL).
+**Versión:** 1.11 — 2026-11-23 — El archivo de registros se llama `Registros.xlsx` (REG-ESQUEMA, ADR 0011).
 **Estado:** esquema de la plantilla. El paso 8 de `/configurar` (Registros) crea el archivo de registros desde el bloque de REG-ESQUEMA.
 
 ## Responsabilidad
@@ -9,7 +9,7 @@ Definir campos, relaciones, autoridades y versionado de los datos de búsquedas,
 
 ## REG-LUGAR — Dónde viven los registros
 
-**En un solo lugar:** el archivo de registros, `ChambaKit_Registros.xlsx` en la raíz de la copia, con una pestaña por tabla y el esquema de REG-ESQUEMA. Lo crea el paso 8 de `/configurar` y solo se escribe desde el canal Code, con su herramienta (REG-LOCAL). No hay otro lugar ni cambio de lugar.
+**En un solo lugar:** el archivo de registros, `Registros.xlsx` en la raíz de la copia, con una pestaña por tabla y el esquema de REG-ESQUEMA. Lo crea el paso 8 de `/configurar` y solo se escribe desde el canal Code, con su herramienta (REG-LOCAL). No hay otro lugar ni cambio de lugar.
 
 **Canal Web:** no lee el archivo, sino la instantánea (REG-INSTANTANEA), que la herramienta regenera con cada escritura.
 
@@ -258,7 +258,7 @@ El esquema completo en la forma que lee una herramienta: pestañas, columnas, li
 
 ```json
 {
-  "archivo": {"nombre": "ChambaKit_Registros"},
+  "archivo": {"nombre": "Registros"},
   "pestanas": [
     {
       "nombre": "vacantes",
@@ -391,7 +391,7 @@ El esquema completo en la forma que lee una herramienta: pestañas, columnas, li
 
 ## REG-LOCAL — El archivo y su herramienta
 
-El archivo `ChambaKit_Registros.xlsx` (el `nombre` del bloque) está en la raíz de la copia. Se lee y se escribe solo con `herramientas/registros.py`, con el Python del entorno virtual de la copia, que tiene `openpyxl`:
+El archivo `Registros.xlsx` (el `nombre` del bloque) está en la raíz de la copia. Se lee y se escribe solo con `herramientas/registros.py`, con el Python del entorno virtual de la copia, que tiene `openpyxl`:
 
 ```sh
 .venv/bin/python -I herramientas/registros.py <orden> …
@@ -422,7 +422,7 @@ En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y 
 - **Historial y respaldo:** git. El archivo se versiona en la copia, así que no se ignora. Al cerrar una sesión que lo modificó, el agente le ofrece al titular un commit con él y, si la copia tiene remoto privado, el push.
   - **Code en la nube:** la sesión trabaja en un clon nuevo, en una rama propia que Code local y el canal Web no leen. Al cerrar una sesión que cambió módulos, registros o CV de `muestras_cv/`, el agente integra en `main`, con permiso del titular para cada paso: commit, `git fetch origin main`, `git rebase origin/main` y `git push origin HEAD:main`. Si `main` no avanzó desde que abrió la sesión, el rebase no cambia nada. Si el push se rechaza porque `main` avanzó otra vez, se repiten el fetch y el rebase.
   - **La rama de la sesión no se conserva:** no se sube. Si ya está en el remoto, el agente la borra después del push a `main` (`git push origin --delete <rama>`), con permiso.
-  - **Choque en el archivo de registros:** pasa si otra sesión registró en paralelo. El archivo es binario, así que no se fusiona a mano. En cada commit que choque, el agente toma el archivo y la instantánea del `main` nuevo (`git checkout origin/main -- ChambaKit_Registros.xlsx instantanea/`), los agrega y sigue el rebase (`git rebase --continue`); si el commit queda vacío, porque solo traía registros, lo salta (`git rebase --skip`). Al terminar el rebase, rehace una sola vez sobre ese archivo las escrituras de la sesión: `importar` con la misma salida JSON y el mismo archivo de decisiones, que siguen en el directorio temporal de la sesión, y `agregar` y `actualizar` con los IDs que devuelva `importar`, porque pueden cambiar. La herramienta regenera la instantánea completa al escribir. Con eso hace un commit nuevo y el push a `main`.
+  - **Choque en el archivo de registros:** pasa si otra sesión registró en paralelo. El archivo es binario, así que no se fusiona a mano. En cada commit que choque, el agente toma el archivo y la instantánea del `main` nuevo (`git checkout origin/main -- Registros.xlsx instantanea/`), los agrega y sigue el rebase (`git rebase --continue`); si el commit queda vacío, porque solo traía registros, lo salta (`git rebase --skip`). Al terminar el rebase, rehace una sola vez sobre ese archivo las escrituras de la sesión: `importar` con la misma salida JSON y el mismo archivo de decisiones, que siguen en el directorio temporal de la sesión, y `agregar` y `actualizar` con los IDs que devuelva `importar`, porque pueden cambiar. La herramienta regenera la instantánea completa al escribir. Con eso hace un commit nuevo y el push a `main`.
 - **Edición a mano:** el titular puede abrir el archivo en una hoja de cálculo para consultarlo. Las filas se escriben con la herramienta, que es la que las comprueba.
 
 ## REG-INSTANTANEA — Instantánea para el canal Web

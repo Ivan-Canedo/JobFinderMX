@@ -1,10 +1,10 @@
 ---
 name: actualizar
-description: Lleva a la copia los cambios de una versión más nueva de la plantilla de ChambaKit, sin tocar los datos del titular.
+description: Lleva a la copia los cambios de una versión más nueva de la plantilla de JobFinderMX, sin tocar los datos del titular.
 disable-model-invocation: true
 ---
 
-# Actualizar una copia de ChambaKit
+# Actualizar una copia de JobFinderMX
 
 Lleva a la copia del titular los cambios de una versión más nueva de la plantilla. Cada versión publicada es una etiqueta `vX.Y` del repositorio de la plantilla, y 01 («Versión de la plantilla») anota de cuál salió la copia y la URL de la plantilla. La copia no comparte historial con la plantilla, así que la actualización fusiona archivo por archivo, en tres vías (ADR 0004):
 
@@ -22,7 +22,7 @@ La actualización necesita red para traer la plantilla. Si `git ls-remote` o `gi
 
 Revisa todo antes de cambiar nada. Si algo falla, detente y dile al titular qué pasa y qué hacer:
 
-1. **Plantilla:** si `git config --local --get chambakit.mantenedor` da `true`, esta carpeta es la plantilla y no se actualiza: dile al mantenedor que pruebe en un clon temporal (`CONTRIBUTING.md`, «Probar como titular»).
+1. **Plantilla:** si `git config --local --get plantilla.mantenedor` da `true`, esta carpeta es la plantilla y no se actualiza: dile al mantenedor que pruebe en un clon temporal (`CONTRIBUTING.md`, «Probar como titular»).
 2. **Repositorio:** `git rev-parse --is-inside-work-tree` debe dar `true`. Si no, la copia salió del ZIP sin `git init`: explícale que la actualización necesita un repositorio y que lo cree con `git init` y un primer commit con todo (README, «Con el ZIP»).
 3. **Sin cambios pendientes:** `git status --porcelain` debe salir vacío, para que la actualización quede en un solo commit y se pueda deshacer. Si no, pídele que haga commit de sus cambios o de sus archivos nuevos, o que los descarte.
 4. **01:** la línea **Versión de la plantilla** debe tener la versión y la URL. Si falta alguna, no se puede elegir la base: pregúntale de qué versión y de qué URL salió su copia (la URL pública es la de su página de GitHub, «generated from …»). Sin esos dos datos, detente.

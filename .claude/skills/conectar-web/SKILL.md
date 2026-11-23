@@ -1,6 +1,6 @@
 ---
 name: conectar-web
-description: Conecta un proyecto de claude.ai con el repositorio privado de GitHub de la copia de ChambaKit, para que el canal Web lea los módulos y la instantánea. Úsala cuando el titular pida conectar el canal Web.
+description: Conecta un proyecto de claude.ai con el repositorio privado de GitHub de la copia de JobFinderMX, para que el canal Web lea los módulos y la instantánea. Úsala cuando el titular pida conectar el canal Web.
 ---
 
 # Conectar el canal Web
@@ -9,7 +9,7 @@ Lleva la copia del titular a un proyecto de claude.ai que lee sus módulos 01–
 
 Escribe para alguien que nunca usó git: nada de jerga sin explicar, y los comandos los corres tú, con su permiso. Ninguna de tus herramientas llega a claude.ai ni a la configuración de GitHub: ahí el titular hace cada clic y tú lo acompañas, un punto a la vez. Esta skill no edita módulos ni tiene fila en ESTADO; revisa por sí misma cómo está la copia cada vez que se invoca.
 
-Si `git config --local --get chambakit.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal con un repositorio de prueba aparte (`CONTRIBUTING.md`).
+Si `git config --local --get plantilla.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal con un repositorio de prueba aparte (`CONTRIBUTING.md`).
 
 Si un comando que sale a la red falla porque no se resuelve el nombre o se niega la conexión, sigue «Comandos sin red» de `.claude/skills/configurar/SKILL.md`.
 
@@ -26,14 +26,14 @@ Por eso, cada vez que algo cambia en Code: el agente hace el commit y el push (c
 ## Paso 1: Revisar la copia
 
 1. **Versión:** si la sección «Registros» de `00_INSTRUCCIONES_PROYECTO.md` no menciona `instantanea/`, la copia es de antes de 2.0: dile que primero escriba `/actualizar` y detente.
-2. **Archivo de registros:** si `ChambaKit_Registros.xlsx` no existe, falta el paso 8 de `/configurar`: díselo y detente.
+2. **Archivo de registros:** si `Registros.xlsx` no existe, falta el paso 8 de `/configurar`: díselo y detente.
 3. **Repositorio:** `git rev-parse --is-inside-work-tree`. Si la carpeta no es un repositorio de git (la descargó como ZIP), explícale que hay que convertirla en uno para subirla, y con su permiso:
    1. Si `git config user.name` o `git config user.email` no dan nada, pregúntale su nombre y el correo para sus commits, y guárdalos en la copia con `git config user.name` y `git config user.email`. Si no quiere publicar su correo, el de GitHub sin respuesta (`<usuario>@users.noreply.github.com`) sirve.
-   2. `git init -b main`, `git add -A` y `git commit -m "Copia de ChambaKit"`.
+   2. `git init -b main`, `git add -A` y `git commit -m "Copia de JobFinderMX"`.
 4. **Instantánea:** si la carpeta `instantanea/` no existe, créala con `.venv/bin/python -I herramientas/registros.py instantanea` (en Windows, con `.venv\Scripts\python.exe`). Antes de la primera búsqueda trae las vistas vacías, con su fecha; sirve para la prueba.
 5. **Cambios sin guardar:** `git status --porcelain`. Si lista algo, muéstraselo en pocas líneas y ofrécele el commit: el proyecto solo recibe lo que tiene commit y push.
 6. **Remoto:** `git remote -v`.
-   - **Apunta a la plantilla** (`github.com/Ivan-Canedo/ChambaKit`): su copia es un clon de la plantilla pública. Dile que escriba `/configurar`, cuyo paso 1 lo resuelve, y detente.
+   - **Apunta a la plantilla** (`github.com/Ivan-Canedo/JobFinderMX`): su copia es un clon de la plantilla pública. Dile que escriba `/configurar`, cuyo paso 1 lo resuelve, y detente.
    - **Un repositorio de GitHub:** revisa su visibilidad como en el paso 1 de `/configurar` (punto 3). Si es público, no sigas: la instantánea lleva sus datos personales. Dile cómo volverlo privado («Settings» → «General» → «Danger Zone» → «Change visibility») y que vuelva a invocar `/conectar-web` cuando lo esté. Si es privado, sigue en el punto 7.
    - **Otro servicio** (GitLab, Bitbucket…): dile en dos líneas que el proyecto web solo lee repositorios de GitHub, así que puede crear un proyecto y subir a mano los módulos 01–11 y los archivos de `instantanea/`, reemplazándolos cada vez que cambien, o quedarse sin canal Web. Detente.
    - **Sin remoto:** su copia está solo en su equipo. Sigue en el paso 2.
@@ -41,7 +41,7 @@ Por eso, cada vez que algo cambia en Code: el agente hace el commit y el push (c
 
 ## Paso 2: Subir la copia a un repositorio privado
 
-Explícale que vas a crear en su cuenta de GitHub un repositorio **privado**, que solo él puede ver, y subir ahí su copia. Si no tiene cuenta de GitHub, que la cree en <https://github.com/signup>. Pídele el nombre del repositorio; si no tiene preferencia, propón `ChambaKit`. La rama es la que da `git branch --show-current`.
+Explícale que vas a crear en su cuenta de GitHub un repositorio **privado**, que solo él puede ver, y subir ahí su copia. Si no tiene cuenta de GitHub, que la cree en <https://github.com/signup>. Pídele el nombre del repositorio; si no tiene preferencia, propón `JobFinderMX`. La rama es la que da `git branch --show-current`.
 
 **Con `gh`:** si `gh auth status` dice que tiene sesión iniciada, muéstrale este comando y pide su permiso antes de correrlo:
 
@@ -66,7 +66,7 @@ Con su permiso, corre `git remote add origin <URL>` y `git push -u origin <rama>
 
 Dale los puntos uno a la vez y espera a que te diga que terminó cada uno o en cuál tuvo un problema.
 
-1. **Proyecto:** en claude.ai, abre «Projects» en la barra lateral (<https://claude.ai/projects>) y selecciona «+ New Project». Ponle un nombre, como «ChambaKit». En un plan Team o Enterprise, elige «Keep it private»: el proyecto va a tener sus datos. Si ya tiene un proyecto web para su copia, puede usarlo en lugar de crear otro, con sus chats: en su sección de conocimiento, que quite los módulos que haya subido a mano (`01_…` a `11_…`) con la opción de quitar de cada archivo. Quitarlos del proyecto no borra nada de su copia.
+1. **Proyecto:** en claude.ai, abre «Projects» en la barra lateral (<https://claude.ai/projects>) y selecciona «+ New Project». Ponle un nombre, como «JobFinderMX». En un plan Team o Enterprise, elige «Keep it private»: el proyecto va a tener sus datos. Si ya tiene un proyecto web para su copia, puede usarlo en lugar de crear otro, con sus chats: en su sección de conocimiento, que quite los módulos que haya subido a mano (`01_…` a `11_…`) con la opción de quitar de cada archivo. Quitarlos del proyecto no borra nada de su copia.
 2. **Instrucciones:** selecciona «Set project instructions» (en un proyecto que ya tiene, abre sus instrucciones y reemplaza el texto), pega el contenido completo de `00_INSTRUCCIONES_PROYECTO.md` de su copia y guárdalo con «Save instructions». 00 va solo en ese campo, no como archivo.
 3. **GitHub:** en la sección de conocimiento del proyecto, selecciona «+» → «GitHub».
    1. La primera vez, claude.ai lo manda a GitHub para darle permiso a la app de Claude. En la pantalla de instalación, elige «Only select repositories», elige el repositorio de su copia y confirma con «Install» (puede decir «Install & Authorize»). Así la app solo ve ese repositorio.

@@ -1,6 +1,6 @@
 ---
 name: conectar-nube
-description: Prepara la copia de ChambaKit para Claude Code en la nube (claude.ai/code y la pestaña Code de la app), con su repositorio privado de GitHub y un entorno de la nube con la lista de dominios de sus empresas, y termina con una búsqueda de prueba. Úsala cuando el titular pida conectar o usar Code en la nube.
+description: Prepara la copia de JobFinderMX para Claude Code en la nube (claude.ai/code y la pestaña Code de la app), con su repositorio privado de GitHub y un entorno de la nube con la lista de dominios de sus empresas, y termina con una búsqueda de prueba. Úsala cuando el titular pida conectar o usar Code en la nube.
 ---
 
 # Conectar Code en la nube
@@ -9,7 +9,7 @@ Deja la copia del titular lista para Code en la nube (ADR 0007): sesiones de Cla
 
 Escribe para alguien que nunca usó git: nada de jerga sin explicar, y los comandos los corres tú, con su permiso. Ninguna de tus herramientas llega a claude.ai ni a la configuración de GitHub: ahí el titular hace cada clic y tú lo acompañas, un punto a la vez. Esta skill no edita módulos ni tiene fila en ESTADO; revisa por sí misma cómo está la copia cada vez que se invoca.
 
-Si `git config --local --get chambakit.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal con un repositorio privado de prueba aparte y datos sintéticos (`CONTRIBUTING.md`).
+Si `git config --local --get plantilla.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal con un repositorio privado de prueba aparte y datos sintéticos (`CONTRIBUTING.md`).
 
 Si un comando que sale a la red falla porque no se resuelve el nombre o se niega la conexión, sigue «Comandos sin red» de `.claude/skills/configurar/SKILL.md`.
 
@@ -44,7 +44,7 @@ Dale los puntos uno a la vez y espera a que te diga que terminó cada uno o en c
    - Si no, que abra <https://github.com/apps/claude/installations/new>, elija su cuenta, marque «Only select repositories», elija el repositorio de su copia y confirme con «Install». Así la app solo ve ese repositorio.
 4. **Comprobación:** en la pantalla de sesión nueva de claude.ai/code, el selector de repositorio, debajo del cuadro de mensaje, debe mostrar su repositorio. Si no aparece, el permiso del punto 3 no lo incluye.
 
-Al conectar GitHub, claude.ai puede crear un entorno de la nube «Default». No sirve para buscar: su red (Trusted) no llega a los portales. Se queda ahí sin estorbar; el paso 3 crea el de ChambaKit.
+Al conectar GitHub, claude.ai puede crear un entorno de la nube «Default». No sirve para buscar: su red (Trusted) no llega a los portales. Se queda ahí sin estorbar; el paso 3 crea el de JobFinderMX.
 
 ## Paso 3: Entorno de la nube
 
@@ -53,24 +53,24 @@ Al conectar GitHub, claude.ai puede crear un entorno de la nube «Default». No 
    2. Si deja fuera Workable, nombra en una línea esas empresas y dile que se buscan en Code local.
    3. Un adaptador construido en la copia sin hosts en CAT-PLATAFORMAS pone el host de su `portal` y los que pida su código en `herramientas/buscar.py`.
 2. **Entorno de la nube nuevo:** en la pantalla de sesión nueva de claude.ai/code, que abra el selector de entorno, el primer control de la fila bajo el cuadro de mensaje, y elija «New environment». En el diálogo:
-   1. **Nombre:** «ChambaKit».
+   1. **Nombre:** «JobFinderMX».
    2. **«Network access»:** **Custom**. En «Allowed domains», que pegue la lista. Que marque «Also include default list of common package managers»: sin ella, la sesión no puede instalar lo que necesita. Si pregunta por **Full**: deja pasar cualquier dominio y no pide lista, pero entonces los datos de la sesión podrían salir a cualquier sitio; Custom solo los deja ir a sus portales.
    3. **«Setup script»:** vacío. La preparación de cada sesión ya viene en su copia y se actualiza con ella.
    4. **«Environment variables»:** ninguna.
    5. Que guarde con «Add environment».
-3. **Comprobación:** al volver a la pantalla de sesión nueva, el selector de entorno muestra «ChambaKit». Si tiene más de un entorno, que lo elija ahí cada vez que abra una sesión de ChambaKit, también en el teléfono. GitHub no pasa por la lista, así que el agente sube y baja su copia sin agregar nada.
+3. **Comprobación:** al volver a la pantalla de sesión nueva, el selector de entorno muestra «JobFinderMX». Si tiene más de un entorno, que lo elija ahí cada vez que abra una sesión de JobFinderMX, también en el teléfono. GitHub no pasa por la lista, así que el agente sube y baja su copia sin agregar nada.
 
 ## Paso 4: Búsqueda de prueba
 
 1. **Empresa:** elige una del catálogo que no esté en Workable. Si el catálogo está vacío o solo tiene empresas de Workable, la prueba solo revisa la preparación (punto 2).
-2. **Sesión:** pídele que abra una sesión nueva en claude.ai/code o en la pestaña Code de la app, con su repositorio y el entorno «ChambaKit», y que escriba, según el caso:
+2. **Sesión:** pídele que abra una sesión nueva en claude.ai/code o en la pestaña Code de la app, con su repositorio y el entorno «JobFinderMX», y que escriba, según el caso:
    - con empresa: «Haz una búsqueda de prueba solo en EMP-\<ID\>, sin registrarla, y dime cómo salió»;
    - sin empresa: «Comprueba que la sesión quedó preparada: markdownlint-cli2, LibreOffice y el `.venv` con openpyxl».
 3. **Resultado:** que te pegue aquí la respuesta. La búsqueda sale bien con `[OK]`, o `[SIN TOTAL]` con la comprobación de su ficha; la revisión, con una versión de cada herramienta. Si es así, Code en la nube quedó conectado.
 4. **Si algo falla,** ayúdale según lo que vea y repite la prueba en la misma sesión:
-   - **`[FALLO]` que dice que el host no está en la lista de dominios del entorno de la nube:** falta en la lista el host con que termina el mensaje. Que lo agregue: en esa sesión, el control junto al título → «Edit cloud environment» (o, en la pantalla de sesión nueva, el selector de entorno → el ícono de ajustes junto a «ChambaKit»), «Network access», una línea más en «Allowed domains» y «Save changes». La sesión toma el cambio en un minuto.
+   - **`[FALLO]` que dice que el host no está en la lista de dominios del entorno de la nube:** falta en la lista el host con que termina el mensaje. Que lo agregue: en esa sesión, el control junto al título → «Edit cloud environment» (o, en la pantalla de sesión nueva, el selector de entorno → el ícono de ajustes junto a «JobFinderMX»), «Network access», una línea más en «Allowed domains» y «Save changes». La sesión toma el cambio en un minuto.
    - **`[FALLO]` que dice que el sitio bloquea las IP de Code en la nube:** esa empresa se busca en Code local, como las de Workable; repite con otra.
-   - **Un aviso que empieza con «Hook de la nube de ChambaKit», o falta una herramienta:** la preparación no pudo instalar algo. Si nombra `apt`, `npm` o `pip`, casi siempre falta marcar «Also include default list of common package managers» en el entorno de la nube (paso 3, punto 2). Con el entorno de la nube corregido, que abra una sesión nueva.
+   - **Un aviso que empieza con «Hook de la nube de JobFinderMX», o falta una herramienta:** la preparación no pudo instalar algo. Si nombra `apt`, `npm` o `pip`, casi siempre falta marcar «Also include default list of common package managers» en el entorno de la nube (paso 3, punto 2). Con el entorno de la nube corregido, que abra una sesión nueva.
    - **El agente de la sesión pregunta cómo crear `.venv`:** la preparación no corrió. Revisa aquí con `git ls-files .claude/settings.json herramientas/preparar_nube.sh` que los dos archivos tengan commit, y con `git status -sb`, que no falte un push.
    - **Otro `[FALLO]`,** con un código HTTP, un `robots.txt` o un error de la ficha: no es de la nube; se atiende como en Code local (07/BUS-ACCESO-CODE).
    - **No encuentra su repositorio al abrir la sesión:** el permiso del paso 2, punto 3.

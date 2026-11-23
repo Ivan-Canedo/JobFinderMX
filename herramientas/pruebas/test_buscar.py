@@ -2540,7 +2540,7 @@ class DetalleHastaLaSenal(ConOccFalso):
 def estado_de_bolsas(copia, **bolsas):
     """El JSON de estado que da `registros.py estado-bolsas` para la copia: {BOL_ID: (con detalle o evaluación,
     pendientes, bloqueos seguidos)}."""
-    return {"formato": "chambakit-estado-bolsas", "version": 1, "copia": os.path.realpath(copia),
+    return {"formato": "estado-bolsas", "version": 1, "copia": os.path.realpath(copia),
             "generado": "2026-11-22 10:00",
             "bolsas": {bid.replace("_", "-"): {"con_detalle_o_evaluacion": list(con), "pendientes": list(pendientes),
                                                "bloqueos_seguidos": bloqueos}

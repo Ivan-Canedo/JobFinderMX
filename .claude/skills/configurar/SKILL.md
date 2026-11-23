@@ -1,13 +1,13 @@
 ---
 name: configurar
-description: Configura paso a paso la copia de ChambaKit del titular y retoma donde quedó según la tabla ESTADO de 01. Úsala cuando el titular acepte configurar su copia o pida retomar la configuración.
+description: Configura paso a paso la copia de JobFinderMX del titular y retoma donde quedó según la tabla ESTADO de 01. Úsala cuando el titular acepte configurar su copia o pida retomar la configuración.
 ---
 
-# Configurar una copia de ChambaKit
+# Configurar una copia de JobFinderMX
 
 Lleva al titular de una copia recién creada a una copia lista para usar, un paso corto y revisable a la vez. La configuración puede repartirse en varias sesiones: el avance vive en la tabla ESTADO de `01_MAPA_DEL_PROYECTO.md`, donde «Sin llenar» marca lo pendiente y el «Siguiente paso sugerido» de cada fila nombra el paso de esta skill que la atiende.
 
-Si `git config --local --get chambakit.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal (`CONTRIBUTING.md`).
+Si `git config --local --get plantilla.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal (`CONTRIBUTING.md`).
 
 Cualquier agente con terminal configura la copia completa. No anotes qué agente usa el titular: puede cambiarlo. En los comandos, `<directorio temporal>` es el directorio temporal de la sesión o, si no tienes uno, el del sistema; nunca esta carpeta.
 
@@ -27,7 +27,7 @@ Cualquier agente con terminal configura la copia completa. No anotes qué agente
 Los módulos van a guardar datos personales del titular, así que su copia debe ser privada o no tener remoto.
 
 1. Lista los remotos con `git remote -v`. Si la carpeta no es un repositorio de git o no tiene remotos, dilo en una línea y pasa al paso 2.
-2. Si un remoto apunta a la plantilla pública (`github.com/Ivan-Canedo/ChambaKit`, por HTTPS o SSH), el titular clonó la plantilla en lugar de crear su copia. Ofrécele dos caminos, en este orden:
+2. Si un remoto apunta a la plantilla pública (`github.com/Ivan-Canedo/JobFinderMX`, por HTTPS o SSH), el titular clonó la plantilla en lugar de crear su copia. Ofrécele dos caminos, en este orden:
    - **Solo en su equipo:** con su permiso, quita ese remoto (`git remote remove <nombre>`). Dile en una línea que su copia queda solo en su equipo y que en el paso 8 le explicas su respaldo. Sigue con el punto 3.
    - **Copia en GitHub:** en la página de la plantilla, «Use this template» → «Create a new repository» con visibilidad **Private**; después clona ese repositorio y ábrelo con su agente. Detén la configuración hasta que trabaje en esa copia: al configurarla, este paso revisa su visibilidad.
 3. Revisa la visibilidad de cada remoto restante:
@@ -41,10 +41,10 @@ El paso termina cuando cada remoto es privado, o el titular, ya avisado, decide 
 
 Python, Node y markdownlint-cli2 sirven a todos los pasos siguientes. Las herramientas del CV y las del archivo de registros se instalan en sus propios pasos, cuando hacen falta.
 
-**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y las herramientas del CV, y creó `.venv`; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4: corre solo la comprobación de cada herramienta de la tabla. Si alguna falta, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de ChambaKit»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
+**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y las herramientas del CV, y creó `.venv`; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4: corre solo la comprobación de cada herramienta de la tabla. Si alguna falta, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de JobFinderMX»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
 
 1. **Sistema:** detecta el sistema operativo con `uname -s`: `Linux`; `Darwin` es macOS; `MINGW…`, `MSYS…` o un `uname` inexistente (PowerShell) es Windows. En Linux, lee `ID` e `ID_LIKE` en `/etc/os-release`: `dnf` sirve a Fedora y derivados; `apt`, a Debian, Ubuntu y derivados. En macOS el gestor es Homebrew (`brew`) y en Windows, `winget`.
-2. **Aviso:** si el sistema no es Linux, dile al titular que ChambaKit solo se ha probado en Linux, así que un fallo puede venir de ahí.
+2. **Aviso:** si el sistema no es Linux, dile al titular que JobFinderMX solo se ha probado en Linux, así que un fallo puede venir de ahí.
 3. **Revisión:** corre la comprobación de cada herramienta de la tabla. La que ya cumple no se toca.
 4. **Instalación:** muéstrale al titular el comando de cada herramienta que falta y pide su permiso antes de instalar. Un comando con `sudo` pide contraseña: pídele que lo corra él en una terminal y que te avise al terminar. Si su sistema no tiene ninguno de estos gestores, dale el sitio oficial de descarga de la herramienta.
 5. **Comprobación:** vuelve a correr la comprobación de cada herramienta instalada. El paso termina cuando las tres dan una versión que cumple.
@@ -195,7 +195,7 @@ Llena `06_EMPRESAS_OBJETIVO.md` con las empresas donde el titular quiere buscar,
 
 ## Paso 8: Registros
 
-Crea el archivo de registros `ChambaKit_Registros.xlsx` en la raíz de la copia (11/REG-LUGAR), que escribe y lee `herramientas/registros.py` (11/REG-LOCAL). Funciona igual con cualquier agente.
+Crea el archivo de registros `Registros.xlsx` en la raíz de la copia (11/REG-LUGAR), que escribe y lee `herramientas/registros.py` (11/REG-LOCAL). Funciona igual con cualquier agente.
 
 1. **Aviso:** antes de instalar o crear nada, dile al titular que sus registros viven en ese archivo de su copia, y que su respaldo y su historial son los commits de la copia. Sin un remoto privado, solo viven en su equipo: si lo pierde, pierde su copia y sus registros. Si no tiene remoto, dile que, si conecta Code en la nube o el canal Web en el paso 9, su copia queda también en un repositorio privado de GitHub; si no, que la respalde con un remoto privado o una copia de la carpeta.
 2. **Entorno virtual:** la herramienta usa `openpyxl`, que va en un entorno virtual dentro de la copia (`.venv/`, que git ignora), no en el Python del sistema. Muéstrale los comandos de su sistema (paso 2) y pide su permiso antes de correrlos:

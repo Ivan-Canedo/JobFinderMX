@@ -1,10 +1,10 @@
-# Trabajo en esta copia de ChambaKit
+# Trabajo en esta copia de JobFinderMX
 
-Esta carpeta es la copia de ChambaKit de un titular: los módulos 00–11 con su perfil, su CV y su método de búsqueda laboral, más las herramientas del canal Code. No es una aplicación. Conversa en español.
+Esta carpeta es la copia de JobFinderMX de un titular: los módulos 00–11 con su perfil, su CV y su método de búsqueda laboral, más las herramientas del canal Code. No es una aplicación. Conversa en español.
 
 ## Al iniciar
 
-1. Corre `git config --local --get chambakit.mantenedor`. Si da `true`, hablas con el mantenedor de la plantilla: lee `CONTRIBUTING.md` y salta al paso 4.
+1. Corre `git config --local --get plantilla.mantenedor`. Si da `true`, hablas con el mantenedor de la plantilla: lee `CONTRIBUTING.md` y salta al paso 4.
 2. Lee `00_INSTRUCCIONES_PROYECTO.md` (las mismas reglas que el proyecto web) y la tabla ESTADO de `01_MAPA_DEL_PROYECTO.md`.
 3. Si alguna fila de ESTADO dice «Sin llenar», ofrece configurar la copia en tu primera respuesta: con `/configurar` si admites comandos de skill; si no, dile al titular que pida «configura mi copia».
 4. Lee el módulo pedido.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ChambaKit: el archivo de registros de la copia (11/REG-LOCAL).
+"""JobFinderMX: el archivo de registros de la copia (11/REG-LOCAL).
 
 Uso, con el Python del entorno virtual de la copia (en Windows, .venv\\Scripts\\python.exe):
     .venv/bin/python -I herramientas/registros.py crear
@@ -955,7 +955,7 @@ def importar(esquema, salida, decisiones):
 
 # El formato del estado y su versión; buscar.py rechaza otros. Los mismos que FORMATO_DEL_ESTADO de buscar.py: si
 # cambian, cambian en los dos.
-FORMATO_DEL_ESTADO = ("chambakit-estado-bolsas", 1)
+FORMATO_DEL_ESTADO = ("estado-bolsas", 1)
 
 
 def detalles_de_bolsas(busquedas):

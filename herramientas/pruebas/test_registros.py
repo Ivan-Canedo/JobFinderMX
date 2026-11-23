@@ -106,7 +106,7 @@ class CopiaFicticia(unittest.TestCase):
         shutil.copy(RAIZ / "08_EVALUACION_DE_VACANTES.md", self.dir)
         (self.dir / "04_PREFERENCIAS_LABORALES.md").write_text(modulo_04(), encoding="utf-8")
         (self.dir / "06_EMPRESAS_OBJETIVO.md").write_text(modulo_06(["EMP-XA", "EMP-PRUEBA"]), encoding="utf-8")
-        self.archivo = self.dir / "ChambaKit_Registros.xlsx"
+        self.archivo = self.dir / "Registros.xlsx"
 
     def tearDown(self):
         self._tmp.cleanup()
@@ -179,7 +179,7 @@ class Copia(CopiaFicticia):
             (self.dir / modulo).rename(otra / modulo)
         self.ok("--copia", str(otra), "crear")
         self.ok("--copia", str(otra), "agregar", entrada=busqueda_ficticia())
-        self.assertTrue((otra / "ChambaKit_Registros.xlsx").is_file())
+        self.assertTrue((otra / "Registros.xlsx").is_file())
         self.assertTrue((otra / "instantanea" / "vacantes.md").is_file())
         self.assertFalse(self.archivo.exists())
         self.assertFalse((self.dir / "instantanea").exists())
@@ -1602,7 +1602,7 @@ class ReanudacionDeBolsas(ConOccEnLaCopia):
         self.assertIn("; detalle de la bolsa: 3 candidatas, 0 anteriores, 2 pedidos, 1 leídos («501»), bloqueo en el "
                       "detalle, petición 2 (scraping abuse, HTTP 403)", busqueda["cobertura_limitaciones"])
         estado, ruta = self.estado()
-        self.assertEqual(estado, {"formato": "chambakit-estado-bolsas", "version": 1,
+        self.assertEqual(estado, {"formato": "estado-bolsas", "version": 1,
                                   "copia": str(self.dir.resolve()), "generado": estado["generado"],
                                   "bolsas": {"BOL-01": {"con_detalle_o_evaluacion": ["501"],
                                                         "pendientes": ["502", "503"], "bloqueos_seguidos": 0}}})

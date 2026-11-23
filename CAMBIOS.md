@@ -7,10 +7,13 @@ Qué trae cada versión de la plantilla y qué hace `/actualizar` en la copia al
 ### Qué cambió
 
 - Sale lo que quedaba de la hoja de Google, que se retiró en v2.0 y ya nadie usa: `/conectar-web` solo conecta tu proyecto de claude.ai con tu repositorio, y `herramientas/registros.py migrar` solo pone al día archivos de registros de versiones anteriores. Si tu copia es 1.x, `/actualizar` te propone pasar primero a v2.2 y, después, a esta versión.
+- La plantilla se llama JobFinderMX: el nombre anterior sonaba informal, y «MX» dice que está probada con perfiles de México, no que esté limitada a ese país.
+- Tu archivo de registros se llama `Registros.xlsx`, sin el nombre de la plantilla, con sus mismos datos e historial.
 
 ### En la copia
 
-Sin acciones.
+1. **Renombrar el archivo de registros (automática):** si la copia tiene `ChambaKit_Registros.xlsx`, renómbralo con `git mv ChambaKit_Registros.xlsx Registros.xlsx`, que conserva su historial. Si `Registros.xlsx` ya existe, lo escribió en esta actualización el `migrar` de una acción anterior, como la 1 de v2.2, que pone al día el archivo viejo sin cambiarlo y escribe en el nombre nuevo de 11: ese es el bueno, así que en lugar del `git mv` haz `git rm ChambaKit_Registros.xlsx` y `git add Registros.xlsx`; git lo sigue reconociendo como el mismo archivo. Va en el commit del paso 6 de `/actualizar`. Si la copia no tiene `ChambaKit_Registros.xlsx`, porque no llegó al paso 8 de `/configurar`, salta esta acción. No edita módulos.
+2. **Canal Web (con el titular):** si tiene proyecto web, después del push del commit del paso 6 de `/actualizar` que pulse «Sync» en él y vuelva a pegar 00 en «Instrucciones», porque 00 nombra el archivo nuevo.
 
 ## v2.3 — 2026-11-22
 
