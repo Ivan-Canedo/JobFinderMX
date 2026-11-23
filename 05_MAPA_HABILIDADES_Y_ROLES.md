@@ -1,6 +1,6 @@
 # 05 — Mapa de habilidades y roles
 
-**Versión:** 1.1 — 2026-11-23 — HAB-TERMINOS: términos de búsqueda por familia ROL para las bolsas de empleo, con el filtro por título, el rendimiento de cada término y la exploración de términos nuevos.
+**Versión:** 1.1 — 2026-11-23 — HAB-TERMINOS: términos de búsqueda por familia ROL para las bolsas de empleo, con el filtro por título, el rendimiento de cada término y la exploración de términos nuevos; `/configurar` los propone desde las familias al dar de alta una bolsa.
 **Estado:** plantilla sin llenar. El paso 5 de `/configurar` (Habilidades y roles) construye la matriz de evidencias y las familias de roles desde 02 y 04.
 
 ## HAB-USO — Responsabilidad
@@ -59,7 +59,7 @@ No agregar familias fuera de las rutas de 04 solo porque el maestro tenga habili
 
 ## HAB-TERMINOS — Términos de búsqueda
 
-Con qué palabras se buscan las familias ROL en una bolsa de empleo (06/CAT-BOLSAS), que lista sus vacantes por término y no por empresa. El bloque de abajo lo lee el script de búsqueda (07): busca cada término en cada lugar de la región de 04 y, si 04 acepta remoto en el país de la bolsa, en todo el país con su filtro remoto. No trae valores: se llena desde HAB-ROLES con la aprobación del titular. Si el bloque falta o no tiene ningún término, el script reporta cada bolsa como `[FALLO]` y busca igual en las empresas.
+Con qué palabras se buscan las familias ROL en una bolsa de empleo (06/CAT-BOLSAS), que lista sus vacantes por término y no por empresa. El bloque de abajo lo lee el script de búsqueda (07): busca cada término en cada lugar de la región de 04 y, si 04 acepta remoto en el país de la bolsa, en todo el país con su filtro remoto. No trae valores: se llena desde HAB-ROLES con la aprobación del titular, al dar de alta su primera bolsa (paso 7 de `/configurar`, «Bolsas de empleo»). Si el bloque falta o no tiene ningún término, el script reporta cada bolsa como `[FALLO]` y busca igual en las empresas.
 
 ```json
 {}

@@ -1,6 +1,6 @@
 # 06 — Empresas objetivo y fichas
 
-**Versión:** 1.10 — 2026-11-22 — CAT-BOLSAS, OCC Mundial: el detalle de las candidatas, su mapeo y la señal anti-bot.
+**Versión:** 1.10 — 2026-11-23 — CAT-BOLSAS, OCC Mundial: el detalle de las candidatas, su mapeo y la señal anti-bot; el alta de una bolsa se comprueba con una exploración de términos.
 **Estado:** plantilla sin empresas. Las agrega el paso 7 de `/configurar` (Empresas), cada una con su ficha y la configuración de su plataforma de reclutamiento.
 
 ## CAT-EMPRESAS — Catálogo
@@ -201,7 +201,7 @@ Una bolsa de empleo es un sitio donde los empleadores publican sus vacantes y do
   | `adaptador` | El nombre de su adaptador, en minúsculas |
   | `pais` | El código ISO 3166-1 alfa-2 del país de la bolsa: se buscan los lugares de la región de 04 en ese país y, si el alcance del remoto lo incluye, todo el país con el filtro remoto. Si no hay ninguno de los dos, la bolsa sale como `[FALLO]` |
 
-- **Comprobación:** al dar de alta una bolsa, correr el script solo con su ID; esa búsqueda de prueba no se registra.
+- **Comprobación:** al dar de alta una bolsa, correr una exploración de términos solo en ella, con los términos de 05/HAB-TERMINOS (07/BUS-BOLSAS): lista sin pedir ningún detalle, así que no gasta las lecturas que la bolsa vigila. La bolsa no debe salir como `[FALLO]`; la exploración no se registra. El alta la guía el paso 7 de `/configurar` («Bolsas de empleo»), que también ofrece las bolsas del país del titular.
 
 ### OCC Mundial
 

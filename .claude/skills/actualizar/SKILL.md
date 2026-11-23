@@ -89,6 +89,8 @@ Resuelve cada conflicto en su lugar y deja el archivo sin marcas:
 
 - **Solo texto de la plantilla** (instrucciones, estructura, código que el titular no tocó): toma el de la nueva.
 - **Un dato del titular** (lo que escribió al llenar un módulo, una ficha de 06, un adaptador suyo en `herramientas/buscar.py`): consérvalo, acomodado a la estructura nueva.
+- **Sección nueva en un módulo con datos:** entra como la trae la nueva, vacía o con sus valores por defecto, sin tocar las secciones del titular que la rodean. No la llenes en la fusión: si hay que preguntarle algo al titular, lo dice una acción de `CAMBIOS.md` (paso 5).
+- **Bloque JSON que la copia llenó** (como el de 04/PREF-UBICACION o el de 05/HAB-TERMINOS): conserva los valores de la copia. Si la nueva le agrega un campo, súmalo con el valor vacío o por defecto que trae la nueva.
 - **Versiones y ESTADO:** la línea de versión de un módulo (`**Versión:**`; en 00, `Versión`) conserva la de la copia, y el cierre la actualiza. En la tabla ESTADO de 01, la fila de un módulo «Configurado» conserva su estado y su siguiente paso de la copia, y una fila «Sin llenar» toma la de la nueva; la columna Versión la pone el cierre.
 - **Si no está claro** de quién es el texto o cómo acomodarlo: pregúntale, mostrando las tres versiones (base, copia y nueva).
 

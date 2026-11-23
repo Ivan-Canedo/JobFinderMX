@@ -1,6 +1,6 @@
 # 08 — Evaluación de vacantes
 
-**Versión:** 1.5 — 2026-11-22 — Vacantes de bolsas de empleo: las que no tienen detalle salen en la tabla como «Falta el detalle», y una condición visible en su tarjeta las excluye antes (EVAL-FLUJO, EVAL-INFORME).
+**Versión:** 1.5 — 2026-11-23 — Vacantes de bolsas de empleo: las que no tienen detalle salen en la tabla como «Falta el detalle», y una condición visible en su tarjeta las excluye antes (EVAL-FLUJO, EVAL-INFORME); desde Web, una vacante de bolsa se evalúa con el texto que pega el titular.
 **Estado:** método de la plantilla. Las condiciones salen de 04 y las familias de 05; queda listo con el paso 5 de `/configurar` (Habilidades y roles).
 **Evaluaciones vigentes desde:** 1.0. Sube a la versión nueva solo si el cambio altera la clasificación de requisitos, las categorías, la elección de núcleos, la cobertura o las condiciones. Un cambio en la fórmula del nivel o en los pesos no lo sube, porque la herramienta recalcula las estrellas desde `nucleos` (EVAL-ENCAJE). Un cambio de 04 tampoco: lo cubre la regla de EVAL-REGISTRO.
 
@@ -47,7 +47,7 @@ No se gastan preguntas ni detalle en vacantes que el titular no pidió.
 - **Exclusión desde la tarjeta:** antes de esperar el detalle, se revisan las condiciones que ya muestra la tarjeta: el tipo de puesto en el título, la ubicación y el sueldo literal (`sueldo_literal`). Si una no cumple, la vacante se registra `Excluida` con la observación del listado, el texto literal de la tarjeta y sin requisitos, y ya no sale como pendiente. Lo que la tarjeta no muestra queda para el detalle.
 - **Una dudosa conservada** se evalúa como cualquier otra cuando llega su detalle, aunque resulte poco relacionada: sus núcleos lo reflejan.
 
-**Desde Web:** se evalúa una vacante que el titular nombra o pega, con los pasos 2, 5 y 6. Si la instantánea trae su evaluación y sigue vigente (EVAL-REGISTRO), se usa esa. Si no, se evalúa con la descripción leída en su anuncio oficial (07/BUS-ACCESO-WEB) o con la que pegó el titular, y el agente calcula el encaje con la línea «Pesos del encaje» de EVAL-ACUERDOS, como indica EVAL-ENCAJE. Web no registra: si el titular quiere conservarla, la observación, los requisitos y la evaluación van en una nota para Code (00, «Cambios a los registros»), que Code aplica según 07/BUS-PUNTUAL. La evaluación de la nota trae los núcleos con su categoría y no trae estrellas: Code las calcula al registrar.
+**Desde Web:** se evalúa una vacante que el titular nombra o pega, con los pasos 2, 5 y 6. Si la instantánea trae su evaluación y sigue vigente (EVAL-REGISTRO), se usa esa. Si no, se evalúa con la descripción leída en su anuncio oficial (07/BUS-ACCESO-WEB) o con la que pegó el titular, que es la única forma para una vacante de bolsa (07/BUS-PUNTUAL), y el agente calcula el encaje con la línea «Pesos del encaje» de EVAL-ACUERDOS, como indica EVAL-ENCAJE. Web no registra: si el titular quiere conservarla, la observación, los requisitos y la evaluación van en una nota para Code (00, «Cambios a los registros»), que Code aplica según 07/BUS-PUNTUAL. La evaluación de la nota trae los núcleos con su categoría y no trae estrellas: Code las calcula al registrar.
 
 ## EVAL-REQUISITOS — Extracción y tipo
 

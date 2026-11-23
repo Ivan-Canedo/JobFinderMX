@@ -52,7 +52,7 @@ import urllib.parse
 import urllib.request
 from zoneinfo import ZoneInfo
 
-VERSION = "1.1"
+VERSION = "1.2"
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36"
 
 
