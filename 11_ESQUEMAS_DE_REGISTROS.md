@@ -1,6 +1,6 @@
 # 11 — Esquema de registros
 
-**Versión:** 1.7 — 2026-11-22 — `encaje` de `evaluaciones` se calcula desde `nucleos`, la herramienta valida la categoría de cada núcleo y `migrar` quita la columna guardada (REG-CAMPOS, REG-ESQUEMA, REG-LOCAL, REG-INSTANTANEA).
+**Versión:** 1.8 — 2026-11-22 — `Indeterminada` incluye la localidad escrita sin su división en un grupo de división completa (REG-CAMPOS).
 **Estado:** esquema de la plantilla. El paso 8 de `/configurar` (Registros) crea el archivo de registros desde el bloque de REG-ESQUEMA.
 
 ## Responsabilidad
@@ -87,7 +87,7 @@ Las tablas de cada pestaña explican sus columnas; el bloque de REG-ESQUEMA las 
 - **Dentro:** todas las ubicaciones literales están en la región.
 - **Incluye:** hay varias y al menos una está dentro.
 - **Fuera:** ninguna está dentro ni puede estarlo.
-- **Indeterminada:** ninguna está dentro, pero alguna puede estarlo, porque nombra una división de 04 sin una localidad aceptada, solo el país o nada más concreto que «Remote» o «Multiple locations»; o la ubicación no está publicada.
+- **Indeterminada:** ninguna está dentro, pero alguna puede estarlo, porque nombra una división de 04 sin una localidad aceptada, solo el país, nada más concreto que «Remote» o «Multiple locations» o, en un grupo de división completa, una localidad de su país sin la división; o la ubicación no está publicada.
 
 **Empresa:** para registrar una vacante, su empresa necesita un EMP-ID en 06, aunque solo esté como «explorada». La herramienta lee el catálogo de 06, así que el ID vale desde que se agrega ahí.
 

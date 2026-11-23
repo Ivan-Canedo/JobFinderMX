@@ -867,8 +867,8 @@ class Importar(CopiaFicticia):
         self.assertEqual(busqueda["fecha_hora"], de_buscar["fecha_hora"])
         self.assertEqual(busqueda["solicitud_alcance"], "Todas las empresas de 06 con la región de 04")
         self.assertEqual(busqueda["recursos_versiones"], "07 v1.4 | 06/EMP-ACME v0.1 | 04 v1.0")
-        self.assertTrue(busqueda["fuentes_consultas_filtros"].startswith(
-            "herramientas/buscar.py v1.0 | EMP-ACME: API de Workday"), busqueda["fuentes_consultas_filtros"])
+        self.assertRegex(busqueda["fuentes_consultas_filtros"],
+                         r"^herramientas/buscar\.py v[0-9.]+ \| EMP-ACME: API de Workday")
         self.assertIn("Location_Country = País A (3 únicos de 3)", busqueda["fuentes_consultas_filtros"])
         self.assertIn("remoteType = Remote", busqueda["fuentes_consultas_filtros"])
         self.assertEqual(busqueda["cobertura_limitaciones"], "EMP-ACME: 4 únicos de 4, completa; detalle leído en 3 de 4")

@@ -98,6 +98,24 @@ _Avoid_: comprobación, consulta
 Leer el anuncio oficial de una vacante, o de unas pocas que el titular nombra, sin recorrer ningún listado. Se hace en cualquier canal; desde Web, lo que se quiera conservar va en una nota para Code.
 _Avoid_: búsqueda, verificación
 
+## Región
+
+**Región**:
+Los lugares de `localidades` en el bloque de 04/PREF-UBICACION donde el titular acepta trabajo presencial o híbrido.
+_Avoid_: zona (esa es la zona metropolitana de un grupo de localidades), área
+
+**Grupo de localidades**:
+Un elemento de `localidades`: de división completa (con `divisiones` y sin `nombres`), con `nombres` (solo esas localidades) o de país completo (sin ninguno de los dos).
+_Avoid_: localidad (esa es una sola ciudad, municipio o comuna)
+
+**Alcance del remoto**:
+Desde qué países acepta el titular vacantes remotas: ninguno, los de `remoto.paises` o cualquiera.
+_Avoid_: región remota
+
+**Ubicación por revisar**:
+Una ubicación que puede estar en la región o en el alcance del remoto sin que el script pueda decidirlo. Sale en una línea «revisar» y nunca se descarta.
+_Avoid_: ubicación dudosa, indeterminada (ese es un valor de `region_relacionada` en 11)
+
 ## Evaluación
 
 **Núcleo**:

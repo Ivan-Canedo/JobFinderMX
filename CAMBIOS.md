@@ -2,6 +2,21 @@
 
 Qué trae cada versión de la plantilla y qué hace `/actualizar` en la copia al llegar a ella. Lo escribe el mantenedor (`CONTRIBUTING.md`, «Versión de la plantilla»); en la copia no se edita.
 
+## v2.3 — 2026-11-22
+
+### Qué cambió
+
+- La búsqueda ya no descarta en silencio una vacante que puede ser de tu región: si no puede decidirlo, la entrega con una línea «revisar ubicación». Solo deja fuera lo que sabe que está fuera.
+- Si aceptas un estado o provincia completo, una vacante escrita «Localidad, País», sin la división, queda por revisar en lugar de salir como fuera. Las localidades que quieras que cuenten siempre como de tu región van en el campo nuevo `incluidas` de 04.
+- Una ciudad con el mismo nombre que su estado ya no acepta todo el estado: «Ciudad X, Estado A, País A» queda por revisar aunque hayas nombrado la ciudad «Estado A».
+- La búsqueda reconoce los países con una tabla de la plantilla (`herramientas/paises.json`). Si aceptas remotas solo de algunos países, las de otros países que reconoce quedan fuera, en lugar de entrar porque 04 no los nombraba.
+- Una vacante cuya ubicación dice «Remote» cuenta como remota si el portal no publica su modalidad. Si la modalidad publicada dice otra cosa, gana esa y sale una línea «revisar».
+- Las líneas «revisar» se agrupan: una por ubicación, con las vacantes que la comparten, y una por requisición aunque se publique en varias sedes.
+
+### En la copia
+
+1. **Localidades sin su división (con el titular):** si 04 está «Configurado» y su bloque de PREF-UBICACION tiene un grupo de división completa (con `divisiones` y sin `nombres`), haz con el titular, en cada uno de esos grupos, el subpaso 6 del punto 3 del paso 4 de `/configurar` («Localidades sin su división») y escribe sus respuestas en `incluidas`, con su `PREF-U##` (04/PREF-FUENTES). Si no nombra ninguna, el campo queda vacío. Si no tiene grupos así, salta esta acción. Retoma el paso 4 (Preferencias) en la fila de 04 de ESTADO hasta terminar esos grupos; luego la fila vuelve a su siguiente paso.
+
 ## v2.2 — 2026-11-22
 
 ### Qué cambió
