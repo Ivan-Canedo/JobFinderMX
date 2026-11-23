@@ -90,6 +90,14 @@ _Avoid_: portal de empleo, job board, agregador
 Un sitio que copia vacantes publicadas en otros lados y redirige a ellos para postular, como Jooble o Talent.com. Nunca es la fuente oficial de una vacante.
 _Avoid_: bolsa de empleo, buscador de empleo
 
+**Término de búsqueda**:
+Una palabra o frase que se le da a una bolsa de empleo para listar sus vacantes, como «analista de datos» o «power bi». Sale de las familias de roles del titular y de los términos que él agregue; el lugar no es parte del término.
+_Avoid_: consulta, keyword, palabra clave
+
+**Exploración de términos**:
+Una corrida que prueba términos de búsqueda nuevos en una bolsa de empleo y solo reporta cuánto rinden. No registra vacantes ni cuenta para comparar una búsqueda con la anterior.
+_Avoid_: búsqueda de prueba
+
 **Búsqueda**:
 Recorrer el listado de vacantes de una o varias empresas en sus portales, o de una bolsa de empleo, filtrarlas, evaluarlas y registrarlas. Solo se hace en el canal Code.
 _Avoid_: comprobación, consulta
