@@ -2656,5 +2656,78 @@ class ReanudacionYFreno(ConOccFalso):
         self.assertIn("--estado", r.stderr)
 
 
+class ExploracionDeTerminos(ConOccFalso):
+    """--explorar: lista términos nuevos en una bolsa, sin detalle, y solo reporta su rendimiento (07/BUS-BOLSAS)."""
+
+    BLOQUE_04 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1", "Ciudad A2"])], alcance="cualquiera")
+    TERMINOS = terminos(ROL_01=(["analista de datos"], ["analista de datos", "analista bi"]))
+
+    def test_lista_solo_los_terminos_explorados_en_los_lugares_de_04_sin_pedir_detalles(self):
+        bi, a2 = ("analista-bi", "ciudad-a1"), ("analista-bi", "ciudad-a2")
+        occ = OccFalso([
+            anuncio_occ("101", "Ciudad A1, Estado A", bi, titulo="Analista BI"),
+            anuncio_occ("102", "Ciudad A2, Estado A", a2, ("analista-bi", "remoto"), titulo="Analista BI Sr."),
+            anuncio_occ("103", "Ciudad A1, Estado A", bi, ("ciencia-de-datos", "ciudad-a1"),
+                        titulo="Científico de datos"),
+            anuncio_occ("104", "Ciudad Y, Estado Y", bi, titulo="Analista BI"),
+            anuncio_occ("105", "Ciudad A1, Estado A", bi, titulo="Recepcionista"),
+            # Del término de 05, que la exploración no lista
+            anuncio_occ("106", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"))])
+        salida, errores = self.buscar_bolsa(self.BLOQUE_04, occ, self.TERMINOS, "BOL-01", "--explorar", "Analista BI",
+                                            "ciencia de datos", "analista  bi")
+        self.assertEqual(occ.detalles, [])
+        self.assertEqual(sorted({(t, lugar) for t, lugar, _ in occ.listados}), [
+            ("analista-bi", "ciudad-a1"), ("analista-bi", "ciudad-a2"), ("analista-bi", "remoto"),
+            ("ciencia-de-datos", "ciudad-a1"), ("ciencia-de-datos", "ciudad-a2"), ("ciencia-de-datos", "remoto")])
+        self.assertEqual(salida["exploracion"], {"bolsa_id": "BOL-01", "terminos": ["Analista BI", "ciencia de datos"]})
+        r = salida["bolsas"][0]
+        self.assertEqual(r["terminos"], ["Analista BI", "ciencia de datos"])
+        # Las dos del término repetido cuentan una vez; «Científico de datos» no trae «ciencia»: ruido; 104 encaja
+        # fuera de la región: no es candidata; 106 solo la trae el término de 05
+        self.assertEqual(r["rendimiento"], {
+            "Analista BI": {"traidas": 5, "encajan": 3, "dudosas": 0, "candidatas": 2},
+            "ciencia de datos": {"traidas": 1, "encajan": 0, "dudosas": 0, "candidatas": 0}})
+        self.assertIsNone(r["detalle"])
+        self.assertNotIn("error", r)
+        self.assertTrue(all(v["estado_detalle"] == "pendiente" for v in r["vacantes"] + r["remotas_fuera_de_region"]))
+        self.assertIn("exploración", errores.lower())
+        self.assertIn("«Analista BI»: 5 traídas, 3 encajan, 0 dudosas, 2 candidatas", errores)
+        self.assertIn("«ciencia de datos»: 1 traídas, 0 encajan, 0 dudosas, 0 candidatas", errores)
+        self.assertNotIn("revisar vigencia", errores)
+
+    def test_una_senal_en_el_listado_detiene_la_exploracion_con_lo_listado(self):
+        occ = OccFalso([anuncio_occ("101", "Ciudad A1, Estado A", ("analista-bi", "remoto"), titulo="Analista BI")],
+                       reto={"ciencia-de-datos"})
+        salida, errores = self.buscar_bolsa(self.BLOQUE_04, occ, self.TERMINOS, "BOL-01", "--explorar", "analista bi",
+                                            "ciencia de datos", codigo_esperado=1)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, [])
+        self.assertIn("en el listado", r["error"])
+        self.assertNotIn("detalles", r["error"])
+        self.assertFalse(r["completa"])
+        self.assertEqual(r["rendimiento"]["analista bi"]["traidas"], 1)
+        self.assertIn("exploracion", salida)
+        self.assertIn("[FALLO] BOL-01", errores)
+
+    def test_sin_exploracion_la_salida_no_lleva_el_marcador(self):
+        salida, _ = self.buscar_bolsa(self.BLOQUE_04, OccFalso([]), self.TERMINOS)
+        self.assertNotIn("exploracion", salida)
+
+    def test_explorar_pide_un_solo_id_de_bolsa_y_no_vale_con_estado(self):
+        self.escribir(modulo_04(self.BLOQUE_04), modulo_06({"EMP-01": ficha("EMP-01", {"plataforma": "workday"})},
+                                                            {"BOL-01": self.BOLSA, "BOL-02": self.BOLSA}),
+                      modulo_05(self.TERMINOS))
+        casos = {"sin ID": ("--explorar", "x"), "una empresa": ("EMP-01", "--explorar", "x"),
+                 "dos bolsas": ("BOL-01", "BOL-02", "--explorar", "x"),
+                 "con estado": ("BOL-01", "--estado", "e.json", "--explorar", "x"),
+                 "término vacío": ("BOL-01", "--explorar", " ")}
+        for caso, argumentos in casos.items():
+            with self.subTest(caso):
+                r = self.correr(*argumentos)
+                self.assertEqual(r.returncode, 2, r.stderr)
+                self.assertIn("--explorar", r.stderr)
+                self.assertEqual(r.stdout, "")
+
+
 if __name__ == "__main__":
     unittest.main()

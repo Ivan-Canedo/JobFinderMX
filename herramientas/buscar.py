@@ -4,6 +4,8 @@
 Uso:
     python3 -I herramientas/buscar.py [EMP-ID | BOL-ID ...] [--salida archivo.json] [--sin-remotas] [--copia CARPETA]
                                       [--estado ESTADO.json [--sin-freno]]
+    python3 -I herramientas/buscar.py BOL-ID --explorar TERMINO [TERMINO ...] [--salida archivo.json] [--sin-remotas]
+                                      [--copia CARPETA]
 
 Las empresas y las bolsas se nombran por su ID de 06; por defecto, todas las de sus catálogos (CAT-EMPRESAS y
 CAT-BOLSAS). La región, el alcance del remoto y la zona horaria salen del bloque de 04/PREF-UBICACION; la plataforma,
@@ -26,7 +28,10 @@ como [FALLO] y sigue con las demás (07/BUS-BOLSAS, ADR 0010). Con --estado, el 
 estado-bolsas`, no pide el detalle de las vacantes que ya lo tienen o tienen evaluación, que se entregan como
 «anterior»; si una bolsa se bloqueó en su primera petición de detalle en dos búsquedas seguidas, el freno: no le pide
 ningún detalle, lee su listado igual y lo dice en su línea, salvo con --sin-freno, que solo se usa con permiso del
-titular. Un estado que no se puede leer, mal formado o de otra copia termina con código 2. Solo se usan rutas que
+titular. Un estado que no se puede leer, mal formado o de otra copia termina con código 2. Con --explorar, la
+exploración de términos: lista en una sola bolsa los términos dados en lugar de los de 05, con los mismos lugares, sin
+pedir ningún detalle, y solo reporta su rendimiento; su salida lleva el marcador «exploracion», que `registros.py
+importar` rechaza. Sin un solo ID BOL-, con --estado o con un término vacío, termina con código 2. Solo se usan rutas que
 permite el robots.txt del sitio, sin cookies ni credenciales. El JSON va a --salida o a stdout, con las empresas en
 «empresas» y las bolsas en «bolsas»; el resumen y las líneas «revisar», a stderr. El script no evalúa ni escribe en los
 registros: entrega los datos para los pasos 4-9 de 07/BUS-PASOS. Solo biblioteca estándar.
@@ -1874,12 +1879,16 @@ def por_pedir(r, bid, orden, previo):
 
 
 def terminos_de_bolsa(familias):
-    """{slug: término} de 05, cada término una vez: el primero que se escribió de cada slug, porque dos términos
-    con el mismo slug son la misma búsqueda (05/HAB-TERMINOS, «Reglas»)."""
+    """{slug: término} de 05, cada término una vez (terminos_unicos)."""
+    return terminos_unicos(t for f in familias.values() for t in f["terminos"])
+
+
+def terminos_unicos(lista):
+    """{slug: término}, cada término una vez: el primero que se escribió de cada slug, porque dos términos con el
+    mismo slug son la misma búsqueda (05/HAB-TERMINOS, «Reglas»)."""
     terminos = {}
-    for f in familias.values():
-        for t in f["terminos"]:
-            terminos.setdefault(slug(t), " ".join(t.split()))
+    for t in lista:
+        terminos.setdefault(slug(t), " ".join(t.split()))
     return terminos
 
 
@@ -2140,10 +2149,14 @@ def occ_bloqueo(r, e, en, peticiones):
     fue en el listado o en el detalle y cuántos detalles se leyeron. En Code en la nube, la bolsa se busca en Code
     local, como con IpBloqueada (07/BUS-CANALES)."""
     d = r["detalle"]
-    d["bloqueo"] = {"en": en, "peticion": peticiones[en], "tipo": e.tipo, "url": e.url}
+    leidos = ""
+    # Una exploración de términos no pide detalles, así que no hay cuenta de detalles que anotar (07/BUS-BOLSAS)
+    if d is not None:
+        d["bloqueo"] = {"en": en, "peticion": peticiones[en], "tipo": e.tipo, "url": e.url}
+        leidos = f"; se leyeron {d['leidos']} de {d['candidatas']} detalles"
     r["error"] = (f"{e.host} respondió con una señal anti-bot ({e.tipo}) en el {en}, petición {peticiones[en]} "
-                  f"({e.url}); se leyeron {d['leidos']} de {d['candidatas']} detalles; no se reintenta ni se le pide "
-                  "nada más en esta ejecución (07/BUS-BOLSAS, ADR 0010)")
+                  f"({e.url}){leidos}; no se reintenta ni se le pide nada más en esta ejecución (07/BUS-BOLSAS, "
+                  "ADR 0010)")
     if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
         r["error"] += "; en Code en la nube la bolsa recibe más bloqueos: busca esta bolsa en Code local"
 
@@ -2151,9 +2164,11 @@ def occ_bloqueo(r, e, en, peticiones):
 def occ(bid, conf, pref, familias, remotas, previo):
     """Adaptador de OCC Mundial (06/CAT-BOLSAS): un listado por cada término de búsqueda de 05 y cada lugar de la
     región de 04 en el país de la bolsa, más todo el país con el filtro remoto si el alcance del remoto lo incluye.
-    previo: lo que el estado dice de la bolsa (por_pedir)."""
+    previo: lo que el estado dice de la bolsa (por_pedir) y, con --explorar, los términos explorados, que reemplazan
+    a los de 05 y no piden ningún detalle (07/BUS-BOLSAS)."""
     pais = conf["pais"]
-    terminos = terminos_de_bolsa(familias)
+    explorar = previo["explorar"]
+    terminos = explorar or terminos_de_bolsa(familias)
     lugares = lugares_de_bolsa(pref, pais)
     alcance = pref["remoto"]["alcance"]
     sin_remoto = sin_remotas(pref, remotas) or (
@@ -2162,9 +2177,12 @@ def occ(bid, conf, pref, familias, remotas, previo):
     if not lugares and sin_remoto:
         raise Fallo(f"ni la región ni el alcance del remoto de 04 incluyen {pais}, el país de la bolsa: no hay nada "
                     "que buscar en ella")
-    r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar, y detalle de las "
-                             "candidatas hasta la primera señal anti-bot", list(terminos.values()))
-    r["detalle"] = {"candidatas": 0, "anteriores": 0, "pedidos": 0, "leidos": 0, "bloqueo": None, "freno": None}
+    r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar, " + (
+        "en exploración de términos, sin detalle" if explorar else
+        "y detalle de las candidatas hasta la primera señal anti-bot"), list(terminos.values()))
+    # La exploración solo reporta el rendimiento: no hay detalle que contar
+    r["detalle"] = None if explorar else {"candidatas": 0, "anteriores": 0, "pedidos": 0, "leidos": 0, "bloqueo": None,
+                                          "freno": None}
     peticiones = collections.Counter()
     # clases: la clase de cada vacante ya vista, por su ID; sus claves son las vistas de listado()
     clases, candidatas = {}, set()
@@ -2196,7 +2214,7 @@ def occ(bid, conf, pref, familias, remotas, previo):
     # listado desempata)
     orden = sorted((v for v in r["vacantes"] + r["remotas_fuera_de_region"] if v["job_id"] in candidatas),
                    key=lambda v: (v["clasificacion_titulo"] != "encaja", occ_dias(v["_cuando"])))
-    pendientes = por_pedir(r, bid, orden, previo)
+    pendientes = [] if explorar else por_pedir(r, bid, orden, previo)
     if en_el_listado:
         occ_bloqueo(r, en_el_listado, "listado", peticiones)
     else:
@@ -2247,7 +2265,8 @@ ADAPTADORES = {"workday": workday, "eightfold": eightfold, "workable": workable,
                "oraclerecruitingcloud": oraclerecruitingcloud}
 # Un adaptador por bolsa de empleo (06/CAT-BOLSAS): una función (bid, conf, pref, familias, remotas, previo), con las
 # familias de 05/HAB-TERMINOS y lo que el estado dice de la bolsa, que devuelve resultado_bolsa() y elige con
-# por_pedir() las candidatas cuyo detalle pide; se registra con el nombre que lleva la ficha en «adaptador».
+# por_pedir() las candidatas cuyo detalle pide; con previo["explorar"], lista esos términos en lugar de los de 05 y
+# no pide ningún detalle. Se registra con el nombre que lleva la ficha en «adaptador».
 BOLSAS = {"occ": occ}
 
 
@@ -2286,9 +2305,10 @@ def nombre_en_revisar(v):
     return v["job_id"] if v["job_id"] not in (None, "No publicado") else v["url_oficial"] or v["url_fuente"]
 
 
-def informar(fid, r):
+def informar(fid, r, explorar=False):
     """La línea de una empresa o una bolsa en stderr, con su cobertura y sus líneas «revisar». Una bolsa detenida por
-    una señal anti-bot sale como [FALLO] y, debajo, lo que se entrega."""
+    una señal anti-bot sale como [FALLO] y, debajo, lo que se entrega. En una exploración de términos, en lugar de
+    las líneas «revisar» de cada vacante, que no se registra, una línea por término con su rendimiento."""
     if "error" in r:
         print(f"[FALLO] {fid}: {r['error']}", file=sys.stderr)
         if "vacantes" not in r:
@@ -2319,6 +2339,11 @@ def informar(fid, r):
         print(f"    cobertura: {r['verificacion_cobertura']}", file=sys.stderr)
     for nota in r["revisar"]:
         print(f"    revisar: {nota}", file=sys.stderr)
+    if explorar:
+        for t, n in r["rendimiento"].items():
+            print(f"    «{t}»: {n['traidas']} traídas, {n['encajan']} encajan, {n['dudosas']} dudosas, "
+                  f"{n['candidatas']} candidatas", file=sys.stderr)
+        return
     imprimir_revisar(r["vacantes"] + r["remotas_fuera_de_region"])
 
 
@@ -2358,9 +2383,20 @@ def main():
     ap.add_argument("--sin-freno", action="store_true",
                     help="con --estado, pide los detalles pendientes aunque el freno esté activo; solo con permiso del "
                          "titular (07/BUS-BOLSAS)")
+    ap.add_argument("--explorar", nargs="+", metavar="TERMINO",
+                    help="exploración de términos en una sola bolsa: lista estos términos en lugar de los de 05, sin "
+                         "pedir detalles, y solo reporta su rendimiento; `registros.py importar` rechaza su salida "
+                         "(07/BUS-BOLSAS)")
     a = ap.parse_args()
     if a.sin_freno and a.estado is None:
         ap.error("--sin-freno solo vale con --estado: sin el estado no hay freno")
+    explorar = None
+    if a.explorar is not None:
+        if a.estado is not None:
+            ap.error("--explorar no vale con --estado: la exploración no pide detalles")
+        if not all(slug(t) for t in a.explorar):
+            ap.error("--explorar: cada término debe tener alguna letra o número")
+        explorar = terminos_unicos(a.explorar)
     if a.copia is not None:
         if not os.path.isdir(a.copia):
             ap.error(f"--copia: {a.copia!r} no existe o no es una carpeta")
@@ -2374,17 +2410,26 @@ def main():
     if desconocidas:
         ap.error(f"{', '.join(desconocidas)} no está en los catálogos de 06; opciones: "
                  f"{', '.join([*empresas, *bolsas])}")
+    if explorar and not (len(a.ids) == 1 and pedidas[0] in bolsas):
+        ap.error(f"--explorar prueba términos en una sola bolsa: nombra un ID BOL- de 06 antes de --explorar (hay: "
+                 f"{', '.join(bolsas) or 'ninguna'})")
     if a.sin_remotas and not pref["localidades"]:
         ap.error("04 solo acepta remoto (localidades vacía): con --sin-remotas no habría nada que buscar")
     ahora = dt.datetime.now(pref["tz"])
     res = {"script": f"herramientas/buscar.py v{VERSION}", "fecha_hora": ahora.strftime("%Y-%m-%d %H:%M"),
            "zona_horaria": pref["zona_horaria"], "empresas": [], "bolsas": []}
+    if explorar:
+        # El marcador que `registros.py importar` rechaza: una exploración no es una búsqueda (07/BUS-BOLSAS)
+        res["exploracion"] = {"bolsa_id": pedidas[0], "terminos": list(explorar.values())}
+        print(f"Exploración de términos en {pedidas[0]}: sin detalle; solo reporta el rendimiento y no se registra",
+              file=sys.stderr)
     fallos = 0
     # Las empresas primero y después las bolsas, cada una en su lista de la salida
     for fid in sorted(pedidas, key=lambda i: i in bolsas):
         es_bolsa = fid in bolsas
         try:
-            previo = {"con_detalle": set(), "bloqueos": 0, **estado.get(fid, {}), "sin_freno": a.sin_freno}
+            previo = {"con_detalle": set(), "bloqueos": 0, **estado.get(fid, {}), "sin_freno": a.sin_freno,
+                      "explorar": explorar}
             r = (buscar_bolsa(fid, bolsas[fid], pref, not a.sin_remotas, previo) if es_bolsa
                  else buscar_empresa(fid, empresas[fid], pref, not a.sin_remotas))
         except Fallo as e:
@@ -2392,7 +2437,7 @@ def main():
         # Una bolsa detenida por una señal anti-bot entrega su resultado con el error
         fallos += "error" in r
         res["bolsas" if es_bolsa else "empresas"].append(r)
-        informar(fid, r)
+        informar(fid, r, explorar)
     salida = json.dumps(res, ensure_ascii=False, indent=1)
     if a.salida:
         with open(a.salida, "w", encoding="utf-8") as f:

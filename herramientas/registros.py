@@ -808,7 +808,15 @@ def importar(esquema, salida, decisiones):
     """Registra una búsqueda desde la salida de buscar.py y las decisiones del agente (07/BUS-REGISTRO): su fila de
     busquedas, las vacantes nuevas de cada empresa y cada bolsa, una observación por vacante listada y los cambios a
     las ya registradas. De una bolsa no llega el ruido, que buscar.py no entrega, ni las dudosas descartadas. Con un
-    solo error no escribe nada."""
+    solo error no escribe nada. La salida de una exploración de términos (buscar.py --explorar) se rechaza: no es una
+    búsqueda (07/BUS-BOLSAS)."""
+    if isinstance(salida, dict) and "exploracion" in salida:
+        exploracion = salida["exploracion"]
+        bolsa = (f" en {exploracion['bolsa_id']}" if isinstance(exploracion, dict)
+                 and isinstance(exploracion.get("bolsa_id"), str) else "")
+        rechazar([f"La salida es de una exploración de términos{bolsa} (buscar.py --explorar), no de una búsqueda: "
+                  "solo reporta el rendimiento de los términos y no se registra. Para registrar vacantes, corre "
+                  "buscar.py sin --explorar (07/BUS-BOLSAS)."])
     forma = forma_de_salida(salida)
     if forma:
         rechazar(forma)

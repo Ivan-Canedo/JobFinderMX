@@ -1,6 +1,6 @@
 # 07 — Método de búsqueda
 
-**Versión:** 1.13 — 2026-11-23 — Bolsas de empleo: lo permitido y la diferencia con un agregador (BUS-REGLAS), el detalle hasta la señal anti-bot, su reanudación con el estado y el freno (BUS-BOLSAS), el estado antes de listar (BUS-PASOS), su bloqueo en Code en la nube (BUS-CANALES), su listado como fuente oficial (BUS-VIGENCIA), su comparación por los términos comunes (BUS-COBERTURA) y el registro de sus vacantes (BUS-REGISTRO).
+**Versión:** 1.13 — 2026-11-23 — Bolsas de empleo: lo permitido y la diferencia con un agregador (BUS-REGLAS), el detalle hasta la señal anti-bot, su reanudación con el estado y el freno, el rendimiento de los términos y su exploración (BUS-BOLSAS), el estado antes de listar (BUS-PASOS), su bloqueo en Code en la nube (BUS-CANALES), su listado como fuente oficial (BUS-VIGENCIA), su comparación por los términos comunes (BUS-COBERTURA) y el registro de sus vacantes (BUS-REGISTRO).
 **Estado:** método de la plantilla. Queda listo con la región de 04 y las fichas de 06, en el paso 7 de `/configurar` (Empresas).
 
 ## BUS-ALCANCE — Responsabilidad
@@ -47,6 +47,7 @@ Las reglas de este método valen para cualquier titular. Si el titular cambia un
 ```text
 python3 -I herramientas/buscar.py [EMP-ID | BOL-ID ...] [--salida archivo.json] [--sin-remotas]
                                   [--estado estado.json [--sin-freno]]
+python3 -I herramientas/buscar.py BOL-ID --explorar TERMINO [TERMINO ...] [--salida archivo.json] [--sin-remotas]
 ```
 
 - **Empresas:** por su ID de 06; sin IDs, todas las del catálogo. `--help` lista las plataformas con adaptador.
@@ -94,6 +95,17 @@ Una bolsa de empleo (06/CAT-BOLSAS) se busca con el mismo script, con las reglas
   - El agente se lo explica al titular y le propone volver a intentarlo con `--sin-freno`, que se salta el freno y pide los pendientes. Lo propone después de unos días sin intentarlo, nunca en la misma sesión que el último bloqueo.
   - Sin el permiso del titular, no se usa. Si esa búsqueda se bloquea otra vez en su primer detalle, el freno sigue.
   - Mientras tanto, una vacante pendiente se puede leer por comprobación puntual (BUS-PUNTUAL).
+- **Rendimiento de los términos:** cada búsqueda reporta, por término, cuántas vacantes trajo, cuántas encajan, cuántas son dudosas y cuántas son candidatas (05/HAB-TERMINOS), y `importar` lo guarda en `busquedas` (BUS-REGISTRO). Al cerrar una búsqueda con bolsas, el agente lo lee junto con el de las búsquedas anteriores (`registros.py leer busquedas`) y propone cambios a los términos solo con una razón que dé el rendimiento:
+  - **quitar** un término que, en dos búsquedas o más, no trajo candidatas;
+  - **agregar** uno cuando las dudosas que el titular conserva repiten palabras que ningún término busca, o cuando una familia ROL trae pocas candidatas. Antes de agregarlo, propone explorarlo (abajo);
+  - **una frase en `titulos`** cuando el titular conserva varias dudosas con el mismo título.
+
+  Cada propuesta va con sus números. El titular aprueba cada cambio por separado; el agente lo aplica en el bloque de 05/HAB-TERMINOS y lo anota en 05/HAB-FUENTES como `HAB-U##`, con su fuente (la búsqueda `BUS-` o la exploración que lo sustenta) y la fecha. Sin aprobación no cambia nada. Como la comparación usa solo los términos comunes (BUS-COBERTURA), cambiar un término no declara cerrada ninguna vacante.
+- **Exploración de términos:** prueba términos que no están en 05 antes de agregarlos, sin registrar nada. El agente la propone cuando el titular quiere un término nuevo o cuando el rendimiento sugiere agregar uno, y la corre con su permiso: `python3 -I herramientas/buscar.py BOL-ID --explorar "término" "otro término" --salida <directorio temporal>/exploracion.json`, con un solo ID de bolsa y sin `--estado`.
+  - Lista esos términos en lugar de los de 05, en los mismos lugares de 04 y, si el alcance del remoto lo incluye, con su filtro remoto. Clasifica los títulos con las frases de `titulos` de 05.
+  - No pide ningún detalle, así que no gasta las peticiones que la bolsa vigila, ni cuenta para el freno. Una señal anti-bot en el listado la detiene igual, como `[FALLO]`.
+  - Solo reporta el rendimiento: una línea por término en stderr, sin líneas «revisar», y `rendimiento` en la salida, que lleva el marcador `exploracion`. La salida trae también las candidatas, con su tarjeta, para ver qué títulos trae cada término. `registros.py importar` rechaza esa salida, así que no registra vacantes, no escribe en `busquedas` y no altera la comparación de la siguiente búsqueda.
+  - El agente le muestra al titular el rendimiento de cada término explorado junto al de sus términos actuales, y le propone agregar los que rindan; cada uno se aprueba y se anota como arriba, con la exploración y su fecha como fuente.
 
 ## BUS-ACCESO-WEB — Lectura de una vacante desde Web
 

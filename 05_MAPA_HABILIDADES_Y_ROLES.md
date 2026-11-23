@@ -1,6 +1,6 @@
 # 05 — Mapa de habilidades y roles
 
-**Versión:** 1.1 — 2026-11-22 — HAB-TERMINOS: términos de búsqueda por familia ROL para las bolsas de empleo, con el filtro por título y el rendimiento de cada término.
+**Versión:** 1.1 — 2026-11-23 — HAB-TERMINOS: términos de búsqueda por familia ROL para las bolsas de empleo, con el filtro por título, el rendimiento de cada término y la exploración de términos nuevos.
 **Estado:** plantilla sin llenar. El paso 5 de `/configurar` (Habilidades y roles) construye la matriz de evidencias y las familias de roles desde 02 y 04.
 
 ## HAB-USO — Responsabilidad
@@ -81,7 +81,7 @@ Con qué palabras se buscan las familias ROL en una bolsa de empleo (06/CAT-BOLS
   - **dudosa:** no encaja, pero trae todas las palabras de un término, en cualquier orden y sin contar palabras como «de» o «y»; por ejemplo, «Analista de Estrategia y Datos» con el término «analista de datos». Si es candidata, sale como línea «revisar título», y si el titular la conserva, quizá falte una frase en `titulos`;
   - **ruido:** todo lo demás. No se entrega; solo se cuenta.
 - **Rendimiento:** la salida de cada bolsa dice, por término, cuántas vacantes distintas trajo, cuántas encajan, cuántas son dudosas y cuántas son candidatas (encajan o son dudosas, y el script las entrega: en la región o en el alcance del remoto de 04, o con su ubicación por revisar). Una vacante que traen dos términos cuenta en los dos.
-- El titular agrega o quita términos, y cada cambio va con su fuente y su fecha en HAB-FUENTES (`HAB-U##`). El agente puede proponer cambios según el rendimiento de cada término (07), pero nunca los aplica sin permiso.
+- El titular agrega o quita términos, y cada cambio va con su fuente y su fecha en HAB-FUENTES (`HAB-U##`). El agente puede proponer cambios según el rendimiento de cada término, y probar un término nuevo con una exploración de términos que no registra nada (07/BUS-BOLSAS), pero nunca los aplica sin permiso.
 
 ## HAB-VOCABULARIO — Base interna
 

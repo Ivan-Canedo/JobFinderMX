@@ -1360,6 +1360,13 @@ class ImportarBolsa(ConOccEnLaCopia):
         self.assertRechaza(r, "«Tal vez»", "Conservar / Descartar", "BOL-01, 101", "no tiene línea «revisar título»")
         self.assertEqual(self.leer("vacantes"), [])
 
+    def test_rechaza_la_salida_de_una_exploracion_de_terminos(self):
+        salida = self.buscar(PRIMERA_OCC, "BOL-01", "--explorar", "analista de datos")
+        self.assertIn("exploracion", json.loads(salida.read_text(encoding="utf-8")))
+        r = self.importar(salida, self.decisiones({"BOL-01": self.de_los_titulos()}))
+        self.assertRechaza(r, "exploración de términos", "--explorar", "BOL-01")
+        self.assertEqual(self.leer("busquedas"), [])
+
     def test_una_bolsa_detenida_por_la_senal_registra_lo_entregado_si_se_declara(self):
         anuncios = tarjetas(j101="Analista de datos", j105=("Analista de datos Sr.", {"detalle": "abuso"}),
                             j106="Analista de datos Jr.")
