@@ -15,6 +15,23 @@ Qué trae cada versión de la plantilla y qué hace `/actualizar` en la copia al
 1. **Renombrar el archivo de registros (automática):** si la copia tiene `ChambaKit_Registros.xlsx`, renómbralo con `git mv ChambaKit_Registros.xlsx Registros.xlsx`, que conserva su historial. Si `Registros.xlsx` ya existe, lo escribió en esta actualización el `migrar` de una acción anterior, como la 1 de v2.2, que pone al día el archivo viejo sin cambiarlo y escribe en el nombre nuevo de 11: ese es el bueno, así que en lugar del `git mv` haz `git rm ChambaKit_Registros.xlsx` y `git add Registros.xlsx`; git lo sigue reconociendo como el mismo archivo. Va en el commit del paso 6 de `/actualizar`. Si la copia no tiene `ChambaKit_Registros.xlsx`, porque no llegó al paso 8 de `/configurar`, salta esta acción. No edita módulos.
 2. **Canal Web (con el titular):** si tiene proyecto web, después del push del commit del paso 6 de `/actualizar` que pulse «Sync» en él y vuelva a pegar 00 en «Instrucciones», porque 00 nombra el archivo nuevo.
 
+## v2.4 — 2026-11-23
+
+### Qué cambió
+
+- La búsqueda también recorre bolsas de empleo, empezando por OCC Mundial. Busca con los términos de 05 en los lugares de tu región y, si aceptas remoto en el país de la bolsa, en todo ese país. Trae vacantes de empresas que no están en tu catálogo, también las de «Empresa confidencial».
+- Cada vacante de una bolsa se clasifica por su título contra tus familias de 05: las que encajan o son dudosas se entregan, y el ruido solo se cuenta. Cada búsqueda dice cuántas vacantes trajo cada término.
+- La bolsa tolera pocas lecturas: la búsqueda pide el detalle solo de las candidatas y se detiene en la primera señal anti-bot, sin reintentar, y entrega lo que alcanzó a leer. La siguiente búsqueda retoma solo las que siguen sin detalle. Si dos búsquedas seguidas se bloquean al empezar el detalle, deja de pedirlo y te avisa. Nunca usa tu cuenta en la bolsa.
+- Las vacantes de bolsa sin detalle salen en la tabla resumen como «Falta el detalle», con el sueldo, la región y la modalidad de su tarjeta.
+- Puedes probar términos nuevos con una exploración que no registra nada.
+- En Code en la nube, un bloqueo de la bolsa te dice que la busques en Code local.
+- **Aviso:** la búsqueda en OCC no se ha probado de punta a punta en el sitio real; en las pruebas del mantenedor, OCC bloqueó el listado tras unas pocas páginas. Si te pasa, la búsqueda lo dice, entrega lo que alcanzó a leer y sigue con tus empresas.
+
+### En la copia
+
+1. **Columnas nuevas en los registros (automática):** si la copia tiene `ChambaKit_Registros.xlsx`, corre `.venv/bin/python -I herramientas/registros.py migrar ChambaKit_Registros.xlsx` (en Windows, `.venv\Scripts\python.exe`) antes de cualquier otra orden de la herramienta, que rechaza el archivo mientras le falten. Agrega vacías `bolsa_id`, `empresa_literal` y `sueldo_literal` a `vacantes` y regenera la instantánea. Muéstrale al titular los conteos y las columnas agregadas. El archivo y `instantanea/` van en el commit del paso 6 de `/actualizar`.
+2. **Bolsas de empleo (con el titular):** si 05 y 06 están «Configurado», haz con el titular el punto 4 del paso 7 de `/configurar` («Bolsas de empleo»): le ofrece las bolsas de su país y, si acepta una, la da de alta en 06 y llena 05/HAB-TERMINOS desde sus familias. Si no hay bolsas de su país o no acepta ninguna, la acción termina sin editar módulos. Retoma el paso 7 (Empresas) en la fila de 06 de ESTADO hasta terminar ese punto; luego la fila vuelve a su siguiente paso.
+
 ## v2.3 — 2026-11-22
 
 ### Qué cambió
