@@ -1899,7 +1899,14 @@ class OccFalso:
     None, todo el país sin filtro. Como el sitio real: por_pagina tarjetas de la consulta por página y su total en
     data-total-offers del <h1>; si la consulta tiene más de una página, las fijas (anuncios que no son de la consulta
     ni cuentan en el total) se repiten al inicio de cada página; la página siguiente a la última llega sin tarjetas
-    ni marcador. reto: toda página del listado es el reto «Just a moment…» de Cloudflare, servido con 200."""
+    ni marcador. reto: toda página del listado es el reto «Just a moment…» de Cloudflare, servido con 200; con un
+    conjunto de slugs de términos, solo las de esos términos.
+
+    El detalle (/empleo/oferta/<id>) trae el JobPosting del anuncio en JSON-LD, con el «};» final que deja el sitio
+    real, y su canonical. publicada: su DatePosted. detalle: lo que responde en su lugar: «404», «abuso» (HTTP 403 con
+    el cuerpo «scraping abuse»), «reto» (el reto servido con 200), «reto 403» o «sin jobposting» (una página normal sin
+    él) o «403» (un 403 sin señal en el cuerpo). robots None: su robots.txt responde 403 «scraping abuse». Anota en
+    detalles los IDs pedidos y en cabeceras las de cada petición."""
 
     SITIO = "https://www.occ.com.mx"
     RETO = ('<!DOCTYPE html><html><head><title>Just a moment...</title></head><body>'
@@ -1908,7 +1915,7 @@ class OccFalso:
     def __init__(self, anuncios, fijas=(), por_pagina=20, reto=False, robots="User-agent: *\nDisallow: /cuenta/\n"):
         self.anuncios, self.fijas, self.por_pagina = list(anuncios), list(fijas), por_pagina
         self.reto, self.robots = reto, robots
-        self.pedidas, self.listados = [], []
+        self.pedidas, self.listados, self.detalles, self.cabeceras = [], [], [], []
 
     def tarjeta(self, a):
         return (f'<li class="vacancy-card {a.get("clase", "")}" data-id=\'{a["id"]}\' data-lc="ListOffers">'
@@ -1916,17 +1923,56 @@ class OccFalso:
                 f'{html.escape(a["titulo"])}</a></h2>'
                 f'<p class="vacancy-card__company-text">{html.escape(a.get("empresa", "Empresa confidencial"))}</p>'
                 f'<p class="vacancy-card__salary">{html.escape(a.get("sueldo", "Sueldo no mostrado"))}</p>'
-                f'<p class="vacancy-card__location"><span>{html.escape(a["ubicacion"])}</span><span>Hace 2 días</span>'
-                "</p></li>\n")
+                f'<p class="vacancy-card__location"><span>{html.escape(a["ubicacion"])}</span>'
+                f'<span>{html.escape(a.get("cuando", "Hace 2 días"))}</span></p></li>\n')
+
+    def jobposting(self, a):
+        return {"@context": "http://schema.org", "@type": "JobPosting", "Title": a["titulo"],
+                "Url": f"{self.SITIO}/empleo/oferta/{a['id']}-", "identifier": {"Value": a.get("id_detalle", a["id"])},
+                "DatePosted": a.get("publicada", "2026-11-20"), "ValidThrough": "2027-01-19",
+                "EmploymentType": "Tiempo completo",
+                "HiringOrganization": {"Name": a.get("empresa", "Empresa confidencial")},
+                "JobLocation": {"Address": {"AddressLocality": a.get("localidad", "Ciudad A1"),
+                                            "AddressRegion": "Estado A", "AddressCountry": "XA"}},
+                "BaseSalary": a.get("sueldo_detalle", {"Currency": "XTS", "Value": {"MinValue": 0, "MaxValue": 0,
+                                                                                     "UnitText": "MONTH"}}),
+                "Description": a.get("descripcion", "<p>Requisitos:</p><ul><li>SQL</li><li>Python</li></ul>")}
+
+    def detalle(self, req, jid):
+        self.detalles.append(jid)
+        a = next((a for a in self.anuncios if a["id"] == jid), None)
+        modo = a.get("detalle") if a else "404"
+        url = req.full_url
+        if modo == "404":
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, io.BytesIO(b"<html>No encontrada</html>"))
+        if modo == "abuso":
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, io.BytesIO(b"scraping abuse"))
+        if modo == "403":
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, io.BytesIO(b"<html>Forbidden</html>"))
+        if modo == "reto 403":
+            raise urllib.error.HTTPError(url, 403, "Forbidden", {}, io.BytesIO(self.RETO.encode()))
+        if modo == "reto":
+            return io.BytesIO(self.RETO.encode())
+        jsonld = ("" if modo == "sin jobposting" else
+                  f'<script type="application/ld+json">{json.dumps(self.jobposting(a), ensure_ascii=False)};</script>')
+        return io.BytesIO((f'<html><head><link rel="canonical" href="{self.SITIO}/empleo/oferta/{jid}">'
+                           f'<script type="application/ld+json">{{"@type": "Organization"}}</script>{jsonld}'
+                           f'</head><body><h1>{html.escape(a["titulo"])}</h1></body></html>').encode())
 
     def __call__(self, req, timeout=None):
         url = req.full_url
         self.pedidas.append(url)
+        self.cabeceras.append({k.lower(): v for k, v in req.header_items()})
         u = urllib.parse.urlsplit(url)
         if f"{u.scheme}://{u.netloc}" != self.SITIO:
             raise AssertionError(f"petición inesperada: {url}")
         if u.path == "/robots.txt":
+            if self.robots is None:
+                raise urllib.error.HTTPError(url, 403, "Forbidden", {}, io.BytesIO(b"scraping abuse"))
             return io.BytesIO(self.robots.encode())
+        m = re.fullmatch(r"/empleo/oferta/(\d+)", u.path)
+        if m:
+            return self.detalle(req, m.group(1))
         m = re.fullmatch(r"/empleos/de-([^/]+)/(?:en-([^/]+)/)?(tipo-home-office-remoto/)?", u.path)
         if not m:
             raise AssertionError(f"petición inesperada: {url}")
@@ -1935,7 +1981,7 @@ class OccFalso:
             raise AssertionError(f"el listado debe ir ordenado por fecha (sort=2): {url}")
         termino, lugar, pagina = m.group(1), "remoto" if m.group(3) else m.group(2), int(q.get("page", ["1"])[0])
         self.listados.append((termino, lugar, pagina))
-        if self.reto:
+        if self.reto is True or termino in (self.reto or ()):
             return io.BytesIO(self.RETO.encode())
         de_consulta = [a for a in self.anuncios if (termino, lugar) in a["en"]]
         paginas = max(1, -(-len(de_consulta) // self.por_pagina))
@@ -1954,10 +2000,12 @@ def anuncio_occ(jid, ubicacion, *en, titulo="Analista de datos", **campos):
 class ConOccFalso(CopiaFicticia):
     BOLSA = ficha_bolsa("BOL-01", {"adaptador": "occ", "pais": "XA"})
 
-    def buscar_bolsa(self, bloque_04, occ, bloque_05, *argumentos, empresas=None, bolsas=None, codigo_esperado=0):
+    def buscar_bolsa(self, bloque_04, occ, bloque_05, *argumentos, empresas=None, bolsas=None, codigo_esperado=0,
+                     nube=False):
         """Corre main() del script de la copia con OCC falso como red. empresas: {EMP-ID: portal falso} que se buscan
         junto a la bolsa, con su portal tras la misma red; bolsas: las fichas del catálogo de bolsas (por defecto,
-        BOL-01 en OCC). Devuelve la salida JSON completa y stderr."""
+        BOL-01 en OCC); nube: corre como Code en la nube (CLAUDE_CODE_REMOTE=true). Devuelve la salida JSON completa
+        y stderr."""
         empresas = empresas or {}
         self.escribir(modulo_04(bloque_04),
                       modulo_06({eid: ficha(eid, {"plataforma": p.PLATAFORMA, "portal": p.PORTAL, "consulta": None})
@@ -1979,6 +2027,8 @@ class ConOccFalso(CopiaFicticia):
 
         self.esperas = []
         entorno = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_REMOTE"}
+        if nube:
+            entorno["CLAUDE_CODE_REMOTE"] = "true"
         salida, errores, codigo = io.StringIO(), io.StringIO(), 0
         with mock.patch.object(sys, "argv", ["buscar.py", *argumentos]), \
                 mock.patch.object(script.urllib.request, "urlopen", red), \
@@ -2012,12 +2062,13 @@ class BolsaOcc(ConOccFalso):
                          {"bolsa_id": "BOL-01", "job_id": "101", "titulo": "Analista de datos",
                           "empresa_literal": "Empresa confidencial", "sueldo_literal": "$20,000 - $25,000 Mensual",
                           "ubicacion_literal": "Ciudad A1, Estado A", "region_relacionada": "Dentro",
-                          "modalidad_literal": None, "fecha_publicacion": None,
+                          "modalidad_literal": None, "fecha_publicacion": "2026-11-20",
                           "url_oficial": OccFalso.SITIO + "/empleo/oferta/101",
                           "estado_vigencia": "Confirmada abierta"})
         self.assertNotIn("empresa_id", v)
-        # Con una sola página, la siguiente llega sin tarjetas y termina el recorrido
+        # Con una sola página, la siguiente llega sin tarjetas y termina el recorrido; después, el detalle
         self.assertEqual(occ.listados, [("analista-de-datos", "ciudad-a1", 1), ("analista-de-datos", "ciudad-a1", 2)])
+        self.assertEqual(occ.detalles, ["101"])
         self.assertIn("[OK] BOL-01: 1/1 únicos; 1 en la región", errores)
         self.assertNotIn("revisar", errores)
 
@@ -2035,8 +2086,8 @@ class BolsaOcc(ConOccFalso):
         # Con las 7 reunidas en la página 3, no pide la 4
         self.assertEqual(occ.listados, [(*consulta, 1), (*consulta, 2), (*consulta, 3)])
         self.assertIn("[OK] BOL-01: 7/7 únicos", errores)
-        # Una pausa antes de cada petición a OCC, salvo la primera (robots.txt)
-        self.assertEqual(self.esperas, [2, 2, 2])
+        # Una pausa antes de cada petición a OCC, salvo la primera (robots.txt): 3 páginas y 7 detalles
+        self.assertEqual(self.esperas, [2] * 10)
 
     def test_con_una_sola_pagina_no_se_descarta_ninguna_tarjeta(self):
         # La primera puede llevar «Recomendada» y ser de la consulta: con una página no se distingue de una fija
@@ -2066,7 +2117,12 @@ class BolsaOcc(ConOccFalso):
         self.assertIn("[INCOMPLETA] BOL-01: 4/5 únicos", errores)
 
     def test_una_primera_pagina_sin_su_marcador_es_un_fallo_y_no_un_listado_vacio(self):
-        occ = OccFalso([anuncio_occ("101", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"))], reto=True)
+        class OccSinMarcador(OccFalso):
+            def __call__(self, req, timeout=None):
+                cuerpo = super().__call__(req, timeout).read().decode()
+                return io.BytesIO(re.sub(r' data-total-offers="\d+"', "", cuerpo).encode())
+
+        occ = OccSinMarcador([anuncio_occ("101", "Ciudad A1, Estado A", ("analista-de-datos", "ciudad-a1"))])
         salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1)
         r = salida["bolsas"][0]
         self.assertEqual(set(r), {"bolsa_id", "error"})
@@ -2295,6 +2351,188 @@ class FiltroPorTitulo(ConOccFalso):
         cero = {"traidas": 0, "encajan": 0, "dudosas": 0, "candidatas": 0}
         self.assertEqual(r["rendimiento"], {"analista de datos": cero, "power bi": cero})
         self.assertIn("títulos: 0 encajan, 0 dudosas, 0 ruido", errores)
+
+
+class DetalleHastaLaSenal(ConOccFalso):
+    EN_A1 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])])
+    TERMINOS = terminos(ROL_01=(["analista de datos"], ["analista de datos"]))
+    CONSULTA = ("analista-de-datos", "ciudad-a1")
+
+    def anuncio(self, jid, **campos):
+        return anuncio_occ(jid, "Ciudad A1, Estado A", self.CONSULTA, **campos)
+
+    def detalle_url(self, jid):
+        return f"{OccFalso.SITIO}/empleo/oferta/{jid}"
+
+    def test_el_detalle_de_la_candidata_da_descripcion_fecha_empresa_ubicacion_y_sueldo(self):
+        occ = OccFalso([
+            self.anuncio("101", empresa="Empresa Uno", publicada="2026-11-18", localidad="Ciudad A1",
+                         sueldo_detalle={"Currency": "XTS", "Value": {"MinValue": 20000, "MaxValue": 25000,
+                                                                       "UnitText": "MONTH"}}),
+            # Ruido y una que encaja fuera de la región: no son candidatas y no se pide su detalle
+            self.anuncio("102", titulo="Ejecutivo de ventas"),
+            anuncio_occ("103", "Ciudad Y, Estado Y", self.CONSULTA)])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, ["101"])
+        v = r["vacantes"][0]
+        self.assertEqual({k: v[k] for k in ("titulo", "fecha_publicacion", "empresa_literal", "ubicacion_detalle",
+                                            "sueldo_detalle", "tipo_empleo", "url_oficial", "estado_vigencia",
+                                            "estado_detalle")},
+                         {"titulo": "Analista de datos", "fecha_publicacion": "2026-11-18",
+                          "empresa_literal": "Empresa Uno",
+                          "ubicacion_detalle": {"localidad": "Ciudad A1", "division": "Estado A", "pais": "XA"},
+                          "sueldo_detalle": "20,000 - 25,000 XTS (MONTH)", "tipo_empleo": "Tiempo completo",
+                          "url_oficial": self.detalle_url("101"), "estado_vigencia": "Confirmada abierta",
+                          "estado_detalle": "leido"})
+        self.assertEqual(v["descripcion"], "Requisitos:\n- SQL\n- Python")
+        self.assertIn("detalle leído", v["motivo"])
+        # ValidThrough no es vigencia: no llega a la salida
+        self.assertNotIn("2027-01-19", json.dumps(salida))
+        self.assertEqual(r["detalle"], {"candidatas": 1, "pedidos": 1, "leidos": 1, "bloqueo": None})
+        self.assertIn("[OK] BOL-01: ", errores)
+
+    def test_un_sueldo_0_0_en_el_detalle_es_no_publicado(self):
+        occ = OccFalso([self.anuncio("101")])
+        salida, _ = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        self.assertEqual(salida["bolsas"][0]["vacantes"][0]["sueldo_detalle"], "No publicado")
+
+    def test_primero_las_que_encajan_y_despues_las_dudosas_cada_grupo_de_la_mas_nueva_a_la_mas_vieja(self):
+        dudosa = "Analista de Estrategia y Datos"
+        occ = OccFalso([self.anuncio("201", titulo=dudosa, cuando="Hoy"),
+                        self.anuncio("202", cuando="Hace 2 semanas"),
+                        self.anuncio("203", cuando="Ayer"),
+                        self.anuncio("204", titulo=dudosa, cuando="Hace 3 días"),
+                        self.anuncio("205", cuando="Hace 1 mes"),
+                        self.anuncio("206", cuando="Hace 5 horas")])
+        salida, _ = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        self.assertEqual(occ.detalles, ["206", "203", "202", "205", "201", "204"])
+        # Con su pausa antes de cada petición: 2 páginas del listado y 6 detalles
+        self.assertEqual(self.esperas, [2] * 8)
+        self.assertEqual(salida["bolsas"][0]["detalle"]["leidos"], 6)
+
+    def test_un_404_de_detalle_deja_la_vacante_no_verificable_y_sigue(self):
+        occ = OccFalso([self.anuncio("301", cuando="Hoy", detalle="404"), self.anuncio("302", cuando="Ayer")])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, ["301", "302"])
+        vacantes = {v["job_id"]: v for v in r["vacantes"]}
+        self.assertEqual(vacantes["301"]["estado_vigencia"], "No verificable")
+        self.assertIn("404", vacantes["301"]["motivo"])
+        self.assertEqual(vacantes["301"]["estado_detalle"], "no verificable")
+        self.assertEqual(vacantes["302"]["estado_detalle"], "leido")
+        self.assertEqual(r["detalle"], {"candidatas": 2, "pedidos": 2, "leidos": 1, "bloqueo": None})
+        self.assertIn("revisar vigencia: 301 ", errores)
+        self.assertNotIn("[FALLO]", errores)
+
+    def test_un_detalle_con_otro_id_o_sin_jobposting_no_detiene_la_bolsa(self):
+        occ = OccFalso([self.anuncio("401", cuando="Hoy", id_detalle="499"),
+                        self.anuncio("402", cuando="Ayer", detalle="sin jobposting"),
+                        self.anuncio("403", cuando="Hace 2 días")])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, ["401", "402", "403"])
+        vacantes = {v["job_id"]: v for v in r["vacantes"]}
+        self.assertEqual((vacantes["401"]["estado_vigencia"], vacantes["401"]["estado_detalle"]),
+                         ("No verificable", "no verificable"))
+        self.assertIn("devolvió otro ID", vacantes["401"]["motivo"])
+        self.assertEqual((vacantes["402"]["estado_vigencia"], vacantes["402"]["estado_detalle"]),
+                         ("Confirmada abierta", "pendiente"))
+        self.assertIn("revisar: 402 ", errores)
+        self.assertEqual(vacantes["403"]["estado_detalle"], "leido")
+        self.assertEqual(r["detalle"]["bloqueo"], None)
+
+    def test_scraping_abuse_en_la_segunda_peticion_detiene_la_bolsa_sin_pedir_la_tercera(self):
+        occ = OccFalso([self.anuncio("501", cuando="Hoy"), self.anuncio("502", cuando="Ayer", detalle="abuso"),
+                        self.anuncio("503", cuando="Hace 2 días")])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, ["501", "502"])
+        # Sin reintento: la petición bloqueada es la última que recibe OCC
+        self.assertEqual(occ.pedidas[-1], self.detalle_url("502"))
+        self.assertEqual(occ.pedidas.count(self.detalle_url("502")), 1)
+        # Lo listado y lo leído se entregan
+        self.assertEqual({v["job_id"]: v["estado_detalle"] for v in r["vacantes"]},
+                         {"501": "leido", "502": "pendiente", "503": "pendiente"})
+        self.assertEqual((r["unicos"], r["total_reportado"]), (3, 3))
+        self.assertEqual(r["detalle"], {"candidatas": 3, "pedidos": 2, "leidos": 1,
+                                        "bloqueo": {"en": "detalle", "peticion": 2, "tipo": "scraping abuse, HTTP 403",
+                                                    "url": self.detalle_url("502")}})
+        fallo = next(linea for linea in errores.splitlines() if linea.startswith("[FALLO] BOL-01: "))
+        for texto in ("señal anti-bot", "scraping abuse", "en el detalle", "1 de 3 detalles", "no se reintenta"):
+            self.assertIn(texto, fallo)
+        self.assertNotIn("Code local", fallo)
+        self.assertIn("3/3 únicos", errores)
+
+    def test_un_reto_en_el_detalle_tambien_es_la_senal_con_200_o_con_403(self):
+        for modo, tipo in (("reto", "reto de Cloudflare, HTTP 200"), ("reto 403", "reto de Cloudflare, HTTP 403")):
+            with self.subTest(modo):
+                occ = OccFalso([self.anuncio("601", cuando="Hoy", detalle=modo), self.anuncio("602", cuando="Ayer")])
+                salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1)
+                r = salida["bolsas"][0]
+                self.assertEqual(occ.detalles, ["601"])
+                self.assertEqual(r["detalle"]["bloqueo"], {"en": "detalle", "peticion": 1, "tipo": tipo,
+                                                           "url": self.detalle_url("601")})
+                self.assertIn("0 de 2 detalles", r["error"])
+
+    def test_un_403_sin_senal_en_el_cuerpo_tambien_detiene_la_bolsa(self):
+        occ = OccFalso([self.anuncio("651", cuando="Hoy", detalle="403"), self.anuncio("652", cuando="Ayer")])
+        salida, _ = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1)
+        self.assertEqual(occ.detalles, ["651"])
+        self.assertEqual(salida["bolsas"][0]["detalle"]["bloqueo"]["tipo"],
+                         "sin señal reconocible en el cuerpo, HTTP 403")
+
+    def test_la_senal_en_el_robots_txt_es_un_bloqueo_en_el_listado(self):
+        occ = OccFalso([self.anuncio("661")], robots=None)
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1, nube=True)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.pedidas, [OccFalso.SITIO + "/robots.txt"])
+        self.assertEqual(r["detalle"]["bloqueo"]["en"], "listado")
+        self.assertEqual(r["detalle"]["bloqueo"]["peticion"], 1)
+        fallo = next(linea for linea in errores.splitlines() if linea.startswith("[FALLO] BOL-01: "))
+        self.assertIn("en el listado", fallo)
+        self.assertIn("busca esta bolsa en Code local", fallo)
+
+    def test_un_reto_en_el_listado_entrega_lo_listado_y_no_pide_detalles(self):
+        bloque_05 = terminos(ROL_01=(["analista de datos", "power bi"], ["analista de datos"]))
+        occ = OccFalso([self.anuncio("701")], reto={"power-bi"})
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, bloque_05, codigo_esperado=1)
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, [])
+        self.assertEqual(occ.listados[-1], ("power-bi", "ciudad-a1", 1))
+        self.assertEqual([v["job_id"] for v in r["vacantes"]], ["701"])
+        self.assertEqual(r["vacantes"][0]["estado_detalle"], "pendiente")
+        self.assertFalse(r["completa"])
+        self.assertEqual(r["detalle"]["bloqueo"]["en"], "listado")
+        self.assertEqual(r["detalle"]["bloqueo"]["tipo"], "reto de Cloudflare, HTTP 200")
+        self.assertEqual((r["detalle"]["pedidos"], r["detalle"]["leidos"]), (0, 0))
+        fallo = next(linea for linea in errores.splitlines() if linea.startswith("[FALLO] BOL-01: "))
+        self.assertIn("en el listado", fallo)
+        self.assertIn("0 de 1 detalles", fallo)
+
+    def test_las_empresas_se_buscan_igual_con_la_bolsa_bloqueada(self):
+        en_xa = {"id": "R-1", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]}
+        occ = OccFalso([self.anuncio("801", detalle="abuso")])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1,
+                                            empresas={"EMP-ACME": WorkdayFalso([en_xa])})
+        self.assertIn("[FALLO] BOL-01: ", errores)
+        self.assertIn("[OK] EMP-ACME: 1/1 únicos", errores)
+        self.assertEqual([v["job_id"] for v in salida["empresas"][0]["vacantes"]], ["R-1"])
+        self.assertEqual([v["job_id"] for v in salida["bolsas"][0]["vacantes"]], ["801"])
+
+    def test_en_code_en_la_nube_el_bloqueo_manda_a_buscar_la_bolsa_en_code_local(self):
+        occ = OccFalso([self.anuncio("901", detalle="abuso")])
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, codigo_esperado=1, nube=True)
+        fallo = next(linea for linea in errores.splitlines() if linea.startswith("[FALLO] BOL-01: "))
+        self.assertIn("busca esta bolsa en Code local", fallo)
+        self.assertEqual(occ.detalles, ["901"])
+
+    def test_nunca_envia_cookies_ni_credenciales_a_la_bolsa(self):
+        occ = OccFalso([self.anuncio("1001"), self.anuncio("1002", detalle="404")])
+        self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        self.assertGreater(len(occ.cabeceras), 3)
+        for cabeceras in occ.cabeceras:
+            self.assertFalse({"cookie", "authorization", "proxy-authorization"} & set(cabeceras), cabeceras)
 
 
 if __name__ == "__main__":

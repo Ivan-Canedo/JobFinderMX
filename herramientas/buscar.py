@@ -19,10 +19,12 @@ remotas con el filtro de su plataforma según el alcance del remoto; lee el deta
 ID. Cada adaptador de bolsa lista cada término de búsqueda en cada lugar de la región de su país y, si el alcance
 del remoto lo incluye, en todo el país con su filtro remoto; clasifica cada vacante por su título como «encaja»,
 «dudosa» (con su línea «revisar título») o «ruido», que no se entrega, y reporta el rendimiento de cada término
-(05/HAB-TERMINOS, «Filtro por título»). Solo se usan rutas que permite el robots.txt del
-sitio. El JSON va a --salida o a stdout, con las empresas en «empresas» y las bolsas en «bolsas»; el resumen y las
-líneas «revisar», a stderr. El script no evalúa ni escribe en los registros: entrega los datos para los pasos 4-9
-de 07/BUS-PASOS. Solo biblioteca estándar.
+(05/HAB-TERMINOS, «Filtro por título»). Después pide el detalle solo de las candidatas, primero las que encajan,
+hasta la primera señal anti-bot: ahí detiene la bolsa sin reintentar, la entrega con lo listado y lo leído
+como [FALLO] y sigue con las demás (07/BUS-BOLSAS, ADR 0010). Solo se usan rutas que permite el robots.txt
+del sitio, sin cookies ni credenciales. El JSON va a --salida o a stdout, con las empresas en «empresas» y
+las bolsas en «bolsas»; el resumen y las líneas «revisar», a stderr. El script no evalúa ni escribe en los
+registros: entrega los datos para los pasos 4-9 de 07/BUS-PASOS. Solo biblioteca estándar.
 """
 import argparse
 import collections
@@ -87,6 +89,27 @@ class IpBloqueada(Fallo):
         super().__init__(f"{host} bloquea las IP de Code en la nube (HTTP 429, {motivo}); "
                          "busca esta empresa en Code local", 429)
         self.host = host
+
+
+class SenalAntiBot(Fallo):
+    """El sitio respondió con una señal anti-bot: HTTP 403 con el cuerpo «scraping abuse», o el reto «Just a
+    moment…» de Cloudflare (challenge-platform), con un error HTTP o servido con 200 sin el marcador que se esperaba.
+    No se reintenta ni se le pide nada más al sitio en esa ejecución: retroceder ante la señal no es evadirla
+    (ADR 0010). tipo: cuál fue y con qué estado HTTP; url: la petición que la recibió."""
+
+    def __init__(self, url, senal, codigo):
+        self.host, self.url, self.tipo = urllib.parse.urlsplit(url).hostname, url, f"{senal}, HTTP {codigo}"
+        super().__init__(f"{self.host} respondió con una señal anti-bot ({self.tipo}) en {url}; no se reintenta "
+                         "(ADR 0010)", codigo)
+
+
+def senal_antibot(cuerpo):
+    """La señal anti-bot que trae el cuerpo de una respuesta, o None (SenalAntiBot)."""
+    if "scraping abuse" in cuerpo:
+        return "scraping abuse"
+    if "challenge-platform" in cuerpo or "Just a moment" in cuerpo:
+        return "reto de Cloudflare"
+    return None
 
 
 def error(mensaje):
@@ -264,10 +287,12 @@ def leer_ficha(eid, ficha):
 
 # --- Acceso a los portales ---------------------------------------------------
 
-def pedir(url, cuerpo=None, intentos=3, como_json=True, extra=None):
+def pedir(url, cuerpo=None, intentos=3, como_json=True, extra=None, antibot=False):
     """GET (o POST con cuerpo JSON) que devuelve JSON, o texto si como_json=False.
-    extra: cabeceras adicionales que pida un adaptador. Reintenta errores transitorios, también HTTP 429, salvo el
-    bloqueo de las IP de la nube."""
+    extra: cabeceras adicionales que pida un adaptador. Sin cookies ni credenciales: urlopen no guarda las que da el
+    sitio. Reintenta errores transitorios, también HTTP 429, salvo el bloqueo de las IP de la nube. antibot: el sitio
+    es una bolsa de empleo (07/BUS-BOLSAS): todo 403 o 429, y un 503 con el reto en el cuerpo, son la señal
+    anti-bot (SenalAntiBot), sin reintento."""
     datos = json.dumps(cuerpo).encode() if cuerpo is not None else None
     # Algunas plataformas responden JSON en lugar de la página solo si se pide application/json
     cabeceras = {"User-Agent": UA, "Accept": "application/json" if como_json else "text/html,application/xhtml+xml"}
@@ -283,10 +308,19 @@ def pedir(url, cuerpo=None, intentos=3, como_json=True, extra=None):
                 return json.load(r) if como_json else r.read().decode("utf-8", "replace")
         except urllib.error.HTTPError as e:
             pedida = (e.headers.get("Retry-After") if e.headers else None) or ""
+            try:
+                inicio = e.read(100_000)
+            except (OSError, http.client.HTTPException):
+                inicio = b""
+            if antibot:
+                # Ante la duda se retrocede: un 403 o un 429 de una bolsa la detiene aunque no traiga la señal
+                senal = senal_antibot(inicio.decode("utf-8", "replace"))
+                if e.code in (403, 429) or (e.code == 503 and senal):
+                    raise SenalAntiBot(url, senal or "sin señal reconocible en el cuerpo", e.code) from e
             if e.code == 429 and os.environ.get("CLAUDE_CODE_REMOTE") == "true":
                 # Workable responde así a las IP de la nube: con su propia página de error y un Retry-After de horas
                 # si se le pide como navegador, o con el «error code: 1015» de Cloudflare si no
-                if b"error code: 1015" in e.read(2000):
+                if b"error code: 1015" in inicio:
                     raise IpBloqueada(urllib.parse.urlsplit(url).hostname, "«error code: 1015» de Cloudflare") from e
                 if pedida.isdigit() and int(pedida) > 60:
                     segundos = int(pedida)
@@ -339,13 +373,14 @@ def robots_permite(reglas, url):
     return permite
 
 
-def comprobar_robots(sitio, urls):
+def comprobar_robots(sitio, urls, antibot=False):
     """Falla si el robots.txt del sitio prohíbe alguna de las URL que usa el adaptador (07/BUS-CANALES). Las URL
     llevan una consulta (?…) si el adaptador la usa, porque hay sitios que prohíben las rutas con consulta."""
     url = f"{sitio}/robots.txt"
     try:
-        reglas = pedir(url, como_json=False)
-    except (HostBloqueado, IpBloqueada):
+        # Solo una bolsa pasa antibot: los portales falsos de las pruebas de empresas reemplazan pedir() sin él
+        reglas = pedir(url, como_json=False, antibot=True) if antibot else pedir(url, como_json=False)
+    except (HostBloqueado, IpBloqueada, SenalAntiBot):
         raise
     except Fallo as e:
         if e.codigo in (404, 410):
@@ -1821,7 +1856,8 @@ def contar_rendimiento(r, ids_por_termino, clases, candidatas):
 
 # --- OCC Mundial ------------------------------------------------------------------
 # Listado: GET https://www.occ.com.mx/empleos/de-<término>/[en-<lugar>/][tipo-home-office-remoto/]?page=<n>&sort=2,
-# en HTML. Sin login ni cookies; con pausas entre peticiones (ADR 0010).
+# en HTML. Detalle: GET https://www.occ.com.mx/empleo/oferta/<id>, con el JobPosting en JSON-LD, solo de las
+# candidatas y hasta la primera señal anti-bot. Sin login ni cookies; con pausas entre peticiones (ADR 0010).
 
 OCC_SITIO = "https://www.occ.com.mx"
 OCC_REMOTO = "tipo-home-office-remoto"
@@ -1836,7 +1872,8 @@ def occ_url(termino, lugar, remoto, pagina=1):
 
 
 def occ_tarjetas(h):
-    """Las tarjetas de una página del listado: id (data-id), título, empresa, sueldo y ubicación literales."""
+    """Las tarjetas de una página del listado: id (data-id), título, empresa, sueldo y ubicación literales, y la
+    fecha relativa (cuando), como «Hace 2 días»."""
     tarjetas = []
     for t in re.split(r'<li class="vacancy-card', h)[1:]:
         jid = re.search(r"""data-id=['"](\d+)['"]""", t)
@@ -1852,32 +1889,41 @@ def occ_tarjetas(h):
         partes = [texto(x) for x in re.findall(r"<span[^>]*>(.*?)</span>", lugar.group(1), re.S)] if lugar else []
         tarjetas.append({"id": jid.group(1), "titulo": texto(titulo.group(1)),
                          "empresa": parrafo("vacancy-card__company-text"), "sueldo": parrafo("vacancy-card__salary"),
-                         "ubicacion": partes[0] if partes else None})
+                         "ubicacion": partes[0] if partes else None, "cuando": partes[-1] if len(partes) > 1 else None})
     return tarjetas
 
 
-def occ_pedir(url):
+def occ_pedir(url, peticiones, tipo):
     """pedir() de una página de OCC, con una pausa antes, para no cargar el sitio: la primera petición a OCC siempre
-    es su robots.txt."""
+    es su robots.txt. peticiones: la cuenta de las de cada tipo («listado» o «detalle») en esta ejecución."""
     time.sleep(OCC_PAUSA)
-    return pedir(url, como_json=False)
+    peticiones[tipo] += 1
+    return pedir(url, como_json=False, antibot=True)
 
 
-def occ_listar(termino, lugar, remoto):
+def occ_si_es_reto(url, h):
+    """Una página de OCC servida con 200 sin el marcador que se esperaba: si es un reto, la señal anti-bot."""
+    senal = senal_antibot(h)
+    if senal:
+        raise SenalAntiBot(url, senal, 200)
+
+
+def occ_listar(termino, lugar, remoto, peticiones):
     """(tarjetas sin repetir ni fijas, total publicado) de un listado. Las fijas son las tarjetas que se repiten al
     inicio de cada página y no cuentan en el total; con una sola página no se distinguen y no se descarta ninguna.
     Termina en la primera página sin tarjetas nuevas o, desde la segunda, al reunir el total: en la primera, las fijas
-    pueden completarlo. Una primera página sin data-total-offers
-    es un fallo, no un listado vacío: puede ser un reto anti-bot servido con 200."""
+    pueden completarlo. Una primera página sin data-total-offers no es un listado vacío: es la señal anti-bot si es
+    un reto servido con 200 y, si no, un fallo."""
     paginas, total = [], None
     for p in range(1, OCC_PAGINAS + 1):
         url = occ_url(termino, lugar, remoto, p)
-        h = occ_pedir(url)
+        h = occ_pedir(url, peticiones, "listado")
         if total is None:
             m = re.search(r'data-total-offers="(\d+)"', h)
             if not m:
-                raise Fallo(f"la primera página de {url} no trae data-total-offers: puede ser un reto anti-bot o un "
-                            "cambio del sitio, no un listado vacío")
+                occ_si_es_reto(url, h)
+                raise Fallo(f"{url} no trae data-total-offers en su primera página: no es un listado vacío, puede "
+                            "ser un cambio del sitio")
             total = int(m.group(1))
         tarjetas = occ_tarjetas(h)
         antes = len(occ_sin_fijas(paginas))
@@ -1910,7 +1956,132 @@ def occ_vacante(pref, bid, pais, t, remoto, url):
                 f"Remoto (filtro {OCC_REMOTO} de OCC)" if remoto else None, None, "Confirmada abierta",
                 "En el listado oficial de la bolsa (07/BUS-VIGENCIA); detalle sin leer", url, None, None, {pais})
     del v["empresa_id"]
-    return {"bolsa_id": bid, **v, "empresa_literal": t["empresa"], "sueldo_literal": t["sueldo"]}
+    return {"bolsa_id": bid, **v, "empresa_literal": t["empresa"], "sueldo_literal": t["sueldo"],
+            "estado_detalle": "pendiente"}
+
+
+def occ_dias(cuando):
+    """Los días aproximados de una fecha relativa de tarjeta («Hoy», «Ayer», «Hace 5 horas», «Hace 2 semanas»,
+    «Hace 1 mes»), solo para ordenar las candidatas; una que no se entiende va al final."""
+    s = normalizar(cuando or "")
+    if s in ("hoy", "recien publicada") or re.search(r"\b(minuto|hora)s?\b", s):
+        return 0
+    if s == "ayer":
+        return 1
+    m = re.search(r"(\d+)\s*(dia|semana|mes|meses|ano)s?\b", s)
+    if not m:
+        return float("inf")
+    return int(m.group(1)) * {"dia": 1, "semana": 7, "mes": 30, "meses": 30, "ano": 365}[m.group(2)]
+
+
+def occ_clave(d, k):
+    """Una clave del JobPosting de OCC, que las escribe con mayúscula inicial, o la de schema.org en minúscula."""
+    return d.get(k, d.get(k[0].lower() + k[1:])) if isinstance(d, dict) else None
+
+
+def occ_jobposting(h):
+    """El JobPosting del detalle, o None. Se lee con raw_decode desde la primera «{», porque el bloque del sitio
+    termina en «};»."""
+    for bloque in re.findall(r"<script[^>]*ld\+json[^>]*>(.*?)</script>", h, re.S):
+        if "JobPosting" in bloque and "{" in bloque:
+            try:
+                jp = json.JSONDecoder().raw_decode(bloque[bloque.index("{"):])[0]
+            except ValueError:
+                continue
+            if isinstance(jp, dict) and occ_clave(jp, "@type") == "JobPosting":
+                return jp
+    return None
+
+
+def occ_sueldo(base):
+    """El sueldo del detalle como texto: «No publicado» si BaseSalary es 0/0; «20,000 - 25,000 <moneda> (<unidad>)»
+    si trae mínimo y máximo; y, con otra forma, su JSON tal cual, para no perderlo."""
+    if base in (None, "", {}):
+        return None
+    if isinstance(base, str):
+        return "No publicado" if re.fullmatch(r"[\s0/.,$-]*", base) else base
+    valor = occ_clave(base, "Value")
+    montos = [occ_clave(valor, "MinValue"), occ_clave(valor, "MaxValue")] if isinstance(valor, dict) else [valor]
+    if all(isinstance(x, (int, float)) for x in montos):
+        if not any(montos):
+            return "No publicado"
+        unidad = occ_clave(valor, "UnitText") if isinstance(valor, dict) else None
+        moneda = occ_clave(base, "Currency")
+        return (" - ".join(f"{x:,.0f}" for x in dict.fromkeys(montos)) + (f" {moneda}" if moneda else "")
+                + (f" ({unidad})" if unidad else ""))
+    return json.dumps(base, ensure_ascii=False)
+
+
+def occ_leer_detalle(v, h, url):
+    """Aplica a la vacante su detalle: título, descripción, DatePosted en fecha_publicacion, empresa, ubicación
+    estructurada, sueldo y tipo de empleo; la canonical es la url_oficial. ValidThrough es DatePosted + 60 días, un
+    plazo fijo, y no se usa como vigencia: la vigencia sigue siendo la del listado (07/BUS-VIGENCIA). Una página sin
+    JobPosting es la señal anti-bot si es un reto; si no, la vacante queda con su detalle pendiente y una nota
+    «revisar». Un JobPosting de otro ID deja la vacante «No verificable». Devuelve si se leyó."""
+    jp = occ_jobposting(h)
+    if jp is None:
+        occ_si_es_reto(url, h)
+        v.setdefault("revisar", []).append(f"el detalle ({url}) no trae el JobPosting: ¿vacante cerrada o cambio "
+                                           "del sitio? Confirmarlo en el anuncio")
+        return False
+    jid = occ_clave(occ_clave(jp, "identifier"), "Value")
+    if jid is not None and str(jid) != v["job_id"]:
+        v.update(estado_vigencia="No verificable", estado_detalle="no verificable",
+                 motivo=f"Detalle de la bolsa: devolvió otro ID ({jid}) en {url}")
+        return False
+    lugar = occ_clave(occ_clave(jp, "JobLocation"), "Address")
+    canonical = next((a["href"] for a in map(atributos, re.findall(r"<link[^>]*>", h))
+                      if a.get("rel") == "canonical" and a.get("href")), None)
+    publicada = occ_clave(jp, "DatePosted")
+    v.update({
+        "titulo": texto(occ_clave(jp, "Title")) or v["titulo"],
+        "descripcion": texto(occ_clave(jp, "Description")) or None,
+        "fecha_publicacion": publicada[:10] if isinstance(publicada, str)
+        and re.match(r"\d{4}-\d{2}-\d{2}", publicada) else None,
+        "empresa_literal": texto(occ_clave(occ_clave(jp, "HiringOrganization"), "Name")) or v["empresa_literal"],
+        "ubicacion_detalle": {"localidad": occ_clave(lugar, "AddressLocality") or None,
+                              "division": occ_clave(lugar, "AddressRegion") or None,
+                              "pais": occ_clave(lugar, "AddressCountry") or None} if isinstance(lugar, dict) else None,
+        "sueldo_detalle": occ_sueldo(occ_clave(jp, "BaseSalary")),
+        "tipo_empleo": occ_clave(jp, "EmploymentType") or None,
+        "url_oficial": canonical or v["url_oficial"],
+        "motivo": "En el listado oficial de la bolsa (07/BUS-VIGENCIA); detalle leído",
+        "estado_detalle": "leido"})
+    return True
+
+
+def occ_detalles(r, candidatas, peticiones):
+    """Pide el detalle de las candidatas, en su orden, hasta la primera señal anti-bot, que se deja subir. Un 404 deja
+    la vacante «No verificable» y sigue; también otro fallo de una sola vacante, que la deja pendiente."""
+    d = r["detalle"]
+    for v in candidatas:
+        url = f"{OCC_SITIO}/empleo/oferta/{v['job_id']}"
+        d["pedidos"] += 1
+        try:
+            h = occ_pedir(url, peticiones, "detalle")
+        except SenalAntiBot:
+            raise
+        except Fallo as e:
+            if e.codigo == 404:
+                v.update(estado_vigencia="No verificable", estado_detalle="no verificable",
+                         motivo=f"Detalle de la bolsa: error 404 en {url}, aunque el listado la traía")
+            else:
+                v.setdefault("revisar", []).append(f"no se pudo leer el detalle ({e}); queda pendiente")
+            continue
+        d["leidos"] += occ_leer_detalle(v, h, url)
+
+
+def occ_bloqueo(r, e, en, peticiones):
+    """Anota en la bolsa la señal anti-bot que la detuvo: en qué petición y de qué tipo, y el [FALLO], que dice si
+    fue en el listado o en el detalle y cuántos detalles se leyeron. En Code en la nube, la bolsa se busca en Code
+    local, como con IpBloqueada (07/BUS-CANALES)."""
+    d = r["detalle"]
+    d["bloqueo"] = {"en": en, "peticion": peticiones[en], "tipo": e.tipo, "url": e.url}
+    r["error"] = (f"{e.host} respondió con una señal anti-bot ({e.tipo}) en el {en}, petición {peticiones[en]} "
+                  f"({e.url}); se leyeron {d['leidos']} de {d['candidatas']} detalles; no se reintenta ni se le pide "
+                  "nada más en esta ejecución (07/BUS-BOLSAS, ADR 0010)")
+    if os.environ.get("CLAUDE_CODE_REMOTE") == "true":
+        r["error"] += "; en Code en la nube la bolsa recibe más bloqueos: busca esta bolsa en Code local"
 
 
 def occ(bid, conf, pref, familias, remotas):
@@ -1926,10 +2097,10 @@ def occ(bid, conf, pref, familias, remotas):
     if not lugares and sin_remoto:
         raise Fallo(f"ni la región ni el alcance del remoto de 04 incluyen {pais}, el país de la bolsa: no hay nada "
                     "que buscar en ella")
-    # Una URL de muestra por cada forma del listado, con lugar y con el filtro remoto, y con toda su consulta
-    comprobar_robots(OCC_SITIO, [occ_url("x", "x", False, 2), occ_url("x", None, True, 2)])
-    r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar",
-                        list(terminos.values()))
+    r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar, y detalle de las "
+                             "candidatas hasta la primera señal anti-bot", list(terminos.values()))
+    r["detalle"] = {"candidatas": 0, "pedidos": 0, "leidos": 0, "bloqueo": None}
+    peticiones = collections.Counter()
     # clases: la clase de cada vacante ya vista, por su ID; sus claves son las vistas de listado()
     clases, candidatas = {}, set()
     ids_por_termino = {t: set() for t in terminos.values()}
@@ -1938,8 +2109,42 @@ def occ(bid, conf, pref, familias, remotas):
     # vacante ya vista no se vuelve a ver
     consultas = ([] if sin_remoto else [(termino, None, True) for termino in terminos]) + [
         (termino, lugar, False) for termino in terminos for lugar in lugares]
+    try:
+        # Una URL de muestra por cada forma del listado, con lugar y con el filtro remoto, y con toda su consulta, y
+        # una del detalle. El robots.txt es la primera petición del listado
+        peticiones["listado"] += 1
+        comprobar_robots(OCC_SITIO, [occ_url("x", "x", False, 2), occ_url("x", None, True, 2),
+                                     f"{OCC_SITIO}/empleo/oferta/1"], antibot=True)
+        occ_listados(r, pref, bid, pais, familias, terminos, consultas, clases, candidatas, ids_por_termino,
+                     revisadas, peticiones)
+    except SenalAntiBot as e:
+        # Lo listado se entrega; las consultas que faltaron dejan la cobertura incompleta
+        r["completa"] = False
+        r["detalle"]["candidatas"] = len(candidatas)
+        occ_bloqueo(r, e, "listado", peticiones)
+    contar_rendimiento(r, ids_por_termino, clases, candidatas)
+    r["remotas_revision"] = sin_remoto or f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas)
+    if r["detalle"]["bloqueo"] is None:
+        # Primero las que encajan y después las dudosas; en cada grupo, de la más nueva a la más vieja (el orden
+        # del listado desempata)
+        orden = sorted((v for v in r["vacantes"] + r["remotas_fuera_de_region"] if v["job_id"] in candidatas),
+                       key=lambda v: (v["clasificacion_titulo"] != "encaja", occ_dias(v["_cuando"])))
+        r["detalle"]["candidatas"] = len(orden)
+        try:
+            occ_detalles(r, orden, peticiones)
+        except SenalAntiBot as e:
+            occ_bloqueo(r, e, "detalle", peticiones)
+    for v in r["vacantes"] + r["remotas_fuera_de_region"]:
+        v.pop("_cuando", None)
+    return r
+
+
+def occ_listados(r, pref, bid, pais, familias, terminos, consultas, clases, candidatas, ids_por_termino, revisadas,
+                 peticiones):
+    """Recorre los listados de la bolsa: suma cada uno al resultado y clasifica sus vacantes por título. Llena
+    clases, candidatas, ids_por_termino y revisadas, que quedan con lo listado si una señal anti-bot lo corta."""
     for termino, lugar, remoto in consultas:
-        tarjetas, total = occ_listar(termino, lugar, remoto)
+        tarjetas, total = occ_listar(termino, lugar, remoto, peticiones)
         url = occ_url(termino, lugar, remoto)
         ids = {t["id"] for t in tarjetas}
         ids_por_termino[terminos[termino]] |= ids
@@ -1955,14 +2160,12 @@ def occ(bid, conf, pref, familias, remotas):
             # El ruido solo se cuenta: no se entrega ni deja su ubicación en fuera_de_region
             if clase == "ruido":
                 continue
-            v = {**occ_vacante(pref, bid, pais, t, remoto, url), "clasificacion_titulo": clase, "familias_rol": roles}
+            v = {**occ_vacante(pref, bid, pais, t, remoto, url), "clasificacion_titulo": clase, "familias_rol": roles,
+                 "_cuando": t["cuando"]}
             if en_titulo:
                 v["termino_en_titulo"] = en_titulo
             if repartir(r, v, pref, de_remotas=remoto):
                 candidatas.add(t["id"])
-    contar_rendimiento(r, ids_por_termino, clases, candidatas)
-    r["remotas_revision"] = sin_remoto or f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas)
-    return r
 
 
 # --- Principal --------------------------------------------------------------
@@ -2013,10 +2216,12 @@ def nombre_en_revisar(v):
 
 
 def informar(fid, r):
-    """La línea de una empresa o una bolsa en stderr, con su cobertura y sus líneas «revisar»."""
+    """La línea de una empresa o una bolsa en stderr, con su cobertura y sus líneas «revisar». Una bolsa detenida por
+    una señal anti-bot sale como [FALLO] y, debajo, lo que se entrega."""
     if "error" in r:
         print(f"[FALLO] {fid}: {r['error']}", file=sys.stderr)
-        return
+        if "vacantes" not in r:
+            return
     en_region = sum(v["region_relacionada"] in ("Dentro", "Incluye") for v in r["vacantes"])
     # completa = None: la fuente no publica total (07/BUS-COBERTURA); se declara con su verificación
     estado = "OK" if r["completa"] else "SIN TOTAL" if r["completa"] is None else "INCOMPLETA"
@@ -2027,8 +2232,13 @@ def informar(fid, r):
         c = r["clasificacion_titulos"]
         titulos = (f"; títulos: {c['encajan']} encaja{'' if c['encajan'] == 1 else 'n'}, {c['dudosas']} "
                    f"dudosa{'' if c['dudosas'] == 1 else 's'}, {c['ruido']} ruido")
-    print(f"[{estado}] {fid}: {cuenta} únicos; {en_region} en la región; remotas fuera de la región: "
-          f"{len(r['remotas_fuera_de_region'])} ({r['remotas_revision']}){titulos}", file=sys.stderr)
+    detalle = ""
+    if r.get("detalle"):
+        d = r["detalle"]
+        detalle = f"; detalle: {d['leidos']} leídos de {d['candidatas']} candidatas"
+    inicio = f"    entregado, {estado.lower()}:" if "error" in r else f"[{estado}] {fid}:"
+    print(f"{inicio} {cuenta} únicos; {en_region} en la región; remotas fuera de la región: "
+          f"{len(r['remotas_fuera_de_region'])} ({r['remotas_revision']}){titulos}{detalle}", file=sys.stderr)
     if r.get("verificacion_cobertura"):
         print(f"    cobertura: {r['verificacion_cobertura']}", file=sys.stderr)
     for nota in r["revisar"]:
@@ -2091,8 +2301,9 @@ def main():
             r = (buscar_bolsa(fid, bolsas[fid], pref, not a.sin_remotas) if es_bolsa
                  else buscar_empresa(fid, empresas[fid], pref, not a.sin_remotas))
         except Fallo as e:
-            fallos += 1
             r = {"bolsa_id" if es_bolsa else "empresa_id": fid, "error": str(e)}
+        # Una bolsa detenida por una señal anti-bot entrega su resultado con el error
+        fallos += "error" in r
         res["bolsas" if es_bolsa else "empresas"].append(r)
         informar(fid, r)
     salida = json.dumps(res, ensure_ascii=False, indent=1)

@@ -1,6 +1,6 @@
 # 06 — Empresas objetivo y fichas
 
-**Versión:** 1.9 — 2026-11-22 — CAT-BOLSAS: catálogo de bolsas de empleo, con IDs `BOL-##`, y el adaptador de OCC Mundial.
+**Versión:** 1.10 — 2026-11-22 — CAT-BOLSAS, OCC Mundial: el detalle de las candidatas, su mapeo y la señal anti-bot.
 **Estado:** plantilla sin empresas. Las agrega el paso 7 de `/configurar` (Empresas), cada una con su ficha y la configuración de su plataforma de reclutamiento.
 
 ## CAT-EMPRESAS — Catálogo
@@ -207,15 +207,19 @@ Una bolsa de empleo es un sitio donde los empleadores publican sus vacantes y do
 
 - **`adaptador`:** `occ`. **`pais`:** `MX`.
 - **Hosts:** `www.occ.com.mx`.
-- **Acceso:** sin login, sin cookies y con 2 s de pausa antes de cada petición. El `robots.txt` permite el listado, con su consulta y su filtro de modalidad.
+- **Acceso:** sin login, sin cookies y con 2 s de pausa antes de cada petición. El `robots.txt` permite el listado, con su consulta y su filtro de modalidad, y el detalle.
 - **Listado:** `GET https://www.occ.com.mx/empleos/de-<término>/[en-<lugar>/][tipo-home-office-remoto/]?page=<n>&sort=2`, en HTML; `sort=2` ordena de la más nueva a la más vieja, y la página 1 va sin `page`. El término y el lugar van como slug: minúsculas, sin acentos y con guiones (`de-analista-de-datos`, `en-ciudad-a`).
   - **Búsquedas:** una por cada término de 05 y cada lugar de la región de 04 en el país de la bolsa: cada nombre de un grupo con `nombres`, cada división de un grupo de división completa, y sin `en-<lugar>` por un grupo de país completo. Si el alcance del remoto incluye ese país, también una por término en todo el país con `tipo-home-office-remoto/`; todas estas van antes que las de lugar.
-  - **Marcador:** el total de la consulta en `data-total-offers` del `<h1>`. Si la primera página no lo trae, la bolsa sale como `[FALLO]` y no como un listado vacío: puede ser un reto anti-bot servido con 200.
+  - **Marcador:** el total de la consulta en `data-total-offers` del `<h1>`. Si la primera página no lo trae, no es un listado vacío: si es un reto, es la señal anti-bot (abajo, «Detalle»); si no, la bolsa sale como `[FALLO]`, porque el sitio pudo haber cambiado.
   - **Tarjetas:** cada `<li class="vacancy-card…" data-id=…>`. El ItemList JSON-LD de la página omite las tarjetas «Recomendada», así que no sirve como fuente de IDs.
   - **Tarjetas fijas:** cuando la consulta tiene varias páginas, unas tarjetas se repiten al inicio de cada una y no respetan los filtros ni cuentan en el total; se descuentan. Fija es solo la que se repite: con una sola página no se distinguen y no se descarta ninguna, aunque la primera diga «Recomendada».
   - **Fin y cobertura:** el recorrido termina en la primera página sin tarjetas nuevas o, desde la segunda página, al reunir el total; en la primera no, porque las fijas pueden completarlo. Los IDs únicos, sin las fijas, deben igualar `data-total-offers`.
 - **Modalidad:** las tarjetas no la dicen; sale del filtro con que se listó la vacante. Las de un listado remoto llevan `Remoto (filtro tipo-home-office-remoto de OCC)`, y las demás, ninguna.
 - **Vigencia:** aparecer en el listado de la bolsa es la evidencia (07/BUS-VIGENCIA): `Confirmada abierta`.
+- **Detalle:** `GET https://www.occ.com.mx/empleo/oferta/<data-id>`, solo de las candidatas y hasta la primera señal anti-bot (07/BUS-BOLSAS). Trae el `JobPosting` en JSON-LD, con las claves en mayúscula inicial; se lee con `raw_decode` desde la primera `{`, porque el bloque termina en `};`. Su `canonical` es la `url_oficial`.
+  - **`ValidThrough`** es `DatePosted` + 60 días, un plazo fijo: no se usa como vigencia.
+  - **Un 404** deja la vacante `No verificable`. Un `JobPosting` con otro `identifier.Value` también, con el motivo «devolvió otro ID».
+  - **Señal anti-bot:** HTTP 403 con el cuerpo `scraping abuse`, o una página con `challenge-platform` o «Just a moment…» sin el `JobPosting` (o, en el listado, sin `data-total-offers`), servida con 403 o con 200. Ante la duda se retrocede: cualquier 403 o 429 de OCC, también el de su `robots.txt`, cuenta como señal.
 
 | Columna | Campo de la tarjeta |
 | --- | --- |
@@ -227,8 +231,22 @@ Una bolsa de empleo es un sitio donde los empleadores publican sus vacantes y do
 | `url_oficial` | `https://www.occ.com.mx/empleo/oferta/<data-id>` |
 | `ubicacion_literal` | El primer texto de `vacancy-card__location`, como «Alcaldía, Estado» |
 | `modalidad_literal` | La del filtro con que se listó (arriba) |
-| `fecha_publicacion` | Vacía: la fecha de la tarjeta es relativa («Hace 2 semanas»), y la antigüedad sale de la primera detección (07/BUS-FECHAS) |
+| `fecha_publicacion` | Vacía: la fecha de la tarjeta es relativa («Hace 2 semanas»), y la antigüedad sale de la primera detección (07/BUS-FECHAS). La fecha relativa solo sirve para ordenar las candidatas para el detalle |
 | `observaciones.url_fuente` | URL de la primera página del listado que la trajo |
+
+Con el detalle leído, la vacante cambia o suma estos campos:
+
+| Campo | Campo del `JobPosting` |
+| --- | --- |
+| `titulo` | `Title` |
+| `descripcion` | `Description`, en texto |
+| `fecha_publicacion` | `DatePosted` (`AAAA-MM-DD`) |
+| `empresa_literal` | `HiringOrganization.Name` |
+| `ubicacion_detalle` | `JobLocation.Address`: `localidad` (`AddressLocality`, a veces vacía), `division` (`AddressRegion`) y `pais` (`AddressCountry`) |
+| `sueldo_detalle` | `BaseSalary`: «No publicado» si es `0/0`; si no, mínimo y máximo con su moneda y su unidad |
+| `tipo_empleo` | `EmploymentType`, literal |
+| `url_oficial` | La `canonical` de la página |
+| `estado_detalle` | `leido`; sin detalle, `pendiente`, y tras un 404 u otro ID, `no verificable` |
 
 ## FICHA-PLANTILLA — Contenido de cada ficha
 

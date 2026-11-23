@@ -1,6 +1,6 @@
 # 07 — Método de búsqueda
 
-**Versión:** 1.12 — 2026-11-22 — En un grupo de división completa, una localidad escrita sin su división queda por revisar (BUS-ACCESO-CODE, «Región»).
+**Versión:** 1.13 — 2026-11-22 — Bolsas de empleo: lo permitido (BUS-REGLAS), el detalle hasta la señal anti-bot (BUS-BOLSAS) y su bloqueo en Code en la nube (BUS-CANALES).
 **Estado:** método de la plantilla. Queda listo con la región de 04 y las fichas de 06, en el paso 7 de `/configurar` (Empresas).
 
 ## BUS-ALCANCE — Responsabilidad
@@ -26,6 +26,7 @@ Las reglas de este método valen para cualquier titular. Si el titular cambia un
 - **Requisitos de una excluida:** los de una vacante relacionada se registran en `habilidades_vacante` aunque su evaluación resulte excluida por condiciones, salvo por «Tipo de puesto».
 - **Tipos de puesto excluidos:** si 04/PREF-TIPOS excluye alguno, las vacantes de esos tipos no gastan trabajo: se registran en `vacantes` y `observaciones`, con su fila `Excluida` en `evaluaciones` (08, condición «Tipo de puesto»), sin extraer requisitos. Si 04 no excluye ninguno, esta regla no aplica.
 - **Agregadores y buscadores:** solo si la fuente oficial no da cobertura completa (BUS-COBERTURA) o al descubrir empresas nuevas.
+- **Lo permitido en una bolsa de empleo** (06/CAT-BOLSAS): solo las rutas que permite su `robots.txt` y lo que permiten sus términos de uso; sin login, sin la cuenta ni la sesión del titular, y sin cookies ni credenciales. Ante una señal anti-bot se retrocede, nunca se evade: nada de reintentar de inmediato, cambiar de IP o de huella, ni resolver un reto (BUS-BOLSAS, ADR 0010). Una bolsa nueva se juzga con esta misma regla antes de construir su adaptador.
 - **Empresas nuevas:** solo cuando se pida; buscarlas por funciones, habilidades, roles, ubicación y condiciones (02, 04 y 05), no solo por sector. Una empresa explorada entra al catálogo de 06 solo si el titular la acepta.
 
 ## BUS-CANALES — Qué se hace en cada canal
@@ -37,6 +38,7 @@ Las reglas de este método valen para cualquier titular. Si el titular cambia un
 - **Continuidad:** lo que registra una búsqueda en Code (vacantes, observaciones, requisitos, evaluaciones y la tabla resumen en `informes`) se usa desde Web para ver la tabla, pedir el detalle de una vacante o adaptar el CV, sin repetir la búsqueda (08/EVAL-INFORME).
 - **`robots.txt`:** solo se usan rutas que el sitio permite, en ambos canales. La herramienta web lo respeta por sí sola. En Code, cada adaptador lo comprueba en cada búsqueda, y la ficha anota lo que se revisó al darla de alta. Si una API lo prohíbe, se busca otra ruta del sitio oficial; no se rodea.
 - **Empresa sin API:** buscar la API que usa su portal; a veces está en el dominio de la empresa y no en el de la plataforma. Si no hay, un navegador sin interfaz (Chromium headless) en Code.
+- **Bolsa bloqueada (Code en la nube):** las IP de la nube reciben más señales anti-bot que la de la casa del titular. Si el `[FALLO]` de una bolsa dice que la busque en Code local, la bolsa queda como no revisada en lo que faltó (BUS-COBERTURA) y el agente le dice al titular que la busque en Code local (BUS-BOLSAS).
 - **Empresa nueva:** si su plataforma tiene adaptador, basta la ficha (06/CAT-REGLAS). Al darla de alta, el agente le da al titular, en una línea de su respuesta, el host que va en la lista de dominios del entorno de la nube (06/CAT-PLATAFORMAS, «Hosts»), para si usa Code en la nube; la copia no anota si la usa, así que la línea va siempre. En Workable, la línea dice en cambio que esa empresa se busca en Code local. Sin adaptador, la investigación de su API (arriba) pide hosts que la lista no deja pasar: se hace en Code local o, en Code en la nube, con los dominios que el titular agrega a mano en el Entorno de la nube mientras se investiga.
 
 ## BUS-ACCESO-CODE — Script de búsqueda
@@ -73,6 +75,18 @@ python3 -I herramientas/buscar.py [EMP-ID ...] [--salida archivo.json] [--sin-re
   - **Las demás,** como «revisar vigencia», van una por vacante.
 
   El JSON no cambia: cada vacante conserva sus `ubicaciones_por_revisar` y sus notas `revisar`.
+
+## BUS-BOLSAS — Bolsas de empleo
+
+Una bolsa de empleo (06/CAT-BOLSAS) se busca con el mismo script, con las reglas de lo permitido (BUS-REGLAS). Su listado se lee completo, pero la descripción, y con ella los requisitos y el encaje, solo está en el detalle de cada vacante, que es donde la bolsa responde con señales anti-bot. Por eso el detalle se pide hasta la primera señal (ADR 0010).
+
+- **Solo las candidatas:** las vacantes que el filtro por título deja como «encaja» o «dudosa» (05/HAB-TERMINOS) y que se entregan por su región o el alcance del remoto. El ruido y las de fuera no gastan peticiones.
+- **Orden:** primero las que encajan y después las dudosas; en cada grupo, de la más nueva a la más vieja según la fecha relativa de su tarjeta. Con la pausa del script antes de cada petición.
+- **Qué da el detalle:** la descripción, la fecha de publicación exacta (`fecha_publicacion`), la empresa, la ubicación estructurada, el sueldo y el tipo de empleo (06/CAT-BOLSAS, el adaptador de la bolsa). Cada vacante dice en `estado_detalle` si se leyó (`leido`), si sigue `pendiente` o si quedó `no verificable`.
+- **Un 404** deja esa vacante `No verificable`, con su motivo, y no detiene la bolsa.
+- **La señal anti-bot:** un HTTP 403 con el cuerpo «scraping abuse», o el reto «Just a moment…» de Cloudflare, con un error HTTP o servido con 200 sin la página esperada. Ante la duda se retrocede: cualquier 403 o 429 de la bolsa cuenta como señal. En la primera, el script detiene la bolsa en esa ejecución: no reintenta ni le pide nada más. Entrega lo listado y lo leído, con las demás vacantes `pendiente`, y sigue con las demás empresas y bolsas.
+- **El `[FALLO]` de un bloqueo** dice si fue en el listado o en el detalle, en qué petición y cuántos detalles se leyeron de cuántas candidatas; debajo, una línea con lo entregado. En la salida, el `detalle` de la bolsa trae las candidatas, los detalles pedidos y leídos y, si hubo bloqueo, dónde (`listado` o `detalle`), en qué petición, de qué tipo y en qué URL.
+- **Cobertura:** declara el bloqueo; si fue en el listado, las consultas que faltaron quedan sin revisar (BUS-COBERTURA).
 
 ## BUS-ACCESO-WEB — Lectura de una vacante desde Web
 
