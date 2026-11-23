@@ -1,6 +1,6 @@
 # 07 — Método de búsqueda
 
-**Versión:** 1.13 — 2026-11-22 — Bolsas de empleo: lo permitido (BUS-REGLAS), el detalle hasta la señal anti-bot (BUS-BOLSAS) y su bloqueo en Code en la nube (BUS-CANALES).
+**Versión:** 1.13 — 2026-11-22 — Bolsas de empleo: lo permitido y la diferencia con un agregador (BUS-REGLAS), el detalle hasta la señal anti-bot (BUS-BOLSAS), su bloqueo en Code en la nube (BUS-CANALES), su listado como fuente oficial (BUS-VIGENCIA) y el registro de sus vacantes (BUS-REGISTRO).
 **Estado:** método de la plantilla. Queda listo con la región de 04 y las fichas de 06, en el paso 7 de `/configurar` (Empresas).
 
 ## BUS-ALCANCE — Responsabilidad
@@ -22,9 +22,10 @@ Las reglas de este método valen para cualquier titular. Si el titular cambia un
 - Un mensaje oficial explícito de cierre en la página de la vacante prevalece sobre su presencia en el listado: se registra `Cerrada`, con el mensaje literal.
 - Identidad por Job ID (11/REG-IDENTIDAD); el mismo título no basta para fusionar.
 - Separar fecha de publicación, primera detección y última verificación.
-- **Qué se registra:** las vacantes de la región y las remotas que trae el acceso de la ficha van todas a `vacantes` y `observaciones`, también las remotas con sede fuera de la región (`region_relacionada` = `Fuera`), porque basta con guardar lo que da el listado. Requisitos y evaluación, solo de las relacionadas con alguna familia ROL (05).
+- **Qué se registra:** las vacantes de la región y las remotas que trae el acceso de la ficha van todas a `vacantes` y `observaciones`, también las remotas con sede fuera de la región (`region_relacionada` = `Fuera`), porque basta con guardar lo que da el listado. De una bolsa de empleo, solo las que encajan por su título y las dudosas que el titular decide conservar (05/HAB-TERMINOS); el ruido no se registra. Requisitos y evaluación, solo de las relacionadas con alguna familia ROL (05).
 - **Requisitos de una excluida:** los de una vacante relacionada se registran en `habilidades_vacante` aunque su evaluación resulte excluida por condiciones, salvo por «Tipo de puesto».
 - **Tipos de puesto excluidos:** si 04/PREF-TIPOS excluye alguno, las vacantes de esos tipos no gastan trabajo: se registran en `vacantes` y `observaciones`, con su fila `Excluida` en `evaluaciones` (08, condición «Tipo de puesto»), sin extraer requisitos. Si 04 no excluye ninguno, esta regla no aplica.
+- **Bolsa de empleo o agregador:** una bolsa de empleo (06/CAT-BOLSAS) es el sitio donde el empleador publica la vacante y donde se postula: su anuncio es el oficial, y sus vacantes se registran aunque su empresa no esté en 06 o sea «Empresa confidencial» (BUS-VIGENCIA). Un agregador solo reúne anuncios publicados en otros sitios: no es fuente oficial y una vacante vista solo ahí no se registra.
 - **Agregadores y buscadores:** solo si la fuente oficial no da cobertura completa (BUS-COBERTURA) o al descubrir empresas nuevas.
 - **Lo permitido en una bolsa de empleo** (06/CAT-BOLSAS): solo las rutas que permite su `robots.txt` y lo que permiten sus términos de uso; sin login, sin la cuenta ni la sesión del titular, y sin cookies ni credenciales. Ante una señal anti-bot se retrocede, nunca se evade: nada de reintentar de inmediato, cambiar de IP o de huella, ni resolver un reto (BUS-BOLSAS, ADR 0010). Una bolsa nueva se juzga con esta misma regla antes de construir su adaptador.
 - **Empresas nuevas:** solo cuando se pida; buscarlas por funciones, habilidades, roles, ubicación y condiciones (02, 04 y 05), no solo por sector. Una empresa explorada entra al catálogo de 06 solo si el titular la acepta.
@@ -116,9 +117,11 @@ Aplica a una comprobación puntual desde el canal Web (BUS-PUNTUAL). La terminal
 
 | Estado | Evidencia mínima | `motivo` |
 | --- | --- | --- |
-| Confirmada abierta | Detalle oficial con indicador de postulación activa (el de su plataforma, 06/CAT-PLATAFORMAS), **o** presencia en el listado oficial de esta búsqueda | Lo que se vio; si solo fue el listado: «En listado oficial; detalle no consultado» |
+| Confirmada abierta | Detalle oficial con indicador de postulación activa (el de su plataforma, 06/CAT-PLATAFORMAS), **o** presencia en el listado oficial de esta búsqueda, que en una vacante de bolsa es el listado de la bolsa | Lo que se vio; si solo fue el listado: «En listado oficial; detalle no consultado» o, en una bolsa, «En el listado oficial de la bolsa» |
 | Cerrada | Mensaje oficial explícito de cierre o indicador oficial de postulación desactivada, en la página o API de esa vacante | Texto breve literal |
 | No verificable | Todo lo demás: error, redirección, ausencia del listado, ID que no coincide tras reintentar, o solo visto en agregador o buscador | Lo que pasó, p. ej. «error 404», «devolvió otro ID» |
+
+**Bolsa de empleo:** su listado es fuente oficial para sus vacantes, con `tipo_fuente` `Bolsa de empleo`: verla ahí basta para «Confirmada abierta», como el listado de una plataforma sin indicador de postulación. Su detalle da la descripción y la fecha, no la vigencia (BUS-BOLSAS).
 
 Un agregador nunca basta para «Confirmada abierta». Una vacante vista solo en agregador se reporta aparte como no confirmada y no se registra.
 
@@ -172,21 +175,25 @@ Si la herramienta rechaza la entrada, no escribe nada y dice todos los errores: 
     "EMP-<ID>": {
       "<Job ID>": {"region_relacionada": "Dentro", "motivo_region": "<por qué>"},
       "<URL de una sin Job ID>": {"estado_vigencia": "No verificable", "motivo": "<lo que pasó>"}
+    },
+    "BOL-<##>": {
+      "<Job ID>": {"titulo": "Conservar", "motivo_titulo": "<por qué>"}
     }
   }
 }
 ```
 
 - **`revisar`:** una decisión por cada vacante que nombra una línea «revisar ubicación» (`region_relacionada` con `motivo_region`): una por cada ID de una línea agrupada, y una sola por vacante aunque salga en dos líneas y por cada «revisar vigencia» (`estado_vigencia` con `motivo`, según BUS-VIGENCIA). Cada vacante se nombra como en su línea: por su Job ID o, sin él, por su URL. Una requisición con varias publicaciones (su línea «revisar» lo dice) se registra como una sola vacante, con todas sus ubicaciones, y pide su región. Una decisión también corrige una vacante sin línea «revisar», por ejemplo con la vigencia que se vio en su detalle.
+- **«revisar título»** (una dudosa de bolsa, 05/HAB-TERMINOS): `titulo` con `motivo_titulo`, con el valor que decida el titular: `Conservar` la registra y `Descartar` la deja fuera, sin pedir sus demás decisiones. El motivo de conservarla queda en su observación.
 - **Líneas «revisar» de una empresa,** como un filtro que el portal no ofrece: `importar` las copia a la cobertura. Lo que dejan sin revisar va en `no_revisado_pendientes`.
-- **`[FALLO]`:** cada empresa que falló se nombra, por su EMP-ID, en `no_revisado_pendientes`. Una que falló por un bloqueo de Code en la nube (BUS-ACCESO-CODE) se nombra con el motivo, por ejemplo «EMP-ID: apply.workable.com bloquea las IP de Code en la nube; buscar en Code local».
+- **`[FALLO]`:** cada empresa que falló se nombra, por su EMP-ID, en `no_revisado_pendientes`, y cada bolsa, por su BOL-ID. De una bolsa detenida por una señal anti-bot se registra lo que entregó (BUS-BOLSAS). Una que falló por un bloqueo de Code en la nube (BUS-ACCESO-CODE) se nombra con el motivo, por ejemplo «EMP-ID: apply.workable.com bloquea las IP de Code en la nube; buscar en Code local».
 - **Sin decisión:** si queda una línea «revisar» sin decidir o un `[FALLO]` sin declarar, `importar` no escribe nada.
 
 | Pestaña | Qué se escribe |
 | --- | --- |
-| `busquedas` | `importar`, una fila por ejecución. `fecha_hora`: la de inicio del script. `solicitud_alcance`, `recursos_versiones` (las versiones del paso 2) y `no_revisado_pendientes` (BUS-COBERTURA): de las decisiones. `fuentes_consultas_filtros`: la versión del script y, por empresa, el acceso, cada listado con sus filtros y conteos, y cómo se revisaron las remotas. `cobertura_limitaciones`, por empresa: «EMP-ID: N únicos de T, completa» o «incompleta»; si la fuente no publica total, «N únicos, sin total publicado; <comprobación de la ficha>»; después, «detalle leído en M de K» y sus líneas «revisar». `comparacion_anterior`: según BUS-COBERTURA, por empresa: «EMP-ID, contra BUS-…: nuevos …; ya conocidos …; no observados esta vez, sin declararlos cerrados: …; cambios: VAC-… (columnas)» |
+| `busquedas` | `importar`, una fila por ejecución. `fecha_hora`: la de inicio del script. `solicitud_alcance`, `recursos_versiones` (las versiones del paso 2) y `no_revisado_pendientes` (BUS-COBERTURA): de las decisiones. `fuentes_consultas_filtros`: la versión del script y, por empresa, el acceso, cada listado con sus filtros y conteos, y cómo se revisaron las remotas. `cobertura_limitaciones`, por empresa: «EMP-ID: N únicos de T, completa» o «incompleta»; si la fuente no publica total, «N únicos, sin total publicado; <comprobación de la ficha>»; después, «detalle leído en M de K» y sus líneas «revisar». Una bolsa nombra sus términos en `fuentes_consultas_filtros` y agrega a su cobertura sus títulos y el rendimiento de cada término, en la forma fija de 11/REG-CAMPOS: «títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas, E encajan, D dudosas, C candidatas; …». `comparacion_anterior`: según BUS-COBERTURA, por empresa: «EMP-ID, contra BUS-…: nuevos …; ya conocidos …; no observados esta vez, sin declararlos cerrados: …; cambios: VAC-… (columnas)» |
 | `vacantes` | `importar`: una fila por cada vacante listada que no exista, con los campos de la salida, la región decidida y `primera_deteccion` = fecha de la búsqueda; en las ya registradas, los campos que cambiaron y `ultima_observacion_id`. Las del paso 7, con `actualizar` |
-| `observaciones` | `importar`: una fila por vacante listada, con `tipo_fuente` `Oficial`, la vigencia del script o la decidida y su URL. `fecha_verificacion` va sin hora: la del script es la de inicio, no la de cada lectura. El `motivo` agrega la región decidida con su motivo y cada cambio como «antes → ahora» (11/REG-IDENTIDAD). Las del paso 7, con `agregar`: la evidencia de su detalle y su URL |
+| `observaciones` | `importar`: una fila por vacante listada, con `tipo_fuente` `Oficial` o, si es de una bolsa, `Bolsa de empleo`, la vigencia del script o la decidida y su URL. `fecha_verificacion` va sin hora: la del script es la de inicio, no la de cada lectura. El `motivo` agrega la región decidida con su motivo y cada cambio como «antes → ahora» (11/REG-IDENTIDAD). Las del paso 7, con `agregar`: la evidencia de su detalle y su URL |
 | `habilidades_vacante` | `agregar`. Solo vacantes relacionadas con detalle leído y no excluidas por «Tipo de puesto» (BUS-REGLAS), una fila por requisito con su tipo (08/EVAL-REQUISITOS). Si el conjunto no cambió respecto de lo registrado, no se agregan filas (11/REG-IDENTIDAD) |
 | `evaluaciones` | `agregar`. Una fila por evaluación nueva o rehecha (08/EVAL-REGISTRO) |
 | `informes` | `agregar`. Una fila por vacante de la tabla resumen (08/EVAL-INFORME), en cualquier orden, porque `informe` las ordena: `busqueda_id`, `vacante_id` y la `evaluacion_id` que muestra la tabla. Las demás columnas las calcula `informe` |

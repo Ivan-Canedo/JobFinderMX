@@ -26,25 +26,30 @@ evaluaciones, que sale de sus nucleos (08/EVAL-ENCAJE), lo dan leer, informe y l
   ID no cambia; el texto vacío borra el valor.
 - importar: una búsqueda desde la salida JSON de buscar.py (07/BUS-REGISTRO), sin pasar sus filas por el agente.
   Crea su fila de busquedas, con la cobertura y la comparación con la última búsqueda comparable; las vacantes
-  nuevas, con primera_deteccion = la fecha de la búsqueda; una observación por vacante listada, y actualiza en las
-  ya registradas (11/REG-IDENTIDAD) los campos que cambiaron y ultima_observacion_id. Las decisiones son
+  nuevas de cada empresa y cada bolsa de empleo, con primera_deteccion = la fecha de la búsqueda; una observación por
+  vacante listada, y actualiza en las ya registradas (11/REG-IDENTIDAD) los campos que cambiaron y
+  ultima_observacion_id. Las decisiones son
   {"solicitud_alcance": texto, "recursos_versiones": texto, "no_revisado_pendientes": texto,
-   "revisar": {EMP-ID: {Job ID o URL, como en la línea «revisar»: {"region_relacionada": valor, "motivo_region":
-   texto, "estado_vigencia": valor, "motivo": texto}}}}; cada línea «revisar ubicación» pide su región y cada
-  «revisar vigencia», su estado, y una empresa en [FALLO] se nombra en no_revisado_pendientes. Da el busqueda_id y
-  una línea «VAC-ID · título · departamento» por vacante de la búsqueda.
+   "revisar": {EMP-ID o BOL-ID: {Job ID o URL, como en la línea «revisar»: {"region_relacionada": valor,
+   "motivo_region": texto, "estado_vigencia": valor, "motivo": texto, "titulo": "Conservar" o "Descartar",
+   "motivo_titulo": texto}}}}; cada línea «revisar ubicación» pide su región, cada «revisar vigencia», su estado, y
+  cada «revisar título» de una bolsa, si la dudosa se conserva; una descartada no se registra. Una empresa o bolsa en
+  [FALLO] se nombra en no_revisado_pendientes; de una bolsa detenida por una señal anti-bot se registra lo que
+  entregó. Da el busqueda_id y una línea «VAC-ID · título · departamento» por vacante de la búsqueda.
 - migrar: pasa a esta versión una hoja de Google descargada como .xlsx o el archivo de registros de una versión
   anterior (ADR 0006). Lee los valores de cada pestaña por el nombre de sus columnas, quita las calculadas, como
-  el encaje guardado de evaluaciones, y las que el esquema ya no tiene (canal), aplica las correcciones,
+  el encaje guardado de evaluaciones, y las que el esquema ya no tiene (canal), agrega vacías las que el archivo
+  anterior no tenía (bolsa_id, empresa_literal y sueldo_literal de vacantes), aplica las correcciones,
   {pestaña: {ID o "fila N": {columna: texto}}}, y comprueba cada fila como agregar. Escribe el archivo completo y
-  da, por pestaña, las filas de la entrada y las del archivo escrito, más las columnas quitadas, las filas
+  da, por pestaña, las filas de la entrada y las del archivo escrito, más las columnas quitadas y agregadas, las filas
   corregidas y las pestañas ignoradas. Solo lee la entrada. No sobrescribe un archivo de registros con filas,
   salvo cuando la entrada es ese mismo archivo.
 - leer: las filas de una pestaña, o solo las que tienen esos IDs en la primera columna o en --columna. En
   evaluaciones, con su encaje calculado y su valor exacto: ★★★☆☆ (3.3).
 - informe: la tabla resumen de una búsqueda (08/EVAL-INFORME), ordenada por estrellas, encaje exacto y la vacante
   más nueva, con las excluidas al final, y con las columnas calculadas de informes (11/REG-CAMPOS) a la fecha de
-  hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
+  hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS. Cada vacante de bolsa observada
+  en la búsqueda que no tiene evaluación sale como «Falta el detalle», sin evaluacion_id.
 - instantanea: regenera completa la instantánea que lee el canal Web (11/REG-INSTANTANEA), en instantanea/:
   informes.md, con las últimas 10 búsquedas y su tabla resumen, y vacantes.md, con una sección por vacante
   evaluada cuya última observación no es Cerrada. Agregar, actualizar, importar y migrar la regeneran después de
@@ -54,7 +59,8 @@ El encaje de evaluaciones se calcula con los pesos de la línea «Pesos del enca
 línea, con los de por defecto.
 
 Agregar, actualizar, importar y migrar comprueban cada fila que escriben contra el esquema: tipos, listas
-(empresa_id, contra 06/CAT-EMPRESAS), la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias.
+(empresa_id, contra 06/CAT-EMPRESAS, y bolsa_id, contra 06/CAT-BOLSAS; una vacante lleva exactamente una de las
+dos), la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias.
 Con un solo error no escriben nada: dicen todos en stderr y terminan con código 1. El JSON va a stdout. Si falta la
 configuración, el archivo u openpyxl, o se pide una pestaña o búsqueda inexistente, termina con código 2
 y dice qué falla.
@@ -286,13 +292,21 @@ def filas_de_entrada(esquema, entrada):
     return filas
 
 
-def leer_catalogo():
-    """Los EMP-ID de 06/CAT-EMPRESAS."""
+# Los catálogos de 06 que puede nombrar valores_de: su sección y el prefijo de sus IDs.
+CATALOGOS = {"06/CAT-EMPRESAS": ("CAT-EMPRESAS", "EMP"), "06/CAT-BOLSAS": ("CAT-BOLSAS", "BOL")}
+
+
+def leer_catalogo(valores_de):
+    """Los IDs de un catálogo de 06: los EMP-ID de CAT-EMPRESAS o los BOL-ID de CAT-BOLSAS. Una copia anterior al
+    catálogo de bolsas no tiene CAT-BOLSAS: no tiene bolsas."""
     ruta = MODULO_06
-    catalogo = seccion(leer_modulo(ruta, "los IDs de empresa_id"), "CAT-EMPRESAS")
+    nombre, prefijo = CATALOGOS[valores_de]
+    catalogo = seccion(leer_modulo(ruta, f"los IDs de {nombre}"), nombre)
     if catalogo is None:
-        error(f"{ruta}: falta la sección CAT-EMPRESAS, el catálogo de empresas.")
-    return re.findall(r"^\|\s*(EMP-[A-Z0-9]+(?:-[A-Z0-9]+)*)\s*\|", catalogo, re.M)
+        if prefijo == "BOL":
+            return []
+        error(f"{ruta}: falta la sección {nombre}, el catálogo de empresas.")
+    return re.findall(rf"^\|\s*({prefijo}-[A-Z0-9]+(?:-[A-Z0-9]+)*)\s*\|", catalogo, re.M)
 
 
 def es_fecha(valor, con_hora):
@@ -315,7 +329,7 @@ def comprobar(esquema, todas, revisar):
         primera = clave(pestanas[nombre])["nombre"]
         for f in filas:
             por_id[nombre].setdefault(f[primera], []).append(f)
-    catalogo = []
+    catalogos = {}
     errores = []
     for nombre, fila, etiqueta in revisar:
         def mal(columna, mensaje):
@@ -323,6 +337,16 @@ def comprobar(esquema, todas, revisar):
 
         for c in guardadas(pestanas[nombre]):
             col, v = c["nombre"], fila[c["nombre"]]
+            if c.get("o_bien"):
+                # Exactamente una de las dos: la empresa o la bolsa de una vacante (11/REG-CAMPOS)
+                otra = c["o_bien"]
+                if v and fila[otra]:
+                    mal(f"{col} y {otra}", "una fila es de una o de la otra, no de las dos; la misma vacante en otra "
+                                           "fuente es otra fila, ligada con duplicado_de (11/REG-IDENTIDAD).")
+                elif v == "" and fila[otra] == "":
+                    mal(col, f"es obligatoria y está vacía, salvo que la fila lleve {otra} en su lugar.")
+                if v == "":
+                    continue
             if v == "":
                 if c.get("oblig") == "si" and not (c.get("vacia_con") and fila[c["vacia_con"]]):
                     mal(col, "es obligatoria y está vacía.")
@@ -359,11 +383,13 @@ def comprobar(esquema, todas, revisar):
                                  f"{' / '.join(c['categorias'])}.")
             elif tipo == "lista":
                 if "valores_de" in c:
-                    if c["valores_de"] != "06/CAT-EMPRESAS":
+                    if c["valores_de"] not in CATALOGOS:
                         error(f"{MODULO_11}, REG-ESQUEMA: valores_de {c['valores_de']!r} desconocido.")
-                    catalogo = catalogo or leer_catalogo()
-                    if v not in catalogo:
-                        mal(col, f"«{v}» no está en el catálogo de 06 (CAT-EMPRESAS); dala de alta ahí primero.")
+                    if c["valores_de"] not in catalogos:
+                        catalogos[c["valores_de"]] = leer_catalogo(c["valores_de"])
+                    if v not in catalogos[c["valores_de"]]:
+                        mal(col, f"«{v}» no está en el catálogo de 06 ({CATALOGOS[c['valores_de']][0]}); dala de alta "
+                                 "ahí primero.")
                 elif v not in c["valores"]:
                     mal(col, f"«{v}» no es uno de: {' / '.join(c['valores'])}.")
     return errores
@@ -441,12 +467,14 @@ def actualizar(esquema, entrada):
 
 # --- importar: la salida de buscar.py (07/BUS-REGISTRO) ------------------------
 
-# Las decisiones de una línea «revisar» de una vacante: cada columna que se decide, con su motivo.
-DECIDIBLES = {"region_relacionada": "motivo_region", "estado_vigencia": "motivo"}
+# Las decisiones de una línea «revisar» de una vacante: cada columna que se decide, con su motivo. titulo no es una
+# columna: decide si una dudosa de bolsa se registra (DE_UN_TITULO).
+DECIDIBLES = {"region_relacionada": "motivo_region", "estado_vigencia": "motivo", "titulo": "motivo_titulo"}
+DE_UN_TITULO = ("Conservar", "Descartar")
 DE_LAS_DECISIONES = ("solicitud_alcance", "recursos_versiones", "no_revisado_pendientes")
 # Las columnas de vacantes que vienen de buscar.py; en una ya registrada se actualizan si cambiaron.
-DE_LA_SALIDA = ("job_id", "titulo", "url_oficial", "ubicacion_literal", "modalidad_literal", "region_relacionada",
-                "fecha_publicacion")
+DE_LA_SALIDA = ("job_id", "titulo", "empresa_literal", "url_oficial", "ubicacion_literal", "modalidad_literal",
+                "sueldo_literal", "region_relacionada", "fecha_publicacion")
 # Los conteos de un listado, que cambian entre búsquedas comparables (buscar.py, listado() y cada adaptador).
 CUENTAS = re.compile(r"\d+ de \d+ grupos|\d+ únicos(?: de \w+|, sin total publicado)?")
 
@@ -468,14 +496,19 @@ def con_job_id(job_id):
     return job_id != "" and job_id.casefold() != "no publicado"
 
 
+def fuente_de(vacante):
+    """La fuente de una vacante: su EMP-ID o, si es de una bolsa de empleo, su BOL-ID (11/REG-IDENTIDAD)."""
+    return vacante["empresa_id"] or vacante["bolsa_id"]
+
+
 def identidades(vacante):
-    """Las claves de una vacante (11/REG-IDENTIDAD): empresa + Job ID y empresa + URL oficial. La primera es su
-    identidad: la de Job ID si lo tiene; si no, la provisional, por la URL."""
+    """Las claves de una vacante (11/REG-IDENTIDAD): fuente + Job ID y fuente + URL oficial, con la empresa o la
+    bolsa como fuente. La primera es su identidad: la de Job ID si lo tiene; si no, la provisional, por la URL."""
     claves = []
     if con_job_id(vacante["job_id"]):
-        claves.append((vacante["empresa_id"], "job_id", vacante["job_id"]))
+        claves.append((fuente_de(vacante), "job_id", vacante["job_id"]))
     if vacante["url_oficial"]:
-        claves.append((vacante["empresa_id"], "url_oficial", vacante["url_oficial"]))
+        claves.append((fuente_de(vacante), "url_oficial", vacante["url_oficial"]))
     return claves
 
 
@@ -484,27 +517,43 @@ CAMPOS_DE_EMPRESA = ("acceso", "consultas", "total_reportado", "unicos", "comple
 CAMPOS_DE_VACANTE = ("job_id", "titulo", "url_oficial", "ubicacion_literal", "modalidad_literal", "region_relacionada",
                      "ubicaciones_por_revisar", "fecha_publicacion", "estado_vigencia", "motivo", "url_fuente",
                      "departamento", "descripcion")
+# Una bolsa trae además sus términos y su rendimiento, y cada vacante, lo literal de su tarjeta y su clase por título
+# (07/BUS-BOLSAS). Los demás campos de una bolsa, como detalle, no se registran aquí.
+CAMPOS_DE_BOLSA = CAMPOS_DE_EMPRESA + ("terminos", "rendimiento", "clasificacion_titulos")
+CAMPOS_DE_VACANTE_DE_BOLSA = CAMPOS_DE_VACANTE + ("empresa_literal", "sueldo_literal", "clasificacion_titulo")
+# Las dos listas de la salida: la columna de vacantes que nombra su fuente y los campos de cada una y de sus vacantes.
+LISTAS_DE_LA_SALIDA = {"empresas": ("empresa_id", CAMPOS_DE_EMPRESA, CAMPOS_DE_VACANTE),
+                       "bolsas": ("bolsa_id", CAMPOS_DE_BOLSA, CAMPOS_DE_VACANTE_DE_BOLSA)}
 
 
 def forma_de_salida(salida):
-    """Los errores de forma de la salida de buscar.py: cada empresa con su EMP-ID y su error o sus listados, y cada
-    vacante con los campos de vacantes y observaciones (07/BUS-ACCESO-CODE, «Salida»)."""
+    """Los errores de forma de la salida de buscar.py: cada empresa con su EMP-ID y cada bolsa con su BOL-ID, con su
+    error o sus listados, y cada vacante con los campos de vacantes y observaciones (07/BUS-ACCESO-CODE, «Salida»).
+    Una bolsa detenida por una señal anti-bot trae su error y lo que entregó. La salida de una versión anterior del
+    script no trae bolsas."""
     if not (isinstance(salida, dict) and isinstance(salida.get("script"), str)
-            and isinstance(salida.get("fecha_hora"), str) and isinstance(salida.get("empresas"), list)):
-        return ["La salida no tiene la forma de la de buscar.py: un objeto con script, fecha_hora y empresas."]
+            and isinstance(salida.get("fecha_hora"), str) and isinstance(salida.get("empresas"), list)
+            and isinstance(salida.get("bolsas", []), list)):
+        return ["La salida no tiene la forma de la de buscar.py: un objeto con script, fecha_hora, empresas y bolsas."]
     errores = []
-    for n, r in enumerate(salida["empresas"], 1):
-        if not (isinstance(r, dict) and isinstance(r.get("empresa_id"), str)):
-            errores.append(f"salida, empresa {n}: no es un objeto con empresa_id.")
-        elif "error" not in r:
-            faltan = [c for c in CAMPOS_DE_EMPRESA if c not in r]
-            faltan += sorted({c for lista in ("vacantes", "remotas_fuera_de_region")
-                              for v in r.get(lista) or [] for c in CAMPOS_DE_VACANTE if not isinstance(v, dict)
-                              or c not in v})
-            if faltan:
-                errores.append(f"salida, {r['empresa_id']}: le falta {', '.join(dict.fromkeys(faltan))}; ¿es la salida "
-                               "de herramientas/buscar.py sin editar?")
+    for lista, (campo, de_la_fuente, de_cada_vacante) in LISTAS_DE_LA_SALIDA.items():
+        for n, r in enumerate(salida.get(lista, []), 1):
+            if not (isinstance(r, dict) and isinstance(r.get(campo), str)):
+                errores.append(f"salida, {lista[:-1]} {n}: no es un objeto con {campo}.")
+            elif "error" not in r or "vacantes" in r:
+                faltan = [c for c in de_la_fuente if c not in r]
+                faltan += sorted({c for v in (r.get("vacantes") or []) + (r.get("remotas_fuera_de_region") or [])
+                                  for c in de_cada_vacante if not isinstance(v, dict) or c not in v})
+                if faltan:
+                    errores.append(f"salida, {r[campo]}: le falta {', '.join(dict.fromkeys(faltan))}; ¿es la salida "
+                                   "de herramientas/buscar.py sin editar?")
     return errores
+
+
+def resultados(salida):
+    """[(EMP-ID o BOL-ID, columna de vacantes que lo lleva, resultado)] de la salida: las empresas y las bolsas."""
+    return [(r[campo], campo, r) for lista, (campo, _, _) in LISTAS_DE_LA_SALIDA.items()
+            for r in salida.get(lista, [])]
 
 
 def nombre_en_buscar(v):
@@ -513,9 +562,9 @@ def nombre_en_buscar(v):
 
 
 def listadas(r):
-    """{nombre en buscar.py: (vacante, sus líneas «revisar»)} de una empresa de la salida: las de la región y las
-    remotas de fuera. Las publicaciones de una misma requisición (mismo nombre) son una sola vacante, con todas sus
-    ubicaciones y las líneas «revisar» de todas."""
+    """{nombre en buscar.py: (vacante, sus líneas «revisar»)} de una empresa o una bolsa de la salida: las de la
+    región y las remotas de fuera. Las publicaciones de una misma requisición (mismo nombre) son una sola vacante, con
+    todas sus ubicaciones y las líneas «revisar» de todas."""
     vacantes = {}
     for v in r["vacantes"] + r["remotas_fuera_de_region"]:
         nombre = nombre_en_buscar(v)
@@ -533,8 +582,11 @@ def listadas(r):
 
 def por_revisar(v):
     """Las líneas «revisar» de una vacante que piden decisión, {columna decidible: línea}, con las mismas condiciones
-    de buscar.py, que en pantalla agrupa las de ubicación por ubicación literal."""
+    de buscar.py, que en pantalla agrupa las de ubicación por ubicación literal. Una dudosa de bolsa pide su título."""
     lineas = {}
+    if v.get("clasificacion_titulo") == "dudosa":
+        lineas["titulo"] = (f"revisar título: «{v['titulo']}» trae las palabras de «{v.get('termino_en_titulo', '')}», "
+                            "pero ninguna frase de titulos de 05/HAB-TERMINOS")
     if v["ubicaciones_por_revisar"] or v["region_relacionada"] == "Indeterminada" or v.get("revisar"):
         notas = [v["ubicacion_literal"]] + list(v.get("revisar") or [])
         lineas["region_relacionada"] = "revisar ubicación: " + "; ".join(n for n in notas if n)
@@ -543,42 +595,54 @@ def por_revisar(v):
     return lineas
 
 
-def fuente(r):
-    """El elemento de una empresa en fuentes_consultas_filtros: acceso, listados con sus conteos y remotas."""
-    partes = [r["acceso"], *r["consultas"]] + ([f"remotas: {r['remotas_revision']}"] if r["remotas_revision"] else [])
-    return f"{r['empresa_id']}: " + "; ".join(partes).replace(" | ", " / ")
+def fuente(fid, r):
+    """El elemento de una empresa o una bolsa en fuentes_consultas_filtros: acceso, los términos de una bolsa, listados
+    con sus conteos y remotas (07/BUS-REGISTRO)."""
+    terminos = [f"términos: {', '.join(f'«{t}»' for t in r['terminos'])}"] if "terminos" in r else []
+    partes = [r["acceso"], *terminos, *r["consultas"]] + ([f"remotas: {r['remotas_revision']}"]
+                                                          if r["remotas_revision"] else [])
+    return f"{fid}: " + "; ".join(partes).replace(" | ", " / ")
 
 
-def cobertura(r, vacantes):
-    """El elemento de una empresa en cobertura_limitaciones (07/BUS-REGISTRO)."""
+def cobertura(fid, r, vacantes, conservadas):
+    """El elemento de una empresa o una bolsa en cobertura_limitaciones (07/BUS-REGISTRO). El de una bolsa lleva
+    además sus títulos y el rendimiento de cada término, en una forma fija que se vuelve a leer (11/REG-CAMPOS):
+    «títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas, E encajan, D dudosas,
+    C candidatas; …»."""
     if r["completa"] is None:
         texto = (f"{r['unicos']} únicos, sin total publicado; "
                  + (r.get("verificacion_cobertura") or "sin comprobación de la ficha"))
     else:
         texto = f"{r['unicos']} únicos de {r['total_reportado']}, {'completa' if r['completa'] else 'incompleta'}"
     texto += f"; detalle leído en {sum(bool(v['descripcion']) for v in vacantes)} de {len(vacantes)}"
-    return f"{r['empresa_id']}: {texto}" + "".join(f"; revisar: {nota}" for nota in r["revisar"])
+    if "rendimiento" in r:
+        c = r["clasificacion_titulos"]
+        texto += (f"; títulos: {c['encajan']} encajan, {c['dudosas']} dudosas ({conservadas} conservadas), "
+                  f"{c['ruido']} ruido; rendimiento: "
+                  + "; ".join(f"«{t}»: {x['traidas']} traídas, {x['encajan']} encajan, {x['dudosas']} dudosas, "
+                              f"{x['candidatas']} candidatas" for t, x in r["rendimiento"].items()))
+    return f"{fid}: {texto}" + "".join(f"; revisar: {nota}" for nota in r["revisar"])
 
 
-def comparacion(registradas, r, actuales, cambios):
-    """El elemento de una empresa en comparacion_anterior, contra la última búsqueda comparable (07/BUS-COBERTURA):
-    la que listó la misma empresa con el mismo acceso y las mismas consultas, salvo los conteos. None si no hay."""
-    firma = CUENTAS.sub("#", fuente(r))
+def comparacion(registradas, fid, r, de_la_fuente, actuales, cambios):
+    """El elemento de una empresa o una bolsa en comparacion_anterior, contra la última búsqueda comparable
+    (07/BUS-COBERTURA): la que listó la misma fuente con el mismo acceso y las mismas consultas, salvo los conteos.
+    de_la_fuente: las vacantes canónicas de esa fuente. None si no hay."""
+    firma = CUENTAS.sub("#", fuente(fid, r))
     comparables = [b for b in registradas["busquedas"]
                    if any(CUENTAS.sub("#", e) == firma for e in b["fuentes_consultas_filtros"].split(" | "))]
     if not comparables:
         return None
     anterior = max(comparables, key=lambda b: (b["fecha_hora"], b["busqueda_id"]))["busqueda_id"]
-    de_la_empresa = {v["vacante_id"] for v in registradas["vacantes"] if v["empresa_id"] == r["empresa_id"]}
     # Una vacante que esa búsqueda vio cerrada (07/BUS-PASOS, paso 7) ya no se espera en el listado.
     previas = list(dict.fromkeys(o["vacante_id"] for o in registradas["observaciones"]
-                                 if o["busqueda_id"] == anterior and o["vacante_id"] in de_la_empresa
+                                 if o["busqueda_id"] == anterior and o["vacante_id"] in de_la_fuente
                                  and o["estado_vigencia"] != "Cerrada"))
 
     def lista(ids):
         return ", ".join(ids) or "ninguno"
 
-    texto = (f"{r['empresa_id']}, contra {anterior}: nuevos {lista([v for v in actuales if v not in previas])}; "
+    texto = (f"{fid}, contra {anterior}: nuevos {lista([v for v in actuales if v not in previas])}; "
              f"ya conocidos {lista([v for v in actuales if v in previas])}; no observados esta vez, sin declararlos "
              f"cerrados: {lista([v for v in previas if v not in actuales])}")
     if cambios:
@@ -587,7 +651,8 @@ def comparacion(registradas, r, actuales, cambios):
 
 
 def decisiones_de(decididas, nombre, lineas, etiqueta, errores):
-    """{columna: (valor, motivo)} de lo que se decidió para una vacante, comprobado contra sus líneas «revisar»."""
+    """{columna: (valor, motivo)} de lo que se decidió para una vacante, comprobado contra sus líneas «revisar». Una
+    dudosa descartada no pide sus demás decisiones, porque no se registra."""
     d = decididas.get(nombre, {})
     if not isinstance(d, dict):
         errores.append(f"decisiones, {etiqueta}: debe ser un objeto {{columna: texto}}.")
@@ -598,22 +663,31 @@ def decisiones_de(decididas, nombre, lineas, etiqueta, errores):
                            + ", ".join(f"{c} con {m}" for c, m in DECIDIBLES.items()) + ".")
         elif not isinstance(v, str):
             errores.append(f"decisiones, {etiqueta}: {c} debe ser texto, entre comillas; dice {v!r}.")
+    descartada = d.get("titulo") == "Descartar"
     elegidas = {}
     for columna, motivo in DECIDIBLES.items():
         valor, porque = d.get(columna), d.get(motivo)
-        if columna in lineas and not (valor or porque):
+        if columna in lineas and not (valor or porque) and not (descartada and columna != "titulo"):
             errores.append(f"{etiqueta}: falta la decisión de la línea «{lineas[columna]}»: {columna} y {motivo}.")
         elif bool(valor) != bool(porque):
             errores.append(f"decisiones, {etiqueta}: {columna} va con su {motivo}; falta "
                            f"{motivo if valor else columna}.")
         if isinstance(valor, str) and valor:
             elegidas[columna] = (valor, porque if isinstance(porque, str) else "")
+    if "titulo" in elegidas:
+        if "titulo" not in lineas:
+            errores.append(f"decisiones, {etiqueta}: titulo solo se decide en una dudosa de bolsa, y esta vacante no "
+                           "tiene línea «revisar título».")
+        elif elegidas["titulo"][0] not in DE_UN_TITULO:
+            errores.append(f"decisiones, {etiqueta}: titulo: «{elegidas['titulo'][0]}» no es uno de: "
+                           f"{' / '.join(DE_UN_TITULO)}.")
     return elegidas
 
 
 def importar(esquema, salida, decisiones):
     """Registra una búsqueda desde la salida de buscar.py y las decisiones del agente (07/BUS-REGISTRO): su fila de
-    busquedas, las vacantes nuevas, una observación por vacante listada y los cambios a las ya registradas. Con un
+    busquedas, las vacantes nuevas de cada empresa y cada bolsa, una observación por vacante listada y los cambios a
+    las ya registradas. De una bolsa no llega el ruido, que buscar.py no entrega, ni las dudosas descartadas. Con un
     solo error no escribe nada."""
     forma = forma_de_salida(salida)
     if forma:
@@ -626,7 +700,7 @@ def importar(esquema, salida, decisiones):
                 for c in DE_LAS_DECISIONES if not isinstance(decisiones.get(c, ""), str)]
     revisar = decisiones.get("revisar", {})
     if not (isinstance(revisar, dict) and all(isinstance(d, dict) for d in revisar.values())):
-        errores.append("decisiones: revisar debe ser {EMP-ID: {nombre de la vacante en buscar.py: decisión}}.")
+        errores.append("decisiones: revisar debe ser {EMP-ID o BOL-ID: {nombre de la vacante en buscar.py: decisión}}.")
         revisar = {}
     pendientes = decisiones.get("no_revisado_pendientes")
     pendientes = pendientes if isinstance(pendientes, str) else ""
@@ -655,25 +729,33 @@ def importar(esquema, salida, decisiones):
     fuentes, coberturas, comparaciones, compacta = [salida["script"]], [], [], []
     nuevas = {nombre: [] for nombre in ("busquedas", "vacantes", "observaciones")}
     cambios, revisar_filas = {}, []
-    for r in salida["empresas"]:
-        eid = r["empresa_id"]
+    for fid, campo, r in resultados(salida):
         if "error" in r:
-            fuentes.append(f"{eid}: [FALLO] {r['error']}")
-            coberturas.append(f"{eid}: [FALLO] {r['error']}")
-            if not re.search(rf"(?<![\w-]){re.escape(eid)}(?![\w-])", pendientes):
-                errores.append(f"{eid}: salió como [FALLO] ({r['error']}) y no está declarada en "
+            fuentes.append(f"{fid}: [FALLO] {r['error']}")
+            coberturas.append(f"{fid}: [FALLO] {r['error']}")
+            if not re.search(rf"(?<![\w-]){re.escape(fid)}(?![\w-])", pendientes):
+                errores.append(f"{fid}: salió como [FALLO] ({r['error']}) y no está declarada en "
                                "no_revisado_pendientes de las decisiones.")
-            continue
+            # Una bolsa detenida por una señal anti-bot entrega lo que listó y leyó (07/BUS-BOLSAS)
+            if "vacantes" not in r:
+                continue
         vacantes = listadas(r)
-        decididas = revisar.get(eid, {})
-        fuentes.append(fuente(r))
-        coberturas.append(cobertura(r, [v for v, _ in vacantes.values()]))
-        actuales, cambiadas = [], {}
+        decididas = revisar.get(fid, {})
+        tipo_fuente = "Bolsa de empleo" if campo == "bolsa_id" else "Oficial"
+        # Las canónicas de esta fuente, también las que absorbieron una fila suya de otra fuente
+        de_la_fuente = {canonica(v)["vacante_id"] for v in todas["vacantes"] if fuente_de(v) == fid}
+        actuales, cambiadas, entregadas, conservadas = [], {}, [], 0
         for nombre, (v, lineas) in vacantes.items():
-            etiqueta = f"{eid}, {nombre}"
+            etiqueta = f"{fid}, {nombre}"
             elegidas = decisiones_de(decididas, nombre, lineas, etiqueta, errores)
-            fila = {c: v[c] for c in DE_LA_SALIDA} | {"empresa_id": eid}
             motivo = v["motivo"]
+            if "titulo" in lineas and "titulo" in elegidas:
+                if elegidas["titulo"][0] == "Descartar":
+                    continue
+                conservadas += 1
+                motivo += f"; título conservado: {elegidas['titulo'][1]}"
+            entregadas.append(v)
+            fila = {c: v.get(c, "") for c in DE_LA_SALIDA} | {"empresa_id": "", "bolsa_id": "", campo: fid}
             estado = v["estado_vigencia"]
             if "estado_vigencia" in elegidas:
                 estado, motivo = elegidas["estado_vigencia"][0], elegidas["estado_vigencia"][1] or motivo
@@ -682,7 +764,8 @@ def importar(esquema, salida, decisiones):
                 motivo += f"; región {fila['region_relacionada']}: {porque}"
             observacion_id = next(ids["observaciones"])
             identidad = identidades(fila)[:1]
-            registrada = canonica(por_identidad[identidad[0]]) if identidad and identidad[0] in por_identidad else None
+            encontrada = por_identidad.get(identidad[0]) if identidad else None
+            registrada = canonica(encontrada)
             if registrada is None:
                 vacante_id = next(ids["vacantes"])
                 nuevas["vacantes"].append({c: "" for c in columnas["vacantes"]} | fila | {
@@ -690,8 +773,14 @@ def importar(esquema, salida, decisiones):
                 revisar_filas.append(("vacantes", nuevas["vacantes"][-1], etiqueta))
             else:
                 vacante_id = registrada["vacante_id"]
-                distintas = {c: fila[c] for c in DE_LA_SALIDA if fila[c] and fila[c] != registrada[c]
-                             and (c != "job_id" or not con_job_id(registrada["job_id"]))}
+                if fuente_de(registrada) != fid:
+                    # Su fila es duplicado de la de otra fuente: la observación va a la canónica, cuyos campos son
+                    # los de otro anuncio y no se tocan
+                    distintas = {}
+                    motivo += f"; anuncio de {fid}, cuya fila {encontrada['vacante_id']} es duplicado de {vacante_id}"
+                else:
+                    distintas = {c: fila[c] for c in DE_LA_SALIDA if fila[c] and fila[c] != registrada[c]
+                                 and (c != "job_id" or not con_job_id(registrada["job_id"]))}
                 motivo += "".join(f"; {c}: «{registrada[c]}» → «{x}»" for c, x in distintas.items() if registrada[c])
                 if distintas:
                     cambiadas[vacante_id] = list(distintas)
@@ -702,17 +791,20 @@ def importar(esquema, salida, decisiones):
             nuevas["observaciones"].append({
                 "observacion_id": observacion_id, "vacante_id": vacante_id, "busqueda_id": busqueda_id,
                 "fecha_verificacion": fecha, "estado_vigencia": estado, "motivo": motivo,
-                "url_fuente": v["url_fuente"], "tipo_fuente": "Oficial"})
+                "url_fuente": v["url_fuente"], "tipo_fuente": tipo_fuente})
             revisar_filas.append(("observaciones", nuevas["observaciones"][-1], etiqueta))
             actuales.append(vacante_id)
             compacta.append(f"{vacante_id} · {fila['titulo']} · {v['departamento'] or '—'}")
-        comparaciones.append(comparacion(registradas, r, actuales, cambiadas) or f"{eid}: Sin búsqueda comparable")
-        errores += [f"decisiones, {eid}, {nombre}: no es una vacante de {eid} en la salida; se nombra como en las "
+        fuentes.append(fuente(fid, r))
+        coberturas.append(cobertura(fid, r, entregadas, conservadas))
+        comparaciones.append(comparacion(registradas, fid, r, de_la_fuente, actuales, cambiadas)
+                             or f"{fid}: Sin búsqueda comparable")
+        errores += [f"decisiones, {fid}, {nombre}: no es una vacante de {fid} en la salida; se nombra como en las "
                     "líneas «revisar» de buscar.py, por su Job ID o su URL." for nombre in decididas
                     if nombre not in vacantes]
-    con_resultados = {r["empresa_id"] for r in salida["empresas"] if "error" not in r}
-    errores += [f"decisiones, {eid}: no es una empresa con resultados en la salida." for eid in revisar
-                if eid not in con_resultados]
+    con_resultados = {fid for fid, _, r in resultados(salida) if "vacantes" in r}
+    errores += [f"decisiones, {fid}: no es una empresa ni una bolsa con resultados en la salida." for fid in revisar
+                if fid not in con_resultados]
     busqueda = {c: decisiones.get(c, "") if isinstance(decisiones.get(c, ""), str) else "" for c in DE_LAS_DECISIONES}
     busqueda.update({
         "busqueda_id": busqueda_id, "fecha_hora": salida["fecha_hora"],
@@ -741,6 +833,8 @@ def importar(esquema, salida, decisiones):
 
 # Las columnas que el esquema ya no tiene, por pestaña: migrar las quita.
 RETIRADAS = {"busquedas": ("canal",)}
+# Las columnas que un archivo anterior a ellas no tiene, por pestaña: migrar las agrega vacías.
+AGREGADAS = {"vacantes": ("bolsa_id", "empresa_literal", "sueldo_literal")}
 
 
 def texto_de_celda(valor):
@@ -779,8 +873,9 @@ def encabezado(celda, formula):
 
 def leer_para_migrar(esquema, ruta):
     """Las filas de la entrada, {pestaña: [(fila en la hoja, {columna guardada: texto})]}, con las columnas quitadas
-    de cada pestaña y las pestañas que el esquema no tiene. De la hoja descargada se leen los valores, no las
-    fórmulas. Rechaza la entrada si le falta una pestaña o una columna, o trae una que el esquema no conoce."""
+    y las agregadas de cada pestaña y las pestañas que el esquema no tiene. De la hoja descargada se leen los valores,
+    no las fórmulas. Rechaza la entrada si le falta una pestaña o una columna que no sea de AGREGADAS, o trae una que
+    el esquema no conoce."""
     try:
         libro = biblioteca_xlsx().load_workbook(ruta, data_only=True)
         formulas = biblioteca_xlsx().load_workbook(ruta, read_only=True)
@@ -790,7 +885,7 @@ def leer_para_migrar(esquema, ruta):
         error(f"{ruta}: no se pudo abrir como .xlsx ({e}). Descarga la hoja con Archivo → Descargar → Microsoft "
               "Excel (.xlsx).")
     from openpyxl.utils import get_column_letter
-    errores, filas, quitadas = [], {}, {}
+    errores, filas, quitadas, agregadas = [], {}, {}, {}
     for p in esquema["pestanas"]:
         nombre, columnas = p["nombre"], encabezados(p)
         if nombre not in libro.sheetnames:
@@ -800,7 +895,9 @@ def leer_para_migrar(esquema, ruta):
         fila_1 = next(formulas[nombre].iter_rows(max_row=1, values_only=True), ())
         en_la_entrada = [encabezado(v, f) for v, f in zip(next(valores, ()), fila_1 + (None,) * len(columnas))]
         se_quitan = [c["nombre"] for c in p["columnas"] if c["nombre"] not in columnas] + list(RETIRADAS.get(nombre, ()))
-        errores += [f"{nombre}: falta la columna {c}." for c in columnas if c not in en_la_entrada]
+        agregadas[nombre] = [c for c in AGREGADAS.get(nombre, ()) if c in columnas and c not in en_la_entrada]
+        errores += [f"{nombre}: falta la columna {c}." for c in columnas
+                    if c not in en_la_entrada and c not in agregadas[nombre]]
         errores += [f"{nombre}: la columna {c} se repite." for c in dict.fromkeys(en_la_entrada)
                     if c and en_la_entrada.count(c) > 1]
         errores += [f"{nombre}: {c!r} no es una columna de 11/REG-ESQUEMA ni de las que se quitan "
@@ -815,13 +912,14 @@ def leer_para_migrar(esquema, ruta):
                 continue
             errores += [f"{nombre}, fila {n}: la columna {get_column_letter(i + 1)} no tiene encabezado y tiene datos («{fila[i]}»)."
                         for i in sorted(sin_encabezado) if i < len(fila) and fila[i]]
-            filas[nombre].append((n, {c: fila[i] if i < len(fila) else "" for c, i in posicion.items()}))
+            filas[nombre].append((n, {c: fila[posicion[c]] if posicion.get(c, len(fila)) < len(fila) else ""
+                                      for c in columnas}))
         quitadas[nombre] = [c for c in se_quitan if c in en_la_entrada]
     formulas.close()
     if errores:
         rechazar(errores)
     ignoradas = [n for n in libro.sheetnames if n not in filas]
-    return filas, {n: c for n, c in quitadas.items() if c}, ignoradas
+    return filas, {n: c for n, c in quitadas.items() if c}, {n: c for n, c in agregadas.items() if c}, ignoradas
 
 
 def corregir(esquema, filas, correcciones):
@@ -871,8 +969,9 @@ def corregir(esquema, filas, correcciones):
 
 
 def migrar(esquema, entrada, correcciones):
-    """Escribe el archivo de registros desde una hoja descargada como .xlsx o pone al día el archivo 1.x de la copia:
-    sin las columnas calculadas de informes ni las retiradas, y con cada fila comprobada como en agregar después de
+    """Escribe el archivo de registros desde una hoja descargada como .xlsx o pone al día el archivo de una versión
+    anterior de la copia: sin las columnas calculadas de informes ni las retiradas, con las agregadas vacías, y con
+    cada fila comprobada como en agregar después de
     aplicarle las correcciones. Con un solo error no escribe nada. Solo lee la entrada, salvo que sea el archivo
     mismo."""
     ruta = ruta_archivo(esquema)
@@ -881,7 +980,7 @@ def migrar(esquema, entrada, correcciones):
     if os.path.exists(ruta) and not os.path.samefile(ruta, entrada) and tiene_filas(ruta):
         error(f"{ruta} ya tiene filas; migrar no lo sobrescribe. Solo pone al día ese mismo archivo, si es de una "
               "versión anterior: `migrar` con su ruta.")
-    filas, quitadas, ignoradas = leer_para_migrar(esquema, entrada)
+    filas, quitadas, agregadas, ignoradas = leer_para_migrar(esquema, entrada)
     errores, corregidas = corregir(esquema, filas, correcciones)
     todas = {nombre: [f for _, f in de_la_pestana] for nombre, de_la_pestana in filas.items()}
     revisar = []
@@ -902,7 +1001,7 @@ def migrar(esquema, entrada, correcciones):
     escritas = abrir(esquema)[1]
     return {"archivo": ruta,
             "conteos": {nombre: {"entrada": len(filas[nombre]), "archivo": len(escritas[nombre])} for nombre in filas},
-            "columnas_quitadas": quitadas, "corregidas": corregidas, "pestanas_ignoradas": ignoradas}
+            "columnas_quitadas": quitadas, "columnas_agregadas": agregadas, "corregidas": corregidas, "pestanas_ignoradas": ignoradas}
 
 
 def leer_zona_horaria():
@@ -1068,7 +1167,8 @@ def calculadas(vacante, evaluacion, hoy, umbral):
     else:
         job_id = vacante["job_id"]
         de_la_vacante = {
-            "empresa": vacante["empresa_id"].replace("EMP-", ""),
+            # Una vacante de bolsa no tiene empresa_id: la empresa literal que publica, como «Empresa confidencial»
+            "empresa": vacante["empresa_id"].replace("EMP-", "") or vacante["empresa_literal"],
             # «No publicado» sin distinguir mayúsculas.
             "vacante": ("sin Job ID" if job_id.casefold() in ("", "no publicado") else job_id) + " — "
                        + vacante["titulo"],
@@ -1112,9 +1212,18 @@ def orden_de_la_tabla(vacante, evaluacion):
     return grupo, -n, -exacto, mas_nueva
 
 
+def falta_el_detalle(vacante):
+    """Lo que la tabla resumen muestra de una vacante de bolsa sin evaluación (08/EVAL-INFORME): su encaje falta, y
+    sus alertas son lo que se sabe por su tarjeta."""
+    conocido = [f"{titulo}: {vacante[c]}" for titulo, c in (("Sueldo", "sueldo_literal"), ("Región", "region_relacionada"),
+                                                              ("Modalidad", "modalidad_literal")) if vacante[c]]
+    return {"encaje": "Falta el detalle", "alertas": " · ".join(conocido) or "—"}
+
+
 def tabla_resumen(esquema, filas, busqueda_id, hoy, umbral):
     """Las filas de informes de una búsqueda, en el orden de 08/EVAL-INFORME, con sus columnas calculadas a la
-    fecha hoy. Con todo igual, conserva el orden en que se registraron."""
+    fecha hoy, más una sin evaluacion_id por cada vacante de bolsa observada en ella que no tiene evaluación ni fila
+    en informes: le falta el detalle. Con todo igual, conserva el orden en que se registraron."""
     vacantes = primeras(filas["vacantes"], "vacante_id")
     evaluaciones = primeras(filas["evaluaciones"], "evaluacion_id")
     columnas = [c["nombre"] for c in pestana_del_esquema(esquema, "informes")["columnas"]]
@@ -1124,6 +1233,16 @@ def tabla_resumen(esquema, filas, busqueda_id, hoy, umbral):
             vacante, evaluacion = vacantes.get(f["vacante_id"]), evaluaciones.get(f["evaluacion_id"])
             fila = f | calculadas(vacante, evaluacion, hoy, umbral)
             tabla.append((orden_de_la_tabla(vacante, evaluacion), {c: fila[c] for c in columnas}))
+    vistas = {f["vacante_id"] for f in filas["informes"] if f["busqueda_id"] == busqueda_id}
+    vistas |= {e["vacante_id"] for e in filas["evaluaciones"]}
+    for o in filas["observaciones"]:
+        vacante = vacantes.get(o["vacante_id"])
+        if (o["busqueda_id"] == busqueda_id and o["estado_vigencia"] != "Cerrada" and vacante and vacante["bolsa_id"]
+                and not vacante["duplicado_de"] and vacante["vacante_id"] not in vistas):
+            vistas.add(vacante["vacante_id"])
+            fila = ({"busqueda_id": busqueda_id, "vacante_id": vacante["vacante_id"], "evaluacion_id": ""}
+                    | calculadas(vacante, None, hoy, umbral) | falta_el_detalle(vacante))
+            tabla.append((orden_de_la_tabla(vacante, None), {c: fila[c] for c in columnas}))
     return [fila for _, fila in sorted(tabla, key=lambda t: t[0])]
 
 
@@ -1203,7 +1322,7 @@ def vista_vacantes(esquema, filas, encabezado, hoy, umbral):
         if evaluacion is None or v["duplicado_de"] or (observacion and observacion["estado_vigencia"] == "Cerrada"):
             continue
         job_id = "sin Job ID" if v["job_id"].casefold() in ("", "no publicado") else v["job_id"]
-        seccion = [f"## {v['vacante_id']} · {md(job_id)} · {v['empresa_id']} · «{md(v['titulo'])}»", ""]
+        seccion = [f"## {v['vacante_id']} · {md(job_id)} · {fuente_de(v)} · «{md(v['titulo'])}»", ""]
         seccion += campos(v, sin=("vacante_id",)) + [f"- **antigüedad:** {md(antiguedad(v, hoy, umbral))}"]
         if observacion:
             seccion += ["", f"### Última observación: {observacion['observacion_id']}", ""]

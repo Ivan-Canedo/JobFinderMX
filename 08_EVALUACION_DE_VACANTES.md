@@ -1,6 +1,6 @@
 # 08 — Evaluación de vacantes
 
-**Versión:** 1.4 — 2026-11-22 — El encaje es el promedio de las estrellas de los núcleos, con los pesos de EVAL-ACUERDOS, y en Code lo calcula la herramienta de registros (EVAL-ENCAJE, EVAL-FLUJO, EVAL-INFORME).
+**Versión:** 1.5 — 2026-11-22 — Vacantes de bolsas de empleo: las que no tienen detalle salen en la tabla como «Falta el detalle», y una condición visible en su tarjeta las excluye antes (EVAL-FLUJO, EVAL-INFORME).
 **Estado:** método de la plantilla. Las condiciones salen de 04 y las familias de 05; queda listo con el paso 5 de `/configurar` (Habilidades y roles).
 **Evaluaciones vigentes desde:** 1.0. Sube a la versión nueva solo si el cambio altera la clasificación de requisitos, las categorías, la elección de núcleos, la cobertura o las condiciones. Un cambio en la fórmula del nivel o en los pesos no lo sube, porque la herramienta recalcula las estrellas desde `nucleos` (EVAL-ENCAJE). Un cambio de 04 tampoco: lo cubre la regla de EVAL-REGISTRO.
 
@@ -41,6 +41,11 @@ Comparar los requisitos y condiciones de una vacante con la trayectoria y las pr
 6. **Si le interesa:** generar el CV (09) a partir del detalle.
 
 No se gastan preguntas ni detalle en vacantes que el titular no pidió.
+
+**Vacantes de bolsa sin detalle:** de una bolsa de empleo, la descripción solo está en el detalle de cada vacante, que el script pide hasta la primera señal anti-bot (07/BUS-BOLSAS). Una vacante cuyo detalle sigue pendiente queda registrada sin evaluación: sin descripción no hay requisitos ni encaje. La tabla la muestra como «Falta el detalle» (EVAL-INFORME) hasta que una búsqueda posterior lea su detalle y se evalúe.
+
+- **Exclusión desde la tarjeta:** antes de esperar el detalle, se revisan las condiciones que ya muestra la tarjeta: el tipo de puesto en el título, la ubicación y el sueldo literal (`sueldo_literal`). Si una no cumple, la vacante se registra `Excluida` con la observación del listado, el texto literal de la tarjeta y sin requisitos, y ya no sale como pendiente. Lo que la tarjeta no muestra queda para el detalle.
+- **Una dudosa conservada** se evalúa como cualquier otra cuando llega su detalle, aunque resulte poco relacionada: sus núcleos lo reflejan.
 
 **Desde Web:** se evalúa una vacante que el titular nombra o pega, con los pasos 2, 5 y 6. Si la instantánea trae su evaluación y sigue vigente (EVAL-REGISTRO), se usa esa. Si no, se evalúa con la descripción leída en su anuncio oficial (07/BUS-ACCESO-WEB) o con la que pegó el titular, y el agente calcula el encaje con la línea «Pesos del encaje» de EVAL-ACUERDOS, como indica EVAL-ENCAJE. Web no registra: si el titular quiere conservarla, la observación, los requisitos y la evaluación van en una nota para Code (00, «Cambios a los registros»), que Code aplica según 07/BUS-PUNTUAL. La evaluación de la nota trae los núcleos con su categoría y no trae estrellas: Code las calcula al registrar.
 
@@ -189,6 +194,8 @@ La tabla muestra solo las estrellas y la cobertura; el encaje exacto va en el de
 - **Sin exclusiones:** los núcleos `Insuficiente` y luego los `Académica/formativa`, con el nombre guardado en `nucleos` y separados por `;`. Después, los pendientes que no sean sueldo, duración, relación ni horario (como modalidad, ubicación, remoto o viajes), porque esos cuatro casi nunca se publican y quedan pendientes en casi todas. Si no hay nada, `—`.
 - **Excluida:** el motivo, con la condición y el texto literal.
 - Los núcleos directos y transferibles, y los cuatro pendientes habituales, se ven en el detalle.
+
+**Falta el detalle:** una vacante de bolsa observada en la búsqueda que todavía no tiene evaluación (EVAL-FLUJO) sale entre las evaluadas y las excluidas, con `Falta el detalle` en lugar del encaje y, en alertas, lo que dice su tarjeta: sueldo, región y modalidad, cuando se conocen. En la columna de la empresa, una vacante de bolsa muestra la empresa literal, también «Empresa confidencial». `informe` agrega estas filas solo: no se escriben en `informes`.
 
 Debajo de la tabla, una línea: «N sin relación con las familias de 05: no evaluadas».
 

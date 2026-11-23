@@ -21,7 +21,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from test_buscar import TABLA_DE_PAISES, WorkdayFalso, ficha, grupo, preferencias
+import test_buscar
+from test_buscar import (TABLA_DE_PAISES, ConOccFalso, OccFalso, WorkdayFalso, anuncio_occ, ficha, grupo, preferencias,
+                         terminos)
 from test_buscar import modulo_04 as modulo_04_con_region, modulo_06 as modulo_06_con_fichas
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -882,9 +884,10 @@ class Importar(CopiaFicticia):
                           ("VAC-0003", "", "Dentro", "OBS-0003"), ("VAC-0004", "R-3", "Fuera", "OBS-0004")])
         self.assertEqual({v["primera_deteccion"] for v in vacantes}, {fecha})
         self.assertEqual(vacantes[0] | {"vacante_id": ""}, {
-            "vacante_id": "", "empresa_id": "EMP-ACME", "job_id": "R-1", "titulo": "Puesto R-1",
-            "url_oficial": WorkdayFalso.PORTAL + "/job/Lugar/Puesto_R-1", "ubicacion_literal": "Ciudad A1, País A",
-            "modalidad_literal": "", "region_relacionada": "Dentro", "fecha_publicacion": "2026-10-01",
+            "vacante_id": "", "empresa_id": "EMP-ACME", "bolsa_id": "", "empresa_literal": "", "job_id": "R-1",
+            "titulo": "Puesto R-1", "url_oficial": WorkdayFalso.PORTAL + "/job/Lugar/Puesto_R-1",
+            "ubicacion_literal": "Ciudad A1, País A", "modalidad_literal": "", "sueldo_literal": "",
+            "region_relacionada": "Dentro", "fecha_publicacion": "2026-10-01",
             "primera_deteccion": fecha, "ultima_observacion_id": "OBS-0001", "duplicado_de": ""})
 
         observaciones = self.leer("observaciones")
@@ -1167,7 +1170,7 @@ class Migrar(CopiaFicticia):
             "pestaña que falta": (sin_pestana(), "documentos"),
             "columna desconocida": (con_columna("vacantes", "salario", "1000"), "salario"),
             "columna sin encabezado con datos": (con_columna("vacantes", None, "nota"),
-                                                 "vacantes, fila 2: la columna M no tiene encabezado"),
+                                                 "vacantes, fila 2: la columna P no tiene encabezado"),
             "columna que falta": (sin_columna("vacantes", "titulo"), "titulo"),
         }
         for caso, (pestanas, texto) in casos.items():
@@ -1188,6 +1191,19 @@ class Migrar(CopiaFicticia):
                                                   for f in busqueda_ficticia()["busquedas"]])
         self.assertTrue((self.dir / "instantanea" / "vacantes.md").is_file())
 
+    def test_agrega_vacias_las_columnas_de_bolsa_a_un_archivo_anterior_a_ellas(self):
+        nuevas = ["bolsa_id", "empresa_literal", "sueldo_literal"]
+        pestanas = self.libro_1x(busqueda_ficticia(), de_la_hoja=False)
+        for c in nuevas:
+            i = pestanas["vacantes"][0].index(c)
+            for fila in pestanas["vacantes"]:
+                del fila[i]
+        escribir_libro(self.archivo, pestanas)
+        r = self.migrar(self.archivo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["columnas_agregadas"], {"vacantes": nuevas})
+        self.assertEqual([{c: v[c] for c in nuevas} for v in self.leer("vacantes")], [dict.fromkeys(nuevas, "")] * 2)
+
     def test_no_sobrescribe_un_archivo_de_registros_con_filas(self):
         escribir_libro(self.descargada, self.libro_1x(busqueda_ficticia(), de_la_hoja=True))
         self.ok("crear")
@@ -1205,6 +1221,239 @@ class Migrar(CopiaFicticia):
         r = self.migrar(self.descargada)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(len(self.leer("vacantes")), 2)
+
+
+EN_A1 = preferencias([grupo("XA", ["Estado A"], ["Ciudad A1"])])
+TERMINOS = terminos(ROL_01=(["analista de datos"], ["analista de datos"]))
+CONSULTA = ("analista-de-datos", "ciudad-a1")
+DETALLE_OCC = OccFalso.SITIO + "/empleo/oferta/"
+
+
+def tarjetas(**titulos):
+    """Anuncios de OCC en Ciudad A1, traídos por «analista de datos»: {job ID con «j» delante: título o
+    (título, {campos})}."""
+    anuncios = []
+    for jid, t in titulos.items():
+        t, campos = t if isinstance(t, tuple) else (t, {})
+        anuncios.append(anuncio_occ(jid[1:], "Ciudad A1, Estado A", CONSULTA, titulo=t, **campos))
+    return anuncios
+
+
+# 101 encaja; 102 y 103 son dudosas; 104 es ruido.
+PRIMERA_OCC = tarjetas(j101=("Analista de datos", {"empresa": "Empresa confidencial",
+                                                   "sueldo": "$20,000 - $25,000 Mensual"}),
+                       j102=("Analista de Estrategia y Datos", {"empresa": "Empresa Literal B"}),
+                       j103="Analista Comercial (Datos)", j104="Ejecutivo de ventas")
+
+
+class ImportarBolsa(CopiaFicticia):
+    """importar registra las vacantes de una bolsa de empleo (07/BUS-REGISTRO, 11/REG-IDENTIDAD)."""
+
+    escribir = test_buscar.CopiaFicticia.escribir
+    buscar_en_red = ConOccFalso.buscar_bolsa
+    BOLSA = ConOccFalso.BOLSA
+
+    def setUp(self):
+        super().setUp()
+        shutil.copy(RAIZ / "herramientas" / "buscar.py", self.dir / "herramientas")
+        (self.dir / "herramientas" / "paises.json").write_text(json.dumps(TABLA_DE_PAISES, ensure_ascii=False),
+                                                                encoding="utf-8")
+        self.sesion = self.dir / "sesion"
+        self.sesion.mkdir()
+        self.escribir(test_buscar.modulo_04(EN_A1), modulo_06_con_fichas({}, {"BOL-01": self.BOLSA}))
+        self.ok("crear")
+
+    def buscar(self, anuncios, *ids, empresas=None, codigo_esperado=0):
+        """Corre buscar.py de la copia contra OCC falso (y el portal de cada empresa) y devuelve la ruta de su
+        salida JSON."""
+        salida, _ = self.buscar_en_red(EN_A1, OccFalso(anuncios), TERMINOS, *(ids or ["BOL-01"]), empresas=empresas,
+                                       codigo_esperado=codigo_esperado)
+        ruta = self.sesion / f"busqueda_{len(list(self.sesion.iterdir()))}.json"
+        ruta.write_text(json.dumps(salida, ensure_ascii=False), encoding="utf-8")
+        return ruta
+
+    def importar(self, salida, decisiones):
+        ruta = self.sesion / "decisiones.json"
+        ruta.write_text(json.dumps(decisiones, ensure_ascii=False), encoding="utf-8")
+        return self.correr("importar", str(salida), str(ruta))
+
+    def decisiones(self, revisar=None, pendientes="Ninguno"):
+        return {"solicitud_alcance": "BOL-01 con la región de 04", "recursos_versiones": "07 v1.13 | 05 v1.1",
+                "no_revisado_pendientes": pendientes, "revisar": revisar or {}}
+
+    def de_los_titulos(self, **mas):
+        """La 102 se conserva y la 103 se descarta."""
+        return {"102": {"titulo": "Conservar", "motivo_titulo": "la estrategia de datos es de la familia"},
+                "103": {"titulo": "Descartar", "motivo_titulo": "es un puesto comercial"}, **mas}
+
+    def importar_primera(self):
+        r = self.importar(self.buscar(PRIMERA_OCC), self.decisiones({"BOL-01": self.de_los_titulos()}))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    def assertRechaza(self, r, *textos):
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        for t in textos:
+            self.assertIn(t, r.stderr)
+        self.assertIn("No se escribió ninguna fila.", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+
+    def test_registra_las_que_encajan_y_las_dudosas_conservadas_con_la_bolsa_como_fuente(self):
+        res = self.importar_primera()
+        self.assertEqual(res["vacantes"], ["VAC-0001 · Analista de datos · —",
+                                           "VAC-0002 · Analista de Estrategia y Datos · —"])
+        vacantes = self.leer("vacantes")
+        # La descartada y el ruido no llegan; la empresa es la literal, también «Empresa confidencial».
+        self.assertEqual([(v["job_id"], v["empresa_id"], v["bolsa_id"], v["empresa_literal"]) for v in vacantes],
+                         [("101", "", "BOL-01", "Empresa confidencial"), ("102", "", "BOL-01", "Empresa Literal B")])
+        self.assertEqual(vacantes[0]["sueldo_literal"], "$20,000 - $25,000 Mensual")
+        self.assertEqual(vacantes[0]["url_oficial"], DETALLE_OCC + "101")
+        self.assertEqual(vacantes[0]["region_relacionada"], "Dentro")
+        self.assertEqual(vacantes[0]["fecha_publicacion"], "2026-11-20")
+        observaciones = self.leer("observaciones")
+        self.assertEqual({(o["tipo_fuente"], o["estado_vigencia"]) for o in observaciones},
+                         {("Bolsa de empleo", "Confirmada abierta")})
+        self.assertTrue(observaciones[0]["motivo"].startswith("En el listado oficial de la bolsa"))
+        self.assertIn("título conservado: la estrategia de datos es de la familia", observaciones[1]["motivo"])
+
+        [busqueda] = self.leer("busquedas")
+        self.assertIn("BOL-01: Listado de OCC Mundial", busqueda["fuentes_consultas_filtros"])
+        self.assertIn("términos: «analista de datos»", busqueda["fuentes_consultas_filtros"])
+        self.assertEqual(busqueda["cobertura_limitaciones"],
+                         "BOL-01: 4 únicos de 4, completa; detalle leído en 2 de 2; títulos: 1 encajan, 2 dudosas "
+                         "(1 conservadas), 1 ruido; rendimiento: «analista de datos»: 4 traídas, 1 encajan, 2 dudosas, "
+                         "3 candidatas")
+        self.assertEqual(busqueda["comparacion_anterior"], "Sin búsqueda comparable")
+
+    def test_la_segunda_importacion_reconoce_la_vacante_por_bolsa_y_job_id(self):
+        self.importar_primera()
+        segunda = tarjetas(j101=("Analista de datos", {"empresa": "Empresa confidencial",
+                                                       "sueldo": "$22,000 - $26,000 Mensual"}),
+                           j105="Analista de datos Jr.")
+        r = self.importar(self.buscar(segunda), self.decisiones())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(json.loads(r.stdout)["vacantes"], ["VAC-0001 · Analista de datos · —",
+                                                            "VAC-0003 · Analista de datos Jr. · —"])
+        vacantes = {v["vacante_id"]: v for v in self.leer("vacantes")}
+        self.assertEqual(len(vacantes), 3)
+        self.assertEqual(vacantes["VAC-0001"]["sueldo_literal"], "$22,000 - $26,000 Mensual")
+        self.assertEqual(vacantes["VAC-0001"]["ultima_observacion_id"], "OBS-0003")
+        [o] = self.leer("observaciones", "--id", "OBS-0003")
+        self.assertIn("sueldo_literal: «$20,000 - $25,000 Mensual» → «$22,000 - $26,000 Mensual»", o["motivo"])
+        busqueda = self.leer("busquedas", "--id", "BUS-0002")[0]
+        self.assertEqual(busqueda["comparacion_anterior"],
+                         "BOL-01, contra BUS-0001: nuevos VAC-0003; ya conocidos VAC-0001; no observados esta vez, sin "
+                         "declararlos cerrados: VAC-0002; cambios: VAC-0001 (sueldo_literal)")
+
+    def test_una_dudosa_sin_decidir_o_una_decision_de_titulo_invalida_se_rechaza(self):
+        salida = self.buscar(PRIMERA_OCC)
+        r = self.importar(salida, self.decisiones({"BOL-01": {"102": self.de_los_titulos()["102"]}}))
+        self.assertRechaza(r, "BOL-01, 103", "revisar título", "titulo")
+        r = self.importar(salida, self.decisiones({"BOL-01": self.de_los_titulos(
+            **{"102": {"titulo": "Tal vez", "motivo_titulo": "x"}, "101": {"titulo": "Conservar",
+                                                                            "motivo_titulo": "x"}})}))
+        self.assertRechaza(r, "«Tal vez»", "Conservar / Descartar", "BOL-01, 101", "no tiene línea «revisar título»")
+        self.assertEqual(self.leer("vacantes"), [])
+
+    def test_una_bolsa_detenida_por_la_senal_registra_lo_entregado_si_se_declara(self):
+        anuncios = tarjetas(j101="Analista de datos", j105=("Analista de datos Sr.", {"detalle": "abuso"}),
+                            j106="Analista de datos Jr.")
+        salida = self.buscar(anuncios, codigo_esperado=1)
+        self.assertRechaza(self.importar(salida, self.decisiones()), "BOL-01: salió como [FALLO]",
+                           "no_revisado_pendientes")
+        r = self.importar(salida, self.decisiones(pendientes="BOL-01: [FALLO] señal anti-bot en el detalle"))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(self.leer("vacantes")), 3)
+        busqueda = self.leer("busquedas")[0]
+        self.assertIn("BOL-01: [FALLO]", busqueda["cobertura_limitaciones"])
+        self.assertIn("detalle leído en 1 de 3", busqueda["cobertura_limitaciones"])
+
+    def test_bolsa_id_fuera_del_catalogo_o_sin_ninguna_fuente_se_rechaza(self):
+        salida = self.buscar(PRIMERA_OCC)
+        datos = json.loads(salida.read_text(encoding="utf-8"))
+        datos["bolsas"][0]["bolsa_id"] = "BOL-99"
+        for v in datos["bolsas"][0]["vacantes"]:
+            v["bolsa_id"] = "BOL-99"
+        salida.write_text(json.dumps(datos, ensure_ascii=False), encoding="utf-8")
+        self.assertRechaza(self.importar(salida, self.decisiones({"BOL-99": self.de_los_titulos()})), "BOL-99",
+                           "CAT-BOLSAS")
+
+        def vacante(**fuente):
+            fila = busqueda_ficticia()["vacantes"][0] | {"empresa_id": ""} | fuente
+            return {"vacantes": [fila], "observaciones": [busqueda_ficticia()["observaciones"][0]],
+                    "busquedas": busqueda_ficticia()["busquedas"]}
+
+        self.ok("agregar", entrada=vacante(bolsa_id="BOL-01", empresa_literal="Empresa confidencial"))
+        self.archivo.unlink()
+        self.ok("crear")
+        (self.dir / "06_EMPRESAS_OBJETIVO.md").write_text(
+            modulo_06_con_fichas({"EMP-XA": ficha("EMP-XA", {})}, {"BOL-01": self.BOLSA}), encoding="utf-8")
+        for caso, (entrada, texto) in {
+                "sin fuente": (vacante(), "empresa_id: es obligatoria"),
+                "con las dos": (vacante(empresa_id="EMP-XA", bolsa_id="BOL-01"), "no de las dos")}.items():
+            with self.subTest(caso):
+                self.assertRechazaSinEscribir("agregar", entrada, texto)
+
+    def test_una_vacante_de_bolsa_y_la_de_su_empresa_se_ligan_con_duplicado_de(self):
+        empresas = {"EMP-ACME": WorkdayFalso([anuncio("R-1", "Ciudad A1, País A")])}
+        self.escribir(None, modulo_06_con_fichas({}, {"BOL-01": self.BOLSA}))
+        self.importar_primera()
+        self.assertEqual(self.importar(self.buscar([], "EMP-ACME", empresas=empresas), self.decisiones()).returncode,
+                         0)
+        empresa = self.leer("vacantes", "--id", "VAC-0003")[0]
+        self.assertEqual((empresa["empresa_id"], empresa["job_id"]), ("EMP-ACME", "R-1"))
+        # El agente confirma el duplicado y lo fusiona (11/REG-IDENTIDAD): la de bolsa, más antigua, es la canónica.
+        self.ok("actualizar", entrada={
+            "observaciones": [{"observacion_id": "OBS-0003", "vacante_id": "VAC-0001"}],
+            "vacantes": [{"vacante_id": "VAC-0001", "ultima_observacion_id": "OBS-0003"},
+                         {"vacante_id": "VAC-0003", "duplicado_de": "VAC-0001", "ultima_observacion_id": ""}]})
+        bolsa = self.leer("vacantes", "--id", "VAC-0001")[0]
+        empresas["EMP-ACME"] = WorkdayFalso([anuncio("R-1", "Ciudad A1, País A"), anuncio("R-2", "Ciudad A1, País A")])
+        r = self.importar(self.buscar([], "EMP-ACME", empresas=empresas), self.decisiones())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        # El anuncio de la empresa suma su observación a la canónica, sin otra fila ni cambiarle los campos.
+        self.assertEqual(json.loads(r.stdout)["vacantes"], ["VAC-0001 · Puesto R-1 · —", "VAC-0004 · Puesto R-2 · —"])
+        self.assertEqual(self.leer("vacantes", "--id", "VAC-0001")[0], bolsa | {"ultima_observacion_id": "OBS-0004"})
+        [o] = self.leer("observaciones", "--id", "OBS-0004")
+        self.assertEqual((o["vacante_id"], o["tipo_fuente"]), ("VAC-0001", "Oficial"))
+        self.assertIn("anuncio de EMP-ACME", o["motivo"])
+        tercera = json.loads(r.stdout)["busqueda_id"]
+        self.assertIn("ya conocidos VAC-0001", self.leer("busquedas", "--id", tercera)[0]["comparacion_anterior"])
+
+    def test_la_tabla_resumen_muestra_la_empresa_literal_y_las_que_les_falta_el_detalle(self):
+        anuncios = tarjetas(j101=("Analista de datos", {"empresa": "Empresa confidencial", "publicada": hace(3)}),
+                            j105=("Analista de datos Sr.", {"sueldo": "$30,000 Mensual", "detalle": "abuso"}),
+                            j106=("Becario analista de datos", {"empresa": "Empresa Literal C", "detalle": "abuso"}))
+        r = self.importar(self.buscar(anuncios, codigo_esperado=1),
+                          self.decisiones(pendientes="BOL-01: [FALLO] señal anti-bot en el detalle"))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ids = {v["job_id"]: v["vacante_id"] for v in self.leer("vacantes")}
+        observacion = {o["vacante_id"]: o["observacion_id"] for o in self.leer("observaciones")}
+        evaluacion = {"fecha_evaluacion": hoy().isoformat(), "version_perfil": "1.0", "version_evaluacion": "1.5"}
+        # 101 se evaluó con su detalle; 106 se excluyó por su tarjeta («Tipo de puesto», 08), sin detalle.
+        self.ok("agregar", entrada={
+            "evaluaciones": [
+                {"evaluacion_id": "EVA-0001", "vacante_id": ids["101"], "observacion_id": observacion[ids["101"]],
+                 "condiciones": "Sin exclusiones", "condiciones_detalle": "Sueldo", "cobertura": "2/2",
+                 "nucleos": "Núcleo A: Directa | Núcleo B: Directa", **evaluacion},
+                {"evaluacion_id": "EVA-0002", "vacante_id": ids["106"], "observacion_id": observacion[ids["106"]],
+                 "condiciones": "Excluida", "condiciones_detalle": "Tipo de puesto: «Becario»", **evaluacion}],
+            "informes": [{"busqueda_id": "BUS-0001", "vacante_id": ids["101"], "evaluacion_id": "EVA-0001"},
+                         {"busqueda_id": "BUS-0001", "vacante_id": ids["106"], "evaluacion_id": "EVA-0002"}]})
+        tabla = self.ok("informe", "BUS-0001")
+        self.assertEqual([(f["vacante_id"], f["empresa"], f["encaje"], f["alertas"]) for f in tabla], [
+            (ids["101"], "Empresa confidencial", "★★★★★ · 2/2", "—"),
+            (ids["105"], "Empresa confidencial", "Falta el detalle",
+             "Sueldo: $30,000 Mensual · Región: Dentro"),
+            (ids["106"], "Empresa Literal C", "—", "Excluida: Tipo de puesto: «Becario»")])
+        self.assertEqual(tabla[1]["evaluacion_id"], "")
+        self.assertEqual(tabla[1]["vacante"], "105 — Analista de datos Sr.")
+        # La instantánea las trae con la misma forma.
+        informes = (self.dir / "instantanea" / "informes.md").read_text(encoding="utf-8")
+        self.assertIn("| Falta el detalle | ", informes)
+        vacantes = (self.dir / "instantanea" / "vacantes.md").read_text(encoding="utf-8")
+        self.assertIn(f"## {ids['101']} · 101 · BOL-01 · «Analista de datos»", vacantes)
+        self.assertIn("- **empresa_literal:** Empresa confidencial", vacantes)
 
 
 if __name__ == "__main__":

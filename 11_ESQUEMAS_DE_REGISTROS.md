@@ -1,6 +1,6 @@
 # 11 — Esquema de registros
 
-**Versión:** 1.8 — 2026-11-22 — `Indeterminada` incluye la localidad escrita sin su división en un grupo de división completa (REG-CAMPOS).
+**Versión:** 1.9 — 2026-11-22 — Vacantes de bolsas de empleo: `bolsa_id`, `empresa_literal` y `sueldo_literal` en `vacantes`, `Bolsa de empleo` en `tipo_fuente`, su identidad (REG-IDENTIDAD), su rendimiento en `busquedas` y las que les falta el detalle en `informes` (REG-CAMPOS, REG-ESQUEMA, REG-LOCAL).
 **Estado:** esquema de la plantilla. El paso 8 de `/configurar` (Registros) crea el archivo de registros desde el bloque de REG-ESQUEMA.
 
 ## Responsabilidad
@@ -55,7 +55,7 @@ Definir campos, relaciones, autoridades y versionado de los datos de búsquedas,
 
 | Pestaña | Unidad | Columnas |
 | --- | --- | --- |
-| `vacantes` | Una requisición identificada | vacante_id, empresa_id, job_id, titulo, url_oficial, ubicacion_literal, modalidad_literal, region_relacionada, fecha_publicacion, primera_deteccion, ultima_observacion_id, duplicado_de |
+| `vacantes` | Una requisición identificada | vacante_id, empresa_id, bolsa_id, empresa_literal, job_id, titulo, url_oficial, ubicacion_literal, modalidad_literal, sueldo_literal, region_relacionada, fecha_publicacion, primera_deteccion, ultima_observacion_id, duplicado_de |
 | `observaciones` | Comprobación fechada de una vacante | observacion_id, vacante_id, busqueda_id, fecha_verificacion, estado_vigencia, motivo, url_fuente, tipo_fuente |
 | `habilidades_vacante` | Habilidad o requisito en una descripción observada | habilidad_observacion_id, vacante_id, observacion_id, habilidad_literal, habilidad_normalizada, tipo_requisito |
 | `documentos` | Un archivo generado | documento_id, vacante_id, fecha_generacion, version_perfil, version_cv_base, idioma, formato, archivo, revision_visual, texto_extraible, notas |
@@ -70,12 +70,15 @@ Las tablas de cada pestaña explican sus columnas; el bloque de REG-ESQUEMA las 
 | Columna | Tipo | Oblig. | Valores y reglas |
 | --- | --- | --- | --- |
 | vacante_id | ID | Sí | `VAC-0001`, único |
-| empresa_id | Lista cerrada | Sí | IDs del catálogo de 06 (CAT-EMPRESAS). Se amplía cuando 06 agregue uno |
+| empresa_id | Lista cerrada | Sí, salvo con `bolsa_id` | IDs del catálogo de 06 (CAT-EMPRESAS). Se amplía cuando 06 agregue uno. Vacía en una vacante de bolsa |
+| bolsa_id | Lista cerrada | Si existe | IDs del catálogo de bolsas de 06 (CAT-BOLSAS), en una vacante vista en una bolsa de empleo. Cada fila lleva exactamente una de `empresa_id` o `bolsa_id` |
+| empresa_literal | Texto | Si existe | En una vacante de bolsa, la empresa tal como la publica la bolsa, también «Empresa confidencial»; vacía en las de una empresa del catálogo |
 | job_id | Texto | Si existe | Literal, sin normalizar; `No publicado` si la fuente no lo muestra |
 | titulo | Texto | Sí | Literal, en el idioma del anuncio |
-| url_oficial | URL | Si existe | Solo del sitio de la empresa; las URL de agregadores van en `observaciones` |
+| url_oficial | URL | Si existe | Del sitio de la empresa o, en una vacante de bolsa, su anuncio en la bolsa; las URL de agregadores van en `observaciones` |
 | ubicacion_literal | Multivalor | Si existe | Literal; `No publicado` si la fuente no la muestra |
 | modalidad_literal | Texto | Si existe | Literal («Hybrid», «Remote»); `No publicado` si no aparece. No confirma que se pueda trabajar desde la residencia del titular: eso se evalúa en 08 |
+| sueldo_literal | Texto | Si existe | Literal, como lo publica la fuente («$20,000 - $25,000 Mensual», «Sueldo no mostrado por la empresa»); sin convertirlo en monto. Lo compara el agente con 04 (08/EVAL-CONDICIONES) |
 | region_relacionada | Lista cerrada | Sí | `Dentro` / `Incluye` / `Fuera` / `Indeterminada`, respecto de la región de 04 (`localidades` de PREF-UBICACION) |
 | fecha_publicacion | Fecha | Si existe | Solo una fecha absoluta mostrada por la fuente; «hace 3 días» no la llena |
 | primera_deteccion | Fecha | Sí | Fecha de su primera observación; no cambia |
@@ -89,7 +92,7 @@ Las tablas de cada pestaña explican sus columnas; el bloque de REG-ESQUEMA las 
 - **Fuera:** ninguna está dentro ni puede estarlo.
 - **Indeterminada:** ninguna está dentro, pero alguna puede estarlo, porque nombra una división de 04 sin una localidad aceptada, solo el país, nada más concreto que «Remote» o «Multiple locations» o, en un grupo de división completa, una localidad de su país sin la división; o la ubicación no está publicada.
 
-**Empresa:** para registrar una vacante, su empresa necesita un EMP-ID en 06, aunque solo esté como «explorada». La herramienta lee el catálogo de 06, así que el ID vale desde que se agrega ahí.
+**Empresa o bolsa:** para registrar una vacante, su empresa necesita un EMP-ID en 06, aunque solo esté como «explorada». La herramienta lee el catálogo de 06, así que el ID vale desde que se agrega ahí. Una vacante vista en una bolsa de empleo lleva en su lugar el BOL-ID de la bolsa (CAT-BOLSAS) y la empresa literal, porque su empresa puede no estar en el catálogo o no conocerse.
 
 ### `observaciones`
 
@@ -102,7 +105,7 @@ Las tablas de cada pestaña explican sus columnas; el bloque de REG-ESQUEMA las 
 | estado_vigencia | Lista cerrada | Sí | `Confirmada abierta` / `No verificable` / `Cerrada` |
 | motivo | Texto | Sí | Lo que se vio: botón de postular activo, mensaje de cierre, error 404… Si la fuente muestra un texto breve pertinente, se cita literal, p. ej. «This job is no longer accepting applications» |
 | url_fuente | URL | Si existe | URL exacta que se consultó |
-| tipo_fuente | Lista cerrada | Sí | `Oficial` / `Agregador` / `Buscador` / `Aportada por el titular` |
+| tipo_fuente | Lista cerrada | Sí | `Oficial` / `Bolsa de empleo` / `Agregador` / `Buscador` / `Aportada por el titular`. `Bolsa de empleo`: el listado o el anuncio de una bolsa de 06/CAT-BOLSAS, que es fuente oficial para sus vacantes (07/BUS-VIGENCIA) |
 
 La observación es la evidencia fechada (REG-DECISIONES). La evidencia mínima de cada estado se define en 07.
 
@@ -172,8 +175,8 @@ La observación es la evidencia fechada (REG-DECISIONES). La evidencia mínima d
 | fecha_hora | Fecha | Sí | Hora opcional, solo si se conoce |
 | solicitud_alcance | Texto | Sí | Encargo, empresas y región |
 | recursos_versiones | Multivalor | Sí | P. ej. `07 v1.0 \| 06/EMP-<ID> v1.0 \| 04 v1.1` |
-| fuentes_consultas_filtros | Multivalor | Sí | Sitio, consulta y filtros |
-| cobertura_limitaciones | Texto | Sí | Páginas revisadas, totales mostrados y límites |
+| fuentes_consultas_filtros | Multivalor | Sí | Sitio, consulta y filtros. Una bolsa nombra los términos de búsqueda que usó: `términos: «término», «término»` |
+| cobertura_limitaciones | Texto | Sí | Páginas revisadas, totales mostrados y límites. Una bolsa agrega sus títulos y el rendimiento de cada término, en una forma fija que la herramienta vuelve a leer: `títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas, E encajan, D dudosas, C candidatas; «término»: …`, siempre con esas palabras, aunque un número sea 1 (07/BUS-REGISTRO) |
 | no_revisado_pendientes | Texto | Sí | `Ninguno` si no queda nada |
 | comparacion_anterior | Texto | Sí | `Sin búsqueda comparable` la primera vez. «No observada esta vez» no significa «cerrada» |
 
@@ -186,7 +189,7 @@ La tabla resumen de cada búsqueda (08/EVAL-INFORME), para consultarla sin rehac
 | busqueda_id | ID | Sí | Debe existir en `busquedas` |
 | vacante_id | ID | Sí | Debe existir en `vacantes`; una sola vez por búsqueda |
 | evaluacion_id | ID | Sí | La evaluación que muestra la tabla; debe ser de esa vacante |
-| empresa | Calculada | — | `empresa_id` sin el prefijo `EMP-` |
+| empresa | Calculada | — | `empresa_id` sin el prefijo `EMP-`; en una vacante de bolsa, `empresa_literal` |
 | vacante | Calculada | — | `Job ID — título`, con liga a `url_oficial`; `sin Job ID` si es `No publicado` o falta |
 | encaje | Calculada | — | `encaje · cobertura`; `—` si está excluida |
 | antiguedad | Calculada | — | 08/EVAL-ANTIGUEDAD con la fecha de hoy: `N d` desde la más antigua entre `fecha_publicacion` y `primera_deteccion`; `≥ N d` si solo hay `primera_deteccion`; `—` si no tiene fecha y se detectó hoy; `· antigua` desde el umbral de 08/EVAL-ACUERDOS (20 días por defecto) |
@@ -194,6 +197,7 @@ La tabla resumen de cada búsqueda (08/EVAL-INFORME), para consultarla sin rehac
 | url_oficial | Calculada | — | La de `vacantes`, aparte, porque `informe` da `vacante` como texto, sin su liga |
 
 - **Una fila por vacante evaluada de la tabla,** incluidas las excluidas, en cualquier orden: `informe` las ordena como 08/EVAL-INFORME. No tiene ID propio: cada fila es la pareja `busqueda_id` + `vacante_id`. Las vacantes no evaluadas no tienen fila, y la línea «N sin relación…» no se guarda.
+- **Falta el detalle:** `informe` agrega, sin guardarla, una fila por cada vacante de bolsa observada en la búsqueda, y no `Cerrada` en esa observación, que no tiene ninguna evaluación ni fila en `informes`, salvo las absorbidas por una fusión. Lleva `evaluacion_id` vacía, `encaje` = `Falta el detalle` y, en `alertas`, lo que se sabe por su tarjeta: `Sueldo: …`, `Región: …` y `Modalidad: …`, cuando tienen valor. Va entre las evaluadas y las excluidas. Una excluida desde su tarjeta tiene su evaluación y sale como excluida (08/EVAL-FLUJO).
 - **Referencias que faltan:** si la vacante o la evaluación de una fila no existe, sus columnas calculadas dicen `#N/A`.
 - **Umbral de «antigua»:** la herramienta lo lee de la línea «Marca «antigua»» de 08/EVAL-ACUERDOS, donde el titular lo cambia; sin esa línea, usa 20 días.
 - **Un solo cálculo:** la lógica de estas columnas vive solo en `herramientas/registros.py`. Un cambio de estas reglas se hace en la herramienta, en su prueba y en esta tabla.
@@ -202,7 +206,7 @@ La tabla resumen de cada búsqueda (08/EVAL-INFORME), para consultarla sin rehac
 
 ### Relaciones
 
-- `vacantes.empresa_id` → catálogo de 06.
+- `vacantes.empresa_id` → catálogo de 06; `vacantes.bolsa_id` → catálogo de bolsas de 06.
 - `vacantes.ultima_observacion_id` → `observaciones`.
 - `observaciones.vacante_id` → `vacantes`; `observaciones.busqueda_id` → `busquedas`.
 - `habilidades_vacante.observacion_id` → `observaciones`; su `vacante_id` coincide con el de la observación.
@@ -219,6 +223,8 @@ La tabla resumen de cada búsqueda (08/EVAL-INFORME), para consultarla sin rehac
 - Si la misma requisición aparece en varias URL (portal, plataforma de reclutamiento, agregador), es una sola vacante con varias observaciones.
 - Si el título es igual pero el Job ID es distinto, son vacantes separadas.
 - Los Job IDs se comparan literalmente. Si solo difiere el formato (`R12345` frente a `R-12345`), es un posible duplicado y no se fusiona automáticamente.
+
+**Vacante de bolsa:** la fuente es la bolsa en lugar de la empresa. Su identidad es `bolsa_id` + `job_id` (el ID de la vacante en la bolsa), y sin Job ID, `bolsa_id` + `url_oficial`. Una vacante de bolsa y la misma en el portal de su empresa tienen identidades distintas, así que son dos filas: si se confirma que son la misma requisición, se fusionan como cualquier duplicado (abajo). Después, cuando una búsqueda vuelve a ver la fila absorbida, `importar` suma su observación a la canónica y no le cambia los campos, que son los del otro anuncio.
 
 **Sin Job ID:** la identidad provisional es `empresa_id` + `url_oficial`.
 
@@ -258,12 +264,15 @@ El esquema completo en la forma que lee una herramienta: pestañas, columnas, li
       "nombre": "vacantes",
       "columnas": [
         {"nombre": "vacante_id", "tipo": "id", "patron": "VAC-\\d{4,}", "oblig": "si"},
-        {"nombre": "empresa_id", "tipo": "lista", "valores_de": "06/CAT-EMPRESAS", "oblig": "si"},
+        {"nombre": "empresa_id", "tipo": "lista", "valores_de": "06/CAT-EMPRESAS", "oblig": "si", "o_bien": "bolsa_id"},
+        {"nombre": "bolsa_id", "tipo": "lista", "valores_de": "06/CAT-BOLSAS", "oblig": "si_existe"},
+        {"nombre": "empresa_literal", "tipo": "texto", "oblig": "si_existe"},
         {"nombre": "job_id", "tipo": "texto", "oblig": "si_existe"},
         {"nombre": "titulo", "tipo": "texto", "oblig": "si"},
         {"nombre": "url_oficial", "tipo": "url", "oblig": "si_existe"},
         {"nombre": "ubicacion_literal", "tipo": "multivalor", "oblig": "si_existe"},
         {"nombre": "modalidad_literal", "tipo": "texto", "oblig": "si_existe"},
+        {"nombre": "sueldo_literal", "tipo": "texto", "oblig": "si_existe"},
         {"nombre": "region_relacionada", "tipo": "lista", "valores": ["Dentro", "Incluye", "Fuera", "Indeterminada"], "oblig": "si"},
         {"nombre": "fecha_publicacion", "tipo": "fecha", "oblig": "si_existe"},
         {"nombre": "primera_deteccion", "tipo": "fecha", "oblig": "si"},
@@ -281,7 +290,7 @@ El esquema completo en la forma que lee una herramienta: pestañas, columnas, li
         {"nombre": "estado_vigencia", "tipo": "lista", "valores": ["Confirmada abierta", "No verificable", "Cerrada"], "oblig": "si"},
         {"nombre": "motivo", "tipo": "texto", "oblig": "si"},
         {"nombre": "url_fuente", "tipo": "url", "oblig": "si_existe"},
-        {"nombre": "tipo_fuente", "tipo": "lista", "valores": ["Oficial", "Agregador", "Buscador", "Aportada por el titular"], "oblig": "si"}
+        {"nombre": "tipo_fuente", "tipo": "lista", "valores": ["Oficial", "Bolsa de empleo", "Agregador", "Buscador", "Aportada por el titular"], "oblig": "si"}
       ]
     },
     {
@@ -373,7 +382,8 @@ El esquema completo en la forma que lee una herramienta: pestañas, columnas, li
 | `columnas[].hora` | En `fecha`: `true` si admite la hora `HH:MM` |
 | `columnas[].valores` | En `lista`: los valores aceptados |
 | `columnas[].categorias` | En `multivalor`: cada valor es `Nombre: Categoría`, con la categoría entre estas |
-| `columnas[].valores_de` | En `lista`, en lugar de `valores`: de dónde salen. `06/CAT-EMPRESAS` son los IDs del catálogo de 06 |
+| `columnas[].valores_de` | En `lista`, en lugar de `valores`: de dónde salen. `06/CAT-EMPRESAS` son los IDs del catálogo de 06, y `06/CAT-BOLSAS`, los de su catálogo de bolsas |
+| `columnas[].o_bien` | Con `oblig` `si`: exactamente una de esta columna y la nombrada tiene valor, como `empresa_id` o `bolsa_id` en una vacante |
 | `columnas[].en` | En `ref`: la pestaña donde el ID debe existir, en su columna A |
 | `columnas[].misma_vacante` | En `ref`: `true` si la fila citada tiene el mismo `vacante_id` que esta fila |
 | `columnas[].unica_con` | En `ref`: la pareja de esta columna con la nombrada no se repite en la pestaña |
@@ -391,14 +401,14 @@ En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y 
 
 - **Creación:** `crear`, desde el bloque, en el paso 8 de `/configurar`. Lleva las pestañas y columnas del bloque, salvo las calculadas de `evaluaciones` e `informes`, que no se guardan. La validación está en la herramienta, y sus pruebas automáticas la cubren.
 - **Escritura:** tres órdenes, que comprueban cada fila que escriben contra el bloque: tipos, listas, la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias. Rechazan una columna calculada, como `encaje` de `evaluaciones`. Si una fila no cumple, no escriben ninguna y dicen todos los errores. Solo comprueban las filas que escriben: un cambio no vuelve a comprobar las filas que citan a la cambiada. Las referencias se resuelven contra lo ya registrado más lo de la misma llamada.
-  - `importar` registra una búsqueda desde la salida JSON de `buscar.py` y un archivo de decisiones (07/BUS-REGISTRO), sin que el agente genere sus filas. Escribe la fila de `busquedas`, con la cobertura y la comparación con la última búsqueda comparable, las vacantes nuevas y una observación por vacante listada. En las ya registradas, que identifica por REG-IDENTIDAD, actualiza los campos que cambiaron y `ultima_observacion_id`. No escribe nada si queda una línea «revisar» sin decisión o un `[FALLO]` sin declarar. Devuelve el `busqueda_id` y una lista compacta de las vacantes (ID, título y departamento).
+  - `importar` registra una búsqueda desde la salida JSON de `buscar.py` y un archivo de decisiones (07/BUS-REGISTRO), sin que el agente genere sus filas. Escribe la fila de `busquedas`, con la cobertura y la comparación con la última búsqueda comparable, las vacantes nuevas y una observación por vacante listada. En las ya registradas, que identifica por REG-IDENTIDAD, actualiza los campos que cambiaron y `ultima_observacion_id`. De una bolsa de empleo registra las vacantes que encajan y las dudosas que se decidieron conservar; el ruido no llega. No escribe nada si queda una línea «revisar» sin decisión o un `[FALLO]` sin declarar. Devuelve el `busqueda_id` y una lista compacta de las vacantes (ID, título y departamento).
   - `agregar` escribe filas nuevas de varias pestañas a la vez: en una búsqueda, los requisitos, las evaluaciones y `informes`, que piden juicio.
   - `actualizar` cambia columnas de filas ya registradas, por su ID.
 - **Migración:** `migrar` pasa a esta versión una hoja de Google descargada como `.xlsx` (Archivo → Descargar → Microsoft Excel) o el archivo de registros de una copia 1.x, sin pasar las filas por el agente (ADR 0006).
-  - **Entrada:** lee los valores de cada pestaña por el nombre de sus columnas. Quita las calculadas, como las de `informes` o el `encaje` que guardaban las `evaluaciones` de una versión anterior, y las que el esquema ya no tiene, como `canal` de `busquedas`. Se detiene si falta una pestaña o columna del bloque o sobra una que no conoce.
+  - **Entrada:** lee los valores de cada pestaña por el nombre de sus columnas. Quita las calculadas, como las de `informes` o el `encaje` que guardaban las `evaluaciones` de una versión anterior, y las que el esquema ya no tiene, como `canal` de `busquedas`. Agrega vacías las que un archivo anterior a ellas no tiene: `bolsa_id`, `empresa_literal` y `sueldo_literal` de `vacantes`. Se detiene si falta otra pestaña o columna del bloque o sobra una que no conoce.
   - **Comprobación:** cada fila, con las mismas reglas que `agregar`. Con un solo error no escribe nada y dice todos, con pestaña, fila de la hoja y columna.
   - **Correcciones:** `--correcciones` recibe un JSON `{pestaña: {ID o "fila N": {columna: texto}}}`, que se aplica antes de comprobar. Así solo las filas con error pasan por el agente, que le propone al titular cada corrección. En `informes`, que no tiene ID propio, o con un ID repetido, la fila se nombra por su número.
-  - **Salida:** el archivo completo y, por pestaña, cuántas filas tenía la entrada y cuántas tiene el archivo escrito, para que el titular compare. También dice las columnas quitadas, cuántas filas corrigió y las pestañas de la entrada que no son del esquema.
+  - **Salida:** el archivo completo y, por pestaña, cuántas filas tenía la entrada y cuántas tiene el archivo escrito, para que el titular compare. También dice las columnas quitadas y agregadas, cuántas filas corrigió y las pestañas de la entrada que no son del esquema.
   - **Sin sobrescribir:** no reemplaza un archivo de registros que ya tenga filas, salvo cuando la entrada es ese mismo archivo, de una versión anterior. Solo lee la entrada: la hoja de Drive queda intacta, y el titular decide si la borra.
 - **Instantánea:** las órdenes de escritura y `migrar` la regeneran después de escribir (REG-INSTANTANEA); si rechazan la entrada, no la tocan. `instantanea` la regenera a pedido, por ejemplo si alguien la borró o la editó.
 - **Lectura:** `leer` da una pestaña completa o las filas de unos IDs; en `evaluaciones`, con su `encaje` calculado con los pesos de 08/EVAL-ACUERDOS. `informe` da la tabla resumen de una búsqueda: sus filas de `informes`, en el orden de 08/EVAL-INFORME, con las columnas calculadas de REG-CAMPOS, a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
@@ -414,7 +424,7 @@ En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y 
 La copia en Markdown del archivo de registros que lee el canal Web: la carpeta `instantanea/` de la copia, con dos vistas. Es una vista, no una autoridad: manda el archivo.
 
 - **`informes.md`:** las últimas 10 búsquedas, la más reciente primero. Cada una lleva su fila de `busquedas` (alcance, cobertura, pendientes y comparación) y su tabla resumen con el formato de 08/EVAL-INFORME, con las columnas calculadas de `informes`.
-- **`vacantes.md`:** una sección por cada vacante con evaluación cuya última observación no es `Cerrada`, salvo las filas absorbidas por una fusión (`duplicado_de`, REG-IDENTIDAD). El encabezado lleva el `VAC-` ID, el Job ID, el `empresa_id` y el título, para encontrarla aunque solo llegue un fragmento. Debajo van sus campos de `vacantes` y su antigüedad, su última observación, su última evaluación registrada, con su `encaje` calculado, y los requisitos de la observación evaluada. Los requisitos van agrupados por frase literal, con sus términos normalizados y su tipo, así que «Python or R» sigue siendo una alternativa.
+- **`vacantes.md`:** una sección por cada vacante con evaluación cuya última observación no es `Cerrada`, salvo las filas absorbidas por una fusión (`duplicado_de`, REG-IDENTIDAD). El encabezado lleva el `VAC-` ID, el Job ID, el `empresa_id` (o el `bolsa_id` de una vacante de bolsa) y el título, para encontrarla aunque solo llegue un fragmento. Debajo van sus campos de `vacantes` y su antigüedad, su última observación, su última evaluación registrada, con su `encaje` calculado, y los requisitos de la observación evaluada. Los requisitos van agrupados por frase literal, con sus términos normalizados y su tipo, así que «Python or R» sigue siendo una alternativa.
 - **Qué no trae:** las vacantes sin evaluación, el historial de observaciones y `documentos`.
 - **Fecha:** el encabezado de cada vista lleva la fecha y hora de exportación, en la zona horaria de 04. La antigüedad está calculada a esa fecha, no a la de la lectura.
 - **Cuándo se regenera:** completa, cada vez que la herramienta escribe en el archivo (REG-LOCAL), y a pedido con `instantanea`. Se arma antes de guardar el archivo: si no se puede, como cuando falta la zona horaria de 04, la herramienta tampoco escribe las filas.
