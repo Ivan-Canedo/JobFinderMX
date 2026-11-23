@@ -2389,7 +2389,8 @@ class DetalleHastaLaSenal(ConOccFalso):
         self.assertIn("detalle leído", v["motivo"])
         # ValidThrough no es vigencia: no llega a la salida
         self.assertNotIn("2027-01-19", json.dumps(salida))
-        self.assertEqual(r["detalle"], {"candidatas": 1, "pedidos": 1, "leidos": 1, "bloqueo": None})
+        self.assertEqual(r["detalle"], {"candidatas": 1, "anteriores": 0, "pedidos": 1, "leidos": 1, "bloqueo": None,
+                                        "freno": None})
         self.assertIn("[OK] BOL-01: ", errores)
 
     def test_un_sueldo_0_0_en_el_detalle_es_no_publicado(self):
@@ -2421,7 +2422,8 @@ class DetalleHastaLaSenal(ConOccFalso):
         self.assertIn("404", vacantes["301"]["motivo"])
         self.assertEqual(vacantes["301"]["estado_detalle"], "no verificable")
         self.assertEqual(vacantes["302"]["estado_detalle"], "leido")
-        self.assertEqual(r["detalle"], {"candidatas": 2, "pedidos": 2, "leidos": 1, "bloqueo": None})
+        self.assertEqual(r["detalle"], {"candidatas": 2, "anteriores": 0, "pedidos": 2, "leidos": 1, "bloqueo": None,
+                                        "freno": None})
         self.assertIn("revisar vigencia: 301 ", errores)
         self.assertNotIn("[FALLO]", errores)
 
@@ -2455,7 +2457,7 @@ class DetalleHastaLaSenal(ConOccFalso):
         self.assertEqual({v["job_id"]: v["estado_detalle"] for v in r["vacantes"]},
                          {"501": "leido", "502": "pendiente", "503": "pendiente"})
         self.assertEqual((r["unicos"], r["total_reportado"]), (3, 3))
-        self.assertEqual(r["detalle"], {"candidatas": 3, "pedidos": 2, "leidos": 1,
+        self.assertEqual(r["detalle"], {"candidatas": 3, "anteriores": 0, "pedidos": 2, "leidos": 1, "freno": None,
                                         "bloqueo": {"en": "detalle", "peticion": 2, "tipo": "scraping abuse, HTTP 403",
                                                     "url": self.detalle_url("502")}})
         fallo = next(linea for linea in errores.splitlines() if linea.startswith("[FALLO] BOL-01: "))
@@ -2533,6 +2535,125 @@ class DetalleHastaLaSenal(ConOccFalso):
         self.assertGreater(len(occ.cabeceras), 3)
         for cabeceras in occ.cabeceras:
             self.assertFalse({"cookie", "authorization", "proxy-authorization"} & set(cabeceras), cabeceras)
+
+
+def estado_de_bolsas(copia, **bolsas):
+    """El JSON de estado que da `registros.py estado-bolsas` para la copia: {BOL_ID: (con detalle o evaluación,
+    pendientes, bloqueos seguidos)}."""
+    return {"formato": "chambakit-estado-bolsas", "version": 1, "copia": os.path.realpath(copia),
+            "generado": "2026-11-22 10:00",
+            "bolsas": {bid.replace("_", "-"): {"con_detalle_o_evaluacion": list(con), "pendientes": list(pendientes),
+                                               "bloqueos_seguidos": bloqueos}
+                       for bid, (con, pendientes, bloqueos) in bolsas.items()}}
+
+
+class ReanudacionYFreno(ConOccFalso):
+    """--estado: el detalle se retoma con las que siguen sin él, y el freno tras dos bloqueos seguidos (ADR 0010)."""
+
+    EN_A1 = DetalleHastaLaSenal.EN_A1
+    TERMINOS = DetalleHastaLaSenal.TERMINOS
+    anuncio = DetalleHastaLaSenal.anuncio
+    CONSULTA = DetalleHastaLaSenal.CONSULTA
+
+    def anuncios(self):
+        return [self.anuncio("101", cuando="Hoy"), self.anuncio("102", cuando="Ayer"),
+                self.anuncio("103", cuando="Hace 2 días"), self.anuncio("104", titulo="Ejecutivo de ventas")]
+
+    def con_estado(self, **bolsas):
+        ruta = self.dir / "estado.json"
+        ruta.write_text(json.dumps(estado_de_bolsas(self.dir, **bolsas), ensure_ascii=False), encoding="utf-8")
+        return ruta
+
+    def test_con_estado_solo_pide_el_detalle_de_las_que_siguen_sin_el(self):
+        occ = OccFalso(self.anuncios())
+        estado = self.con_estado(BOL_01=(["101", "999"], ["102", "103"], 0))
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, "--estado", str(estado))
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, ["102", "103"])
+        vacantes = {v["job_id"]: v for v in r["vacantes"]}
+        # La que ya tiene detalle se entrega con lo de su tarjeta, sin pedirlo
+        self.assertEqual(vacantes["101"]["estado_detalle"], "anterior")
+        self.assertIn("búsqueda anterior", vacantes["101"]["motivo"])
+        self.assertIsNone(vacantes["101"]["descripcion"])
+        self.assertEqual(r["detalle"], {"candidatas": 2, "anteriores": 1, "pedidos": 2, "leidos": 2, "bloqueo": None,
+                                        "freno": None})
+        # El rendimiento sigue contando lo listado
+        self.assertEqual(r["rendimiento"]["analista de datos"]["candidatas"], 3)
+        self.assertIn("detalle: 2 leídos de 2 candidatas (1 con detalle o evaluación de búsquedas anteriores)",
+                      errores)
+        self.assertNotIn("revisar vigencia: 101", errores)
+
+    def test_sin_estado_pide_el_de_todas_las_candidatas(self):
+        occ = OccFalso(self.anuncios())
+        salida, _ = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS)
+        self.assertEqual(occ.detalles, ["101", "102", "103"])
+        self.assertEqual(salida["bolsas"][0]["detalle"]["anteriores"], 0)
+
+    def test_con_dos_bloqueos_seguidos_no_pide_detalles_pero_lee_el_listado(self):
+        occ = OccFalso(self.anuncios())
+        estado = self.con_estado(BOL_01=(["101"], ["102", "103"], 2))
+        salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, "--estado", str(estado))
+        r = salida["bolsas"][0]
+        self.assertEqual(occ.detalles, [])
+        self.assertEqual(occ.listados, [("analista-de-datos", "ciudad-a1", 1), ("analista-de-datos", "ciudad-a1", 2)])
+        self.assertEqual((r["unicos"], r["total_reportado"]), (4, 4))
+        self.assertEqual({v["job_id"]: v["estado_detalle"] for v in r["vacantes"]},
+                         {"101": "anterior", "102": "pendiente", "103": "pendiente"})
+        self.assertEqual((r["detalle"]["pedidos"], r["detalle"]["candidatas"]), (0, 2))
+        self.assertIn("2 búsquedas seguidas", r["detalle"]["freno"])
+        self.assertNotIn("error", r)
+        linea = next(linea for linea in errores.splitlines() if linea.startswith("[OK] BOL-01: "))
+        for texto in ("freno activo", "ninguno pedido de 2 pendientes", "2 búsquedas seguidas", "--sin-freno"):
+            self.assertIn(texto, linea)
+
+    def test_con_un_bloqueo_o_con_sin_freno_si_pide_los_pendientes(self):
+        for bloqueos, argumentos in ((1, ()), (3, ("--sin-freno",))):
+            with self.subTest(bloqueos=bloqueos):
+                occ = OccFalso(self.anuncios())
+                estado = self.con_estado(BOL_01=(["101"], ["102", "103"], bloqueos))
+                salida, errores = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, "--estado", str(estado),
+                                                    *argumentos)
+                self.assertEqual(occ.detalles, ["102", "103"])
+                self.assertIsNone(salida["bolsas"][0]["detalle"]["freno"])
+                self.assertNotIn("freno activo", errores)
+
+    def test_una_bolsa_que_el_estado_no_trae_pide_todas_sus_candidatas(self):
+        occ = OccFalso(self.anuncios())
+        estado = self.con_estado(BOL_02=(["101"], [], 2))
+        salida, _ = self.buscar_bolsa(self.EN_A1, occ, self.TERMINOS, "--estado", str(estado))
+        self.assertEqual(occ.detalles, ["101", "102", "103"])
+
+    def test_un_estado_mal_formado_de_otra_copia_o_que_falta_falla_sin_buscar(self):
+        self.escribir(modulo_04(self.EN_A1), modulo_06({}, {"BOL-01": self.BOLSA}), modulo_05(self.TERMINOS))
+        bueno = estado_de_bolsas(self.dir, BOL_01=(["101"], [], 0))
+        otra = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, otra)
+        casos = {
+            "no es JSON": ("{", "no es JSON válido"),
+            "otro formato": ({"bolsas": {}}, "registros.py estado-bolsas"),
+            "otra versión": (bueno | {"version": 2}, "versión"),
+            "otra copia": (estado_de_bolsas(otra, BOL_01=([], [], 0)), "otra copia"),
+            "bloqueos no numéricos": (bueno | {"bolsas": {"BOL-01": bueno["bolsas"]["BOL-01"]
+                                                          | {"bloqueos_seguidos": "2"}}}, "BOL-01"),
+            "IDs que no son texto": (bueno | {"bolsas": {"BOL-01": bueno["bolsas"]["BOL-01"]
+                                                         | {"pendientes": [101]}}}, "BOL-01"),
+        }
+        for caso, (contenido, texto) in casos.items():
+            with self.subTest(caso):
+                ruta = self.dir / "estado.json"
+                ruta.write_text(contenido if isinstance(contenido, str) else json.dumps(contenido), encoding="utf-8")
+                r = self.correr("--estado", str(ruta))
+                self.assertEqual(r.returncode, 2, r.stderr)
+                self.assertIn("--estado", r.stderr)
+                self.assertIn(texto, r.stderr)
+                self.assertEqual(r.stdout, "")
+        r = self.correr("--estado", str(self.dir / "no-existe.json"))
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("no-existe.json", r.stderr)
+        r = self.correr("--sin-freno")
+        self.assertEqual(r.returncode, 2)
+        self.assertIn("--sin-freno", r.stderr)
+        self.assertIn("--estado", r.stderr)
 
 
 if __name__ == "__main__":

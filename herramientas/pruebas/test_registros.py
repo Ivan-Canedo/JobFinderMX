@@ -1246,8 +1246,8 @@ PRIMERA_OCC = tarjetas(j101=("Analista de datos", {"empresa": "Empresa confidenc
                        j103="Analista Comercial (Datos)", j104="Ejecutivo de ventas")
 
 
-class ImportarBolsa(CopiaFicticia):
-    """importar registra las vacantes de una bolsa de empleo (07/BUS-REGISTRO, 11/REG-IDENTIDAD)."""
+class ConOccEnLaCopia(CopiaFicticia):
+    """Una copia con buscar.py y la bolsa BOL-01 en OCC falso, para importar sus búsquedas."""
 
     escribir = test_buscar.CopiaFicticia.escribir
     buscar_en_red = ConOccFalso.buscar_bolsa
@@ -1298,6 +1298,10 @@ class ImportarBolsa(CopiaFicticia):
         self.assertIn("No se escribió ninguna fila.", r.stderr)
         self.assertNotIn("Traceback", r.stderr)
 
+
+class ImportarBolsa(ConOccEnLaCopia):
+    """importar registra las vacantes de una bolsa de empleo (07/BUS-REGISTRO, 11/REG-IDENTIDAD)."""
+
     def test_registra_las_que_encajan_y_las_dudosas_conservadas_con_la_bolsa_como_fuente(self):
         res = self.importar_primera()
         self.assertEqual(res["vacantes"], ["VAC-0001 · Analista de datos · —",
@@ -1322,7 +1326,8 @@ class ImportarBolsa(CopiaFicticia):
         self.assertEqual(busqueda["cobertura_limitaciones"],
                          "BOL-01: 4 únicos de 4, completa; detalle leído en 2 de 2; títulos: 1 encajan, 2 dudosas "
                          "(1 conservadas), 1 ruido; rendimiento: «analista de datos»: 4 traídas, 1 encajan, 2 dudosas, "
-                         "3 candidatas")
+                         "3 candidatas; detalle de la bolsa: 3 candidatas, 0 anteriores, 3 pedidos, 3 leídos («101», "
+                         "«102», «103»), sin bloqueo")
         self.assertEqual(busqueda["comparacion_anterior"], "Sin búsqueda comparable")
 
     def test_la_segunda_importacion_reconoce_la_vacante_por_bolsa_y_job_id(self):
@@ -1454,6 +1459,115 @@ class ImportarBolsa(CopiaFicticia):
         vacantes = (self.dir / "instantanea" / "vacantes.md").read_text(encoding="utf-8")
         self.assertIn(f"## {ids['101']} · 101 · BOL-01 · «Analista de datos»", vacantes)
         self.assertIn("- **empresa_literal:** Empresa confidencial", vacantes)
+
+
+class ReanudacionDeBolsas(ConOccEnLaCopia):
+    """estado-bolsas y buscar.py --estado: la reanudación del detalle y el freno, por las dos líneas de comandos
+    (07/BUS-BOLSAS, ADR 0010)."""
+
+    BLOQUEADA = "BOL-01: [FALLO] señal anti-bot en el detalle"
+
+    def buscar_y_importar(self, anuncios, dia, *argumentos, codigo_esperado=0, pendientes="Ninguno"):
+        """Busca en OCC falso con esos argumentos de buscar.py e importa la salida con la fecha_hora del día dado, para
+        que cada búsqueda sea distinta. Devuelve OCC falso, para ver qué detalles se pidieron, y stderr del script."""
+        occ = OccFalso(anuncios)
+        salida, errores = self.buscar_en_red(EN_A1, occ, TERMINOS, "BOL-01", *argumentos,
+                                             codigo_esperado=codigo_esperado)
+        salida["fecha_hora"] = f"2026-11-{dia:02d} 10:00"
+        ruta = self.sesion / f"busqueda_{dia}.json"
+        ruta.write_text(json.dumps(salida, ensure_ascii=False), encoding="utf-8")
+        r = self.importar(ruta, self.decisiones(pendientes=pendientes))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return occ, errores
+
+    def estado(self):
+        """El estado de bolsas, en un archivo de la sesión: (su contenido, su ruta)."""
+        estado = self.ok("estado-bolsas")
+        ruta = self.sesion / "estado.json"
+        ruta.write_text(json.dumps(estado, ensure_ascii=False), encoding="utf-8")
+        return estado, ruta
+
+    def test_tras_un_bloqueo_en_el_segundo_detalle_la_siguiente_busqueda_pide_solo_los_pendientes(self):
+        anuncios = tarjetas(j501=("Analista de datos", {"cuando": "Hoy"}),
+                            j502=("Analista de datos Sr.", {"cuando": "Ayer", "detalle": "abuso"}),
+                            j503=("Analista de datos Jr.", {"cuando": "Hace 2 días"}))
+        self.buscar_y_importar(anuncios, 20, codigo_esperado=1, pendientes=self.BLOQUEADA)
+        [busqueda] = self.leer("busquedas")
+        self.assertIn("; detalle de la bolsa: 3 candidatas, 0 anteriores, 2 pedidos, 1 leídos («501»), bloqueo en el "
+                      "detalle, petición 2 (scraping abuse, HTTP 403)", busqueda["cobertura_limitaciones"])
+        estado, ruta = self.estado()
+        self.assertEqual(estado, {"formato": "chambakit-estado-bolsas", "version": 1,
+                                  "copia": str(self.dir.resolve()), "generado": estado["generado"],
+                                  "bolsas": {"BOL-01": {"con_detalle_o_evaluacion": ["501"],
+                                                        "pendientes": ["502", "503"], "bloqueos_seguidos": 0}}})
+
+        # El mismo día, ya sin bloqueo: solo los pendientes
+        del anuncios[1]["detalle"]
+        occ, errores = self.buscar_y_importar(anuncios, 21, "--estado", str(ruta))
+        self.assertEqual(occ.detalles, ["502", "503"])
+        self.assertIn("1 con detalle o evaluación de búsquedas anteriores", errores)
+        busqueda = self.leer("busquedas", "--id", "BUS-0002")[0]
+        self.assertIn("; detalle de la bolsa: 2 candidatas, 1 anteriores, 2 pedidos, 2 leídos («502», «503»), sin "
+                      "bloqueo", busqueda["cobertura_limitaciones"])
+        self.assertEqual(self.estado()[0]["bolsas"]["BOL-01"],
+                         {"con_detalle_o_evaluacion": ["501", "502", "503"], "pendientes": [], "bloqueos_seguidos": 0})
+
+    def test_una_vacante_evaluada_sin_detalle_no_queda_pendiente(self):
+        anuncios = tarjetas(j601=("Becario analista de datos", {"detalle": "abuso"}), j602="Analista de datos")
+        self.buscar_y_importar(anuncios, 20, codigo_esperado=1, pendientes=self.BLOQUEADA)
+        ids = {v["job_id"]: v["vacante_id"] for v in self.leer("vacantes")}
+        observacion = {o["vacante_id"]: o["observacion_id"] for o in self.leer("observaciones")}
+        # Excluida por su tarjeta («Tipo de puesto», 08), sin detalle
+        self.ok("agregar", entrada={"evaluaciones": [
+            {"evaluacion_id": "EVA-0001", "vacante_id": ids["601"], "observacion_id": observacion[ids["601"]],
+             "condiciones": "Excluida", "condiciones_detalle": "Tipo de puesto: «Becario»",
+             "fecha_evaluacion": "2026-11-20", "version_perfil": "1.0", "version_evaluacion": "1.5"}]})
+        self.assertEqual(self.estado()[0]["bolsas"]["BOL-01"],
+                         {"con_detalle_o_evaluacion": ["601"], "pendientes": ["602"], "bloqueos_seguidos": 1})
+
+    def test_dos_busquedas_seguidas_bloqueadas_en_su_primer_detalle_activan_el_freno(self):
+        anuncios = tarjetas(j701=("Analista de datos", {"cuando": "Hoy", "detalle": "abuso"}),
+                            j702=("Analista de datos Jr.", {"cuando": "Ayer"}))
+        self.buscar_y_importar(anuncios, 20, codigo_esperado=1, pendientes=self.BLOQUEADA)
+        estado, ruta = self.estado()
+        self.assertEqual(estado["bolsas"]["BOL-01"]["bloqueos_seguidos"], 1)
+        self.buscar_y_importar(anuncios, 21, "--estado", str(ruta), codigo_esperado=1, pendientes=self.BLOQUEADA)
+        estado, ruta = self.estado()
+        self.assertEqual(estado["bolsas"]["BOL-01"],
+                         {"con_detalle_o_evaluacion": [], "pendientes": ["701", "702"], "bloqueos_seguidos": 2})
+
+        # Con el freno: no pide detalles, pero lee el listado y registra la búsqueda
+        occ, errores = self.buscar_y_importar(anuncios, 22, "--estado", str(ruta))
+        self.assertEqual(occ.detalles, [])
+        self.assertTrue(occ.listados)
+        self.assertIn("freno activo", next(linea for linea in errores.splitlines() if linea.startswith("[OK] BOL-01")))
+        busqueda = self.leer("busquedas")[-1]
+        self.assertIn("; detalle de la bolsa: 2 candidatas, 0 anteriores, 0 pedidos, 0 leídos (ninguno), freno activo",
+                      busqueda["cobertura_limitaciones"])
+        # Una búsqueda con el freno no pide detalles: no reinicia la cuenta
+        estado, ruta = self.estado()
+        self.assertEqual(estado["bolsas"]["BOL-01"]["bloqueos_seguidos"], 2)
+
+        # Con permiso del titular, --sin-freno pide los pendientes; leerlos reinicia la cuenta
+        del anuncios[0]["detalle"]
+        occ, _ = self.buscar_y_importar(anuncios, 23, "--estado", str(ruta), "--sin-freno")
+        self.assertEqual(occ.detalles, ["701", "702"])
+        self.assertEqual(self.estado()[0]["bolsas"]["BOL-01"],
+                         {"con_detalle_o_evaluacion": ["701", "702"], "pendientes": [], "bloqueos_seguidos": 0})
+
+    def test_un_bloqueo_despues_del_primer_detalle_reinicia_la_cuenta(self):
+        primera = tarjetas(j801=("Analista de datos", {"cuando": "Hoy", "detalle": "abuso"}))
+        self.buscar_y_importar(primera, 20, codigo_esperado=1, pendientes=self.BLOQUEADA)
+        segunda = tarjetas(j801=("Analista de datos", {"cuando": "Hoy"}),
+                           j802=("Analista de datos Jr.", {"cuando": "Ayer", "detalle": "abuso"}))
+        self.buscar_y_importar(segunda, 21, "--estado", str(self.estado()[1]), codigo_esperado=1,
+                               pendientes=self.BLOQUEADA)
+        self.assertEqual(self.estado()[0]["bolsas"]["BOL-01"],
+                         {"con_detalle_o_evaluacion": ["801"], "pendientes": ["802"], "bloqueos_seguidos": 0})
+
+    def test_sin_bolsas_en_06_el_estado_no_trae_ninguna(self):
+        (self.dir / "06_EMPRESAS_OBJETIVO.md").write_text(modulo_06(["EMP-XA"]), encoding="utf-8")
+        self.assertEqual(self.ok("estado-bolsas")["bolsas"], {})
 
 
 if __name__ == "__main__":

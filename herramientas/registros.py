@@ -10,6 +10,7 @@ Uso, con el Python del entorno virtual de la copia (en Windows, .venv\\Scripts\\
     .venv/bin/python -I herramientas/registros.py leer PESTAÑA [--id ID ...] [--columna COLUMNA]
     .venv/bin/python -I herramientas/registros.py informe BUS-ID
     .venv/bin/python -I herramientas/registros.py instantanea
+    .venv/bin/python -I herramientas/registros.py estado-bolsas > ESTADO.json
 
 Con --copia CARPETA antes de la orden, usa los módulos, el archivo y la instantánea de esa copia en lugar de la del
 script; el mantenedor lo usa con su copia de prueba (CONTRIBUTING, «Titulares de prueba»).
@@ -50,6 +51,11 @@ evaluaciones, que sale de sus nucleos (08/EVAL-ENCAJE), lo dan leer, informe y l
   más nueva, con las excluidas al final, y con las columnas calculadas de informes (11/REG-CAMPOS) a la fecha de
   hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS. Cada vacante de bolsa observada
   en la búsqueda que no tiene evaluación sale como «Falta el detalle», sin evaluacion_id.
+- estado-bolsas: el JSON que lee buscar.py --estado (07/BUS-BOLSAS): por cada bolsa de 06/CAT-BOLSAS, los job IDs
+  registrados que ya tienen detalle (leído en una búsqueda registrada, según la forma fija «detalle de la bolsa» de
+  cobertura_limitaciones) o evaluación, los pendientes (sin los cerrados) y cuántas búsquedas seguidas se bloquearon
+  en su primera petición de detalle; las que no pidieron detalles no cortan la racha. Lleva la ruta de la copia, para
+  que buscar.py rechace el estado de otra. Solo lee el archivo.
 - instantanea: regenera completa la instantánea que lee el canal Web (11/REG-INSTANTANEA), en instantanea/:
   informes.md, con las últimas 10 búsquedas y su tabla resumen, y vacantes.md, con una sección por vacante
   evaluada cuya última observación no es Cerrada. Agregar, actualizar, importar y migrar la regeneran después de
@@ -492,6 +498,15 @@ def generador_de_ids(columna, filas):
         yield f"{prefijo}{n:0{cifras}d}"
 
 
+def canonica(v, por_id):
+    """La fila canónica de una vacante registrada: la que la absorbió, si fue un duplicado (11/REG-IDENTIDAD)."""
+    vistas = set()
+    while v and v["duplicado_de"] and v["vacante_id"] not in vistas:
+        vistas.add(v["vacante_id"])
+        v = por_id.get(v["duplicado_de"], v)
+    return v
+
+
 def con_job_id(job_id):
     return job_id != "" and job_id.casefold() != "no publicado"
 
@@ -517,9 +532,9 @@ CAMPOS_DE_EMPRESA = ("acceso", "consultas", "total_reportado", "unicos", "comple
 CAMPOS_DE_VACANTE = ("job_id", "titulo", "url_oficial", "ubicacion_literal", "modalidad_literal", "region_relacionada",
                      "ubicaciones_por_revisar", "fecha_publicacion", "estado_vigencia", "motivo", "url_fuente",
                      "departamento", "descripcion")
-# Una bolsa trae además sus términos y su rendimiento, y cada vacante, lo literal de su tarjeta y su clase por título
-# (07/BUS-BOLSAS). Los demás campos de una bolsa, como detalle, no se registran aquí.
-CAMPOS_DE_BOLSA = CAMPOS_DE_EMPRESA + ("terminos", "rendimiento", "clasificacion_titulos")
+# Una bolsa trae además sus términos, su rendimiento y su detalle, y cada vacante, lo literal de su tarjeta y su clase
+# por título (07/BUS-BOLSAS).
+CAMPOS_DE_BOLSA = CAMPOS_DE_EMPRESA + ("terminos", "rendimiento", "clasificacion_titulos", "detalle")
 CAMPOS_DE_VACANTE_DE_BOLSA = CAMPOS_DE_VACANTE + ("empresa_literal", "sueldo_literal", "clasificacion_titulo")
 # Las dos listas de la salida: la columna de vacantes que nombra su fuente y los campos de cada una y de sus vacantes.
 LISTAS_DE_LA_SALIDA = {"empresas": ("empresa_id", CAMPOS_DE_EMPRESA, CAMPOS_DE_VACANTE),
@@ -604,11 +619,32 @@ def fuente(fid, r):
     return f"{fid}: " + "; ".join(partes).replace(" | ", " / ")
 
 
+def detalle_de_bolsa(r):
+    """La forma fija del detalle de una bolsa en cobertura_limitaciones, que lee estado-bolsas (11/REG-CAMPOS):
+    «detalle de la bolsa: C candidatas, A anteriores, P pedidos, L leídos («id», …), <fin>», con L leídos (ninguno)
+    si no hay, y <fin> «sin bloqueo», «freno activo» o «bloqueo en el listado|detalle, petición N (tipo)»."""
+    d = r["detalle"]
+    leidos = [v["job_id"] for v in r["vacantes"] + r["remotas_fuera_de_region"] if v.get("estado_detalle") == "leido"]
+    if d["bloqueo"]:
+        fin = f"bloqueo en el {d['bloqueo']['en']}, petición {d['bloqueo']['peticion']} ({d['bloqueo']['tipo']})"
+    else:
+        fin = "freno activo" if d.get("freno") else "sin bloqueo"
+    return (f"detalle de la bolsa: {d['candidatas']} candidatas, {d.get('anteriores', 0)} anteriores, {d['pedidos']} "
+            f"pedidos, {d['leidos']} leídos ({', '.join(f'«{j}»' for j in dict.fromkeys(leidos)) or 'ninguno'}), {fin}")
+
+
+# La forma fija de detalle_de_bolsa(): candidatas, anteriores, pedidos, leídos, sus IDs, el fin, y del bloqueo, dónde
+# y en qué petición.
+DETALLE_DE_BOLSA = re.compile(r"(?:^|; )detalle de la bolsa: \d+ candidatas, \d+ anteriores, (?P<pedidos>\d+) pedidos, "
+                              r"\d+ leídos \((?P<leidos>ninguno|«[^»]*»(?:, «[^»]*»)*)\), (?:sin bloqueo|freno activo|"
+                              r"bloqueo en el (?P<en>listado|detalle), petición (?P<peticion>\d+) \([^)]*\))")
+
+
 def cobertura(fid, r, vacantes, conservadas):
     """El elemento de una empresa o una bolsa en cobertura_limitaciones (07/BUS-REGISTRO). El de una bolsa lleva
-    además sus títulos y el rendimiento de cada término, en una forma fija que se vuelve a leer (11/REG-CAMPOS):
-    «títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas, E encajan, D dudosas,
-    C candidatas; …»."""
+    además sus títulos, el rendimiento de cada término y su detalle, en formas fijas que se vuelven a leer
+    (11/REG-CAMPOS): «títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas,
+    E encajan, D dudosas, C candidatas; …; detalle de la bolsa: …» (detalle_de_bolsa)."""
     if r["completa"] is None:
         texto = (f"{r['unicos']} únicos, sin total publicado; "
                  + (r.get("verificacion_cobertura") or "sin comprobación de la ficha"))
@@ -621,6 +657,7 @@ def cobertura(fid, r, vacantes, conservadas):
                   f"{c['ruido']} ruido; rendimiento: "
                   + "; ".join(f"«{t}»: {x['traidas']} traídas, {x['encajan']} encajan, {x['dudosas']} dudosas, "
                               f"{x['candidatas']} candidatas" for t, x in r["rendimiento"].items()))
+        texto += f"; {detalle_de_bolsa(r)}"
     return f"{fid}: {texto}" + "".join(f"; revisar: {nota}" for nota in r["revisar"])
 
 
@@ -718,14 +755,6 @@ def importar(esquema, salida, decisiones):
         for k in identidades(v):
             por_identidad.setdefault(k, v)
 
-    def canonica(v):
-        """La fila canónica de una registrada: la que la absorbió, si fue un duplicado (11/REG-IDENTIDAD)."""
-        vistas = set()
-        while v and v["duplicado_de"] and v["vacante_id"] not in vistas:
-            vistas.add(v["vacante_id"])
-            v = por_id.get(v["duplicado_de"], v)
-        return v
-
     fuentes, coberturas, comparaciones, compacta = [salida["script"]], [], [], []
     nuevas = {nombre: [] for nombre in ("busquedas", "vacantes", "observaciones")}
     cambios, revisar_filas = {}, []
@@ -743,7 +772,7 @@ def importar(esquema, salida, decisiones):
         decididas = revisar.get(fid, {})
         tipo_fuente = "Bolsa de empleo" if campo == "bolsa_id" else "Oficial"
         # Las canónicas de esta fuente, también las que absorbieron una fila suya de otra fuente
-        de_la_fuente = {canonica(v)["vacante_id"] for v in todas["vacantes"] if fuente_de(v) == fid}
+        de_la_fuente = {canonica(v, por_id)["vacante_id"] for v in todas["vacantes"] if fuente_de(v) == fid}
         actuales, cambiadas, entregadas, conservadas = [], {}, [], 0
         for nombre, (v, lineas) in vacantes.items():
             etiqueta = f"{fid}, {nombre}"
@@ -765,7 +794,7 @@ def importar(esquema, salida, decisiones):
             observacion_id = next(ids["observaciones"])
             identidad = identidades(fila)[:1]
             encontrada = por_identidad.get(identidad[0]) if identidad else None
-            registrada = canonica(encontrada)
+            registrada = canonica(encontrada, por_id)
             if registrada is None:
                 vacante_id = next(ids["vacantes"])
                 nuevas["vacantes"].append({c: "" for c in columnas["vacantes"]} | fila | {
@@ -827,6 +856,64 @@ def importar(esquema, salida, decisiones):
     guardar(libro, ruta_archivo(esquema))
     guardar_instantanea(vistas)
     return {"busqueda_id": busqueda_id, "vacantes": compacta}
+
+
+# --- estado-bolsas: lo que lee buscar.py --estado (07/BUS-BOLSAS, ADR 0010) ----------
+
+# El formato del estado y su versión; buscar.py rechaza otros. Los mismos que FORMATO_DEL_ESTADO de buscar.py: si
+# cambian, cambian en los dos.
+FORMATO_DEL_ESTADO = ("chambakit-estado-bolsas", 1)
+
+
+def detalles_de_bolsas(busquedas):
+    """({BOL-ID: job IDs leídos en alguna búsqueda}, {BOL-ID: búsquedas seguidas bloqueadas en su primera petición de
+    detalle}), de la forma fija de cobertura_limitaciones. Se cuentan desde la última búsqueda hacia atrás; las que no
+    pidieron detalles (con el freno, sin candidatas pendientes o bloqueadas en el listado) no cortan la racha ni la
+    alargan. Las búsquedas anteriores a la forma fija no la tienen y no cuentan."""
+    leidos, seguidos, cerradas = {}, {}, set()
+    for b in sorted(busquedas, key=lambda b: (b["fecha_hora"], b["busqueda_id"]), reverse=True):
+        for elemento in b["cobertura_limitaciones"].split(" | "):
+            bid, _, texto = elemento.partition(": ")
+            m = DETALLE_DE_BOLSA.search(texto)
+            if not m:
+                continue
+            leidos.setdefault(bid, set()).update(re.findall(r"«([^»]*)»", m["leidos"]))
+            seguidos.setdefault(bid, 0)
+            if bid in cerradas or m["pedidos"] == "0":
+                continue
+            if (m["en"], m["peticion"]) == ("detalle", "1"):
+                seguidos[bid] += 1
+            else:
+                cerradas.add(bid)
+    return leidos, seguidos
+
+
+def estado_bolsas(esquema):
+    """El estado de cada bolsa de 06/CAT-BOLSAS para buscar.py --estado: los job IDs registrados que ya tienen detalle
+    (leído en una búsqueda registrada) o evaluación, propia o de la fila que la absorbió; los pendientes, sin los que
+    su última observación da por cerrados, y las búsquedas seguidas bloqueadas en su primera petición de detalle."""
+    filas = abrir(esquema)[1]
+    leidos, seguidos = detalles_de_bolsas(filas["busquedas"])
+    por_id = {v["vacante_id"]: v for v in filas["vacantes"]}
+    evaluadas = {e["vacante_id"] for e in filas["evaluaciones"]}
+    cerradas = {o["observacion_id"] for o in filas["observaciones"] if o["estado_vigencia"] == "Cerrada"}
+    bolsas = {bid: {"con_detalle_o_evaluacion": [], "pendientes": [], "bloqueos_seguidos": seguidos.get(bid, 0)}
+              for bid in leer_catalogo("06/CAT-BOLSAS")}
+    for v in filas["vacantes"]:
+        if v["bolsa_id"] not in bolsas or not con_job_id(v["job_id"]):
+            continue
+        c = canonica(v, por_id)
+        b = bolsas[v["bolsa_id"]]
+        if v["job_id"] in leidos.get(v["bolsa_id"], ()) or {v["vacante_id"], c["vacante_id"]} & evaluadas:
+            lista = b["con_detalle_o_evaluacion"]
+        elif c["ultima_observacion_id"] not in cerradas:
+            lista = b["pendientes"]
+        else:
+            continue
+        if v["job_id"] not in lista:
+            lista.append(v["job_id"])
+    return {"formato": FORMATO_DEL_ESTADO[0], "version": FORMATO_DEL_ESTADO[1], "copia": os.path.realpath(RAIZ),
+            "generado": dt.datetime.now(leer_zona_horaria()).strftime("%Y-%m-%d %H:%M"), "bolsas": bolsas}
 
 
 # --- migrar: la hoja descargada o un archivo de registros 1.x (ADR 0006) ----------
@@ -1426,6 +1513,7 @@ def main():
     o.add_argument("--correcciones", metavar="CORRECCIONES.json",
                    help='{pestaña: {ID o "fila N": {columna: texto}}}, aplicadas antes de comprobar')
     ordenes.add_parser("instantanea", help="regenera la instantánea completa que lee el canal Web")
+    ordenes.add_parser("estado-bolsas", help="el estado del detalle de cada bolsa, para buscar.py --estado")
     a = ap.parse_args()
     if a.copia is not None:
         if not os.path.isdir(a.copia):
@@ -1444,6 +1532,8 @@ def main():
         res = migrar(esquema, a.entrada, leer_entrada(a.correcciones) if a.correcciones else {})
     elif a.orden == "informe":
         res = informe(esquema, a.busqueda_id)
+    elif a.orden == "estado-bolsas":
+        res = estado_bolsas(esquema)
     elif a.orden == "instantanea":
         res = guardar_instantanea(instantanea(esquema, abrir(esquema)[1]))
     else:

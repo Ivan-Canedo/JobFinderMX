@@ -1,6 +1,6 @@
 # 11 — Esquema de registros
 
-**Versión:** 1.9 — 2026-11-22 — Vacantes de bolsas de empleo: `bolsa_id`, `empresa_literal` y `sueldo_literal` en `vacantes`, `Bolsa de empleo` en `tipo_fuente`, su identidad (REG-IDENTIDAD), su rendimiento en `busquedas` y las que les falta el detalle en `informes` (REG-CAMPOS, REG-ESQUEMA, REG-LOCAL).
+**Versión:** 1.9 — 2026-11-22 — Vacantes de bolsas de empleo: `bolsa_id`, `empresa_literal` y `sueldo_literal` en `vacantes`, `Bolsa de empleo` en `tipo_fuente`, su identidad (REG-IDENTIDAD), su rendimiento y su detalle en `busquedas`, las que les falta el detalle en `informes` y el estado de las bolsas con `estado-bolsas` (REG-CAMPOS, REG-ESQUEMA, REG-LOCAL).
 **Estado:** esquema de la plantilla. El paso 8 de `/configurar` (Registros) crea el archivo de registros desde el bloque de REG-ESQUEMA.
 
 ## Responsabilidad
@@ -176,7 +176,7 @@ La observación es la evidencia fechada (REG-DECISIONES). La evidencia mínima d
 | solicitud_alcance | Texto | Sí | Encargo, empresas y región |
 | recursos_versiones | Multivalor | Sí | P. ej. `07 v1.0 \| 06/EMP-<ID> v1.0 \| 04 v1.1` |
 | fuentes_consultas_filtros | Multivalor | Sí | Sitio, consulta y filtros. Una bolsa nombra los términos de búsqueda que usó: `términos: «término», «término»` |
-| cobertura_limitaciones | Texto | Sí | Páginas revisadas, totales mostrados y límites. Una bolsa agrega sus títulos y el rendimiento de cada término, en una forma fija que la herramienta vuelve a leer: `títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas, E encajan, D dudosas, C candidatas; «término»: …`, siempre con esas palabras, aunque un número sea 1 (07/BUS-REGISTRO) |
+| cobertura_limitaciones | Texto | Sí | Páginas revisadas, totales mostrados y límites. Una bolsa agrega sus títulos y el rendimiento de cada término, en una forma fija que la herramienta vuelve a leer: `títulos: E encajan, D dudosas (C conservadas), R ruido; rendimiento: «término»: T traídas, E encajan, D dudosas, C candidatas; «término»: …`, siempre con esas palabras, aunque un número sea 1 (07/BUS-REGISTRO). Después, su detalle, que lee `estado-bolsas` (REG-LOCAL): `detalle de la bolsa: C candidatas, A anteriores, P pedidos, L leídos («id», «id»), sin bloqueo`, con `L leídos (ninguno)` si no leyó ninguno y, en lugar de `sin bloqueo`, `freno activo`, `bloqueo en el listado, petición N (tipo)` o `bloqueo en el detalle, petición N (tipo)` |
 | no_revisado_pendientes | Texto | Sí | `Ninguno` si no queda nada |
 | comparacion_anterior | Texto | Sí | `Sin búsqueda comparable` la primera vez. «No observada esta vez» no significa «cerrada» |
 
@@ -411,6 +411,12 @@ En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y 
   - **Salida:** el archivo completo y, por pestaña, cuántas filas tenía la entrada y cuántas tiene el archivo escrito, para que el titular compare. También dice las columnas quitadas y agregadas, cuántas filas corrigió y las pestañas de la entrada que no son del esquema.
   - **Sin sobrescribir:** no reemplaza un archivo de registros que ya tenga filas, salvo cuando la entrada es ese mismo archivo, de una versión anterior. Solo lee la entrada: la hoja de Drive queda intacta, y el titular decide si la borra.
 - **Instantánea:** las órdenes de escritura y `migrar` la regeneran después de escribir (REG-INSTANTANEA); si rechazan la entrada, no la tocan. `instantanea` la regenera a pedido, por ejemplo si alguien la borró o la editó.
+- **Estado de las bolsas:** `estado-bolsas` da el JSON que lee `buscar.py --estado` (07/BUS-BOLSAS, «Reanudación» y «Freno»), sin escribir nada. Va al directorio temporal de la sesión, nunca a la copia. Por cada bolsa de 06/CAT-BOLSAS da tres datos:
+  - `con_detalle_o_evaluacion`: los job IDs registrados cuyo detalle se leyó en una búsqueda registrada (la forma fija de `cobertura_limitaciones`) o que tienen evaluación, propia o de la fila que los absorbió (REG-IDENTIDAD).
+  - `pendientes`: los demás, salvo los que su última observación da por `Cerrada`.
+  - `bloqueos_seguidos`: cuántas búsquedas seguidas, desde la última, se bloquearon en su primera petición de detalle. Las que no pidieron detalles no cuentan ni cortan la cuenta.
+
+  Lleva además `formato`, `version`, la ruta de la copia (`copia`) y la fecha en que se generó. `buscar.py` rechaza un estado de otra copia o con otra forma.
 - **Lectura:** `leer` da una pestaña completa o las filas de unos IDs; en `evaluaciones`, con su `encaje` calculado con los pesos de 08/EVAL-ACUERDOS. `informe` da la tabla resumen de una búsqueda: sus filas de `informes`, en el orden de 08/EVAL-INFORME, con las columnas calculadas de REG-CAMPOS, a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
 - **Encabezados:** la herramienta los compara con el bloque en cada uso y se detiene si no coinciden (REG-DECISIONES, «Encabezados»).
 - **Historial y respaldo:** git. El archivo se versiona en la copia, así que no se ignora. Al cerrar una sesión que lo modificó, el agente le ofrece al titular un commit con él y, si la copia tiene remoto privado, el push.

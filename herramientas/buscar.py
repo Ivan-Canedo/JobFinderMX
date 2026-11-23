@@ -3,6 +3,7 @@
 
 Uso:
     python3 -I herramientas/buscar.py [EMP-ID | BOL-ID ...] [--salida archivo.json] [--sin-remotas] [--copia CARPETA]
+                                      [--estado ESTADO.json [--sin-freno]]
 
 Las empresas y las bolsas se nombran por su ID de 06; por defecto, todas las de sus catálogos (CAT-EMPRESAS y
 CAT-BOLSAS). La región, el alcance del remoto y la zona horaria salen del bloque de 04/PREF-UBICACION; la plataforma,
@@ -21,9 +22,13 @@ del remoto lo incluye, en todo el país con su filtro remoto; clasifica cada vac
 «dudosa» (con su línea «revisar título») o «ruido», que no se entrega, y reporta el rendimiento de cada término
 (05/HAB-TERMINOS, «Filtro por título»). Después pide el detalle solo de las candidatas, primero las que encajan,
 hasta la primera señal anti-bot: ahí detiene la bolsa sin reintentar, la entrega con lo listado y lo leído
-como [FALLO] y sigue con las demás (07/BUS-BOLSAS, ADR 0010). Solo se usan rutas que permite el robots.txt
-del sitio, sin cookies ni credenciales. El JSON va a --salida o a stdout, con las empresas en «empresas» y
-las bolsas en «bolsas»; el resumen y las líneas «revisar», a stderr. El script no evalúa ni escribe en los
+como [FALLO] y sigue con las demás (07/BUS-BOLSAS, ADR 0010). Con --estado, el JSON que da `registros.py
+estado-bolsas`, no pide el detalle de las vacantes que ya lo tienen o tienen evaluación, que se entregan como
+«anterior»; si una bolsa se bloqueó en su primera petición de detalle en dos búsquedas seguidas, el freno: no le pide
+ningún detalle, lee su listado igual y lo dice en su línea, salvo con --sin-freno, que solo se usa con permiso del
+titular. Un estado que no se puede leer, mal formado o de otra copia termina con código 2. Solo se usan rutas que
+permite el robots.txt del sitio, sin cookies ni credenciales. El JSON va a --salida o a stdout, con las empresas en
+«empresas» y las bolsas en «bolsas»; el resumen y las líneas «revisar», a stderr. El script no evalúa ni escribe en los
 registros: entrega los datos para los pasos 4-9 de 07/BUS-PASOS. Solo biblioteca estándar.
 """
 import argparse
@@ -1809,6 +1814,65 @@ def resultado_bolsa(bid, acceso, terminos):
     return {"bolsa_id": bid, **r, "terminos": terminos}
 
 
+# El estado de las bolsas que da `registros.py estado-bolsas` (11/REG-LOCAL) y lee --estado; su formato y versión son
+# los de FORMATO_DEL_ESTADO de registros.py: si cambian, cambian en los dos
+FORMATO_DEL_ESTADO = ("chambakit-estado-bolsas", 1)
+# Búsquedas seguidas bloqueadas en su primera petición de detalle con las que ya no se piden detalles (ADR 0010)
+FRENO = 2
+
+
+def leer_estado(ruta, raiz):
+    """{BOL-ID: {"con_detalle": set de job IDs, "bloqueos": n}} del JSON de estado, que debe ser de esta copia. Si no
+    se puede leer, no tiene su forma o es de otra copia, termina con código 2 sin buscar nada."""
+    como_se_genera = ("genéralo de nuevo con `.venv/bin/python -I herramientas/registros.py estado-bolsas` "
+                      "(07/BUS-PASOS)")
+    try:
+        with open(ruta, encoding="utf-8") as f:
+            estado = json.load(f)
+    except OSError as e:
+        error(f"--estado: no se pudo leer {ruta} ({e.strerror}); {como_se_genera}.")
+    except ValueError as e:
+        error(f"--estado: {ruta} no es JSON válido ({e}); {como_se_genera}.")
+    if not (isinstance(estado, dict) and estado.get("formato") == FORMATO_DEL_ESTADO[0]
+            and isinstance(estado.get("bolsas"), dict) and isinstance(estado.get("copia"), str)):
+        error(f"--estado: {ruta} no es el estado de las bolsas que da `registros.py estado-bolsas`; {como_se_genera}.")
+    if estado.get("version") != FORMATO_DEL_ESTADO[1]:
+        error(f"--estado: {ruta} es de la versión {estado.get('version')!r} del estado y este script lee la "
+              f"{FORMATO_DEL_ESTADO[1]}; {como_se_genera}.")
+    if os.path.normcase(os.path.realpath(estado["copia"])) != os.path.normcase(os.path.realpath(raiz)):
+        error(f"--estado: {ruta} es de otra copia ({estado['copia']}), no de {raiz}; {como_se_genera}.")
+    leido = {}
+    for bid, b in estado["bolsas"].items():
+        if not (isinstance(b, dict) and all(isinstance(b.get(k), list) and all(isinstance(j, str) for j in b[k])
+                                            for k in ("con_detalle_o_evaluacion", "pendientes"))
+                and type(b.get("bloqueos_seguidos")) is int and b["bloqueos_seguidos"] >= 0):
+            error(f"--estado: {ruta}, {bid}: debe tener con_detalle_o_evaluacion y pendientes, listas de job IDs como "
+                  f"texto, y bloqueos_seguidos, un entero desde 0; {como_se_genera}.")
+        leido[bid] = {"con_detalle": set(b["con_detalle_o_evaluacion"]), "bloqueos": b["bloqueos_seguidos"]}
+    return leido
+
+
+def por_pedir(r, bid, orden, previo):
+    """Las candidatas de orden cuyo detalle se pide en esta ejecución: las que el estado (previo) no marca con detalle
+    o evaluación; las marcadas se entregan como «anterior» sin pedirlo. Ninguna si el freno está activo, salvo con
+    --sin-freno (previo["sin_freno"]), y entonces lo anota en el detalle de la bolsa (07/BUS-BOLSAS, ADR 0010)."""
+    d = r["detalle"]
+    pendientes = []
+    for v in orden:
+        if v["job_id"] in previo["con_detalle"]:
+            v.update(estado_detalle="anterior", motivo="En el listado oficial de la bolsa (07/BUS-VIGENCIA); detalle "
+                                                       "leído o evaluada en una búsqueda anterior (--estado)")
+        else:
+            pendientes.append(v)
+    d["candidatas"], d["anteriores"] = len(pendientes), len(orden) - len(pendientes)
+    if previo["bloqueos"] >= FRENO and not previo["sin_freno"]:
+        d["freno"] = (f"{bid} se bloqueó en su primera petición de detalle en {previo['bloqueos']} búsquedas seguidas; "
+                      "no se le pide ningún detalle, para no exponer la IP del titular. Para volver a intentarlo, con "
+                      "permiso del titular: --sin-freno (07/BUS-BOLSAS)")
+        return []
+    return pendientes
+
+
 def terminos_de_bolsa(familias):
     """{slug: término} de 05, cada término una vez: el primero que se escribió de cada slug, porque dos términos
     con el mismo slug son la misma búsqueda (05/HAB-TERMINOS, «Reglas»)."""
@@ -2084,9 +2148,10 @@ def occ_bloqueo(r, e, en, peticiones):
         r["error"] += "; en Code en la nube la bolsa recibe más bloqueos: busca esta bolsa en Code local"
 
 
-def occ(bid, conf, pref, familias, remotas):
+def occ(bid, conf, pref, familias, remotas, previo):
     """Adaptador de OCC Mundial (06/CAT-BOLSAS): un listado por cada término de búsqueda de 05 y cada lugar de la
-    región de 04 en el país de la bolsa, más todo el país con el filtro remoto si el alcance del remoto lo incluye."""
+    región de 04 en el país de la bolsa, más todo el país con el filtro remoto si el alcance del remoto lo incluye.
+    previo: lo que el estado dice de la bolsa (por_pedir)."""
     pais = conf["pais"]
     terminos = terminos_de_bolsa(familias)
     lugares = lugares_de_bolsa(pref, pais)
@@ -2099,7 +2164,7 @@ def occ(bid, conf, pref, familias, remotas):
                     "que buscar en ella")
     r = resultado_bolsa(bid, "Listado de OCC Mundial (GET, HTML), por término de búsqueda y lugar, y detalle de las "
                              "candidatas hasta la primera señal anti-bot", list(terminos.values()))
-    r["detalle"] = {"candidatas": 0, "pedidos": 0, "leidos": 0, "bloqueo": None}
+    r["detalle"] = {"candidatas": 0, "anteriores": 0, "pedidos": 0, "leidos": 0, "bloqueo": None, "freno": None}
     peticiones = collections.Counter()
     # clases: la clase de cada vacante ya vista, por su ID; sus claves son las vistas de listado()
     clases, candidatas = {}, set()
@@ -2109,6 +2174,7 @@ def occ(bid, conf, pref, familias, remotas):
     # vacante ya vista no se vuelve a ver
     consultas = ([] if sin_remoto else [(termino, None, True) for termino in terminos]) + [
         (termino, lugar, False) for termino in terminos for lugar in lugares]
+    en_el_listado = None
     try:
         # Una URL de muestra por cada forma del listado, con lugar y con el filtro remoto, y con toda su consulta, y
         # una del detalle. El robots.txt es la primera petición del listado
@@ -2120,18 +2186,19 @@ def occ(bid, conf, pref, familias, remotas):
     except SenalAntiBot as e:
         # Lo listado se entrega; las consultas que faltaron dejan la cobertura incompleta
         r["completa"] = False
-        r["detalle"]["candidatas"] = len(candidatas)
-        occ_bloqueo(r, e, "listado", peticiones)
+        en_el_listado = e
     contar_rendimiento(r, ids_por_termino, clases, candidatas)
     r["remotas_revision"] = sin_remoto or f"Filtro {OCC_REMOTO} en todo {pais}, " + "; ".join(revisadas)
-    if r["detalle"]["bloqueo"] is None:
-        # Primero las que encajan y después las dudosas; en cada grupo, de la más nueva a la más vieja (el orden
-        # del listado desempata)
-        orden = sorted((v for v in r["vacantes"] + r["remotas_fuera_de_region"] if v["job_id"] in candidatas),
-                       key=lambda v: (v["clasificacion_titulo"] != "encaja", occ_dias(v["_cuando"])))
-        r["detalle"]["candidatas"] = len(orden)
+    # Primero las que encajan y después las dudosas; en cada grupo, de la más nueva a la más vieja (el orden del
+    # listado desempata)
+    orden = sorted((v for v in r["vacantes"] + r["remotas_fuera_de_region"] if v["job_id"] in candidatas),
+                   key=lambda v: (v["clasificacion_titulo"] != "encaja", occ_dias(v["_cuando"])))
+    pendientes = por_pedir(r, bid, orden, previo)
+    if en_el_listado:
+        occ_bloqueo(r, en_el_listado, "listado", peticiones)
+    else:
         try:
-            occ_detalles(r, orden, peticiones)
+            occ_detalles(r, pendientes, peticiones)
         except SenalAntiBot as e:
             occ_bloqueo(r, e, "detalle", peticiones)
     for v in r["vacantes"] + r["remotas_fuera_de_region"]:
@@ -2175,8 +2242,9 @@ def occ_listados(r, pref, bid, pais, familias, terminos, consultas, clases, cand
 # antes de pedir nada pasa por comprobar_robots(); se registra aquí con el nombre que lleva la ficha en «plataforma».
 ADAPTADORES = {"workday": workday, "eightfold": eightfold, "workable": workable, "smartrecruiters": smartrecruiters,
                "oraclerecruitingcloud": oraclerecruitingcloud}
-# Un adaptador por bolsa de empleo (06/CAT-BOLSAS): una función (bid, conf, pref, familias, remotas), con las familias
-# de 05/HAB-TERMINOS, que devuelve resultado_bolsa(); se registra con el nombre que lleva la ficha en «adaptador».
+# Un adaptador por bolsa de empleo (06/CAT-BOLSAS): una función (bid, conf, pref, familias, remotas, previo), con las
+# familias de 05/HAB-TERMINOS y lo que el estado dice de la bolsa, que devuelve resultado_bolsa() y elige con
+# por_pedir() las candidatas cuyo detalle pide; se registra con el nombre que lleva la ficha en «adaptador».
 BOLSAS = {"occ": occ}
 
 
@@ -2235,7 +2303,12 @@ def informar(fid, r):
     detalle = ""
     if r.get("detalle"):
         d = r["detalle"]
-        detalle = f"; detalle: {d['leidos']} leídos de {d['candidatas']} candidatas"
+        if d.get("freno"):
+            detalle = f"; detalle: freno activo, ninguno pedido de {d['candidatas']} pendientes: {d['freno']}"
+        else:
+            detalle = f"; detalle: {d['leidos']} leídos de {d['candidatas']} candidatas"
+        if d.get("anteriores"):
+            detalle += f" ({d['anteriores']} con detalle o evaluación de búsquedas anteriores)"
     inicio = f"    entregado, {estado.lower()}:" if "error" in r else f"[{estado}] {fid}:"
     print(f"{inicio} {cuenta} únicos; {en_region} en la región; remotas fuera de la región: "
           f"{len(r['remotas_fuera_de_region'])} ({r['remotas_revision']}){titulos}{detalle}", file=sys.stderr)
@@ -2256,14 +2329,14 @@ def buscar_empresa(eid, ficha, pref, remotas):
     return adaptador(eid, conf, pref, remotas)
 
 
-def buscar_bolsa(bid, ficha, pref, remotas):
-    """El resultado de una bolsa, con su adaptador y los términos de 05."""
+def buscar_bolsa(bid, ficha, pref, remotas, previo):
+    """El resultado de una bolsa, con su adaptador, los términos de 05 y lo que el estado dice de ella."""
     conf = leer_ficha_bolsa(bid, ficha)
     adaptador = BOLSAS.get(conf["adaptador"].strip().lower())
     if adaptador is None:
         raise Fallo(f"el adaptador {conf['adaptador']!r} no existe en el script (hay: {', '.join(BOLSAS)}; "
                     "06/CAT-BOLSAS)")
-    return adaptador(bid, conf, pref, leer_terminos(MODULO_05), remotas)
+    return adaptador(bid, conf, pref, leer_terminos(MODULO_05), remotas, previo)
 
 
 def main():
@@ -2275,7 +2348,16 @@ def main():
     ap.add_argument("--sin-remotas", action="store_true", help="omitir el listado de vacantes remotas")
     ap.add_argument("--copia", metavar="CARPETA",
                     help="leer el 04, el 05 y el 06 de otra copia (por defecto, la del script)")
+    ap.add_argument("--estado", metavar="ARCHIVO",
+                    help="el JSON de `registros.py estado-bolsas`: no pide el detalle de las vacantes de bolsa que ya "
+                         "lo tienen o tienen evaluación, y aplica el freno (por defecto, pide el de todas las "
+                         "candidatas)")
+    ap.add_argument("--sin-freno", action="store_true",
+                    help="con --estado, pide los detalles pendientes aunque el freno esté activo; solo con permiso del "
+                         "titular (07/BUS-BOLSAS)")
     a = ap.parse_args()
+    if a.sin_freno and a.estado is None:
+        ap.error("--sin-freno solo vale con --estado: sin el estado no hay freno")
     if a.copia is not None:
         if not os.path.isdir(a.copia):
             ap.error(f"--copia: {a.copia!r} no existe o no es una carpeta")
@@ -2283,6 +2365,7 @@ def main():
     pref = leer_preferencias(MODULO_04)
     pref["reconocidos"] = paises_reconocidos(leer_tabla_de_paises(TABLA_DE_PAISES), pref["paises"])
     empresas, bolsas = leer_catalogos(MODULO_06)
+    estado = leer_estado(a.estado, RAIZ) if a.estado is not None else {}
     pedidas = [i.upper() for i in a.ids] or [*empresas, *bolsas]
     desconocidas = [i for i in pedidas if i not in empresas and i not in bolsas]
     if desconocidas:
@@ -2298,7 +2381,8 @@ def main():
     for fid in sorted(pedidas, key=lambda i: i in bolsas):
         es_bolsa = fid in bolsas
         try:
-            r = (buscar_bolsa(fid, bolsas[fid], pref, not a.sin_remotas) if es_bolsa
+            previo = {"con_detalle": set(), "bloqueos": 0, **estado.get(fid, {}), "sin_freno": a.sin_freno}
+            r = (buscar_bolsa(fid, bolsas[fid], pref, not a.sin_remotas, previo) if es_bolsa
                  else buscar_empresa(fid, empresas[fid], pref, not a.sin_remotas))
         except Fallo as e:
             r = {"bolsa_id" if es_bolsa else "empresa_id": fid, "error": str(e)}
