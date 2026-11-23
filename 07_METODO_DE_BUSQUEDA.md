@@ -1,6 +1,6 @@
 # 07 — Método de búsqueda
 
-**Versión:** 1.11 — 2026-11-22 — Una vacante sin modalidad publicada es remota si su ubicación lo dice (BUS-ACCESO-CODE, «Modalidad»).
+**Versión:** 1.12 — 2026-11-22 — En un grupo de división completa, una localidad escrita sin su división queda por revisar (BUS-ACCESO-CODE, «Región»).
 **Estado:** método de la plantilla. Queda listo con la región de 04 y las fichas de 06, en el paso 7 de `/configurar` (Empresas).
 
 ## BUS-ALCANCE — Responsabilidad
@@ -53,7 +53,7 @@ python3 -I herramientas/buscar.py [EMP-ID ...] [--salida archivo.json] [--sin-re
   3. Lista las remotas con el filtro de remoto de la plataforma, según el alcance del remoto de 04, salvo con `--sin-remotas` o si 04 no acepta remoto.
   4. Comprueba que los IDs únicos de cada listado igualen el total que reporta, o, si la fuente no lo publica, hace la comprobación de su ficha.
   5. Lee con comprobación de ID el detalle de cada vacante que entrega, y da sus campos de `vacantes` y `observaciones` según el mapeo de su plataforma, más la descripción en texto.
-- **Región:** clasifica cada ubicación literal con los grupos de 04 («Cómo se lee un grupo»). `region_relacionada` es `Dentro` si todas las ubicaciones están en la región; `Incluye` si alguna lo está; `Indeterminada` si ninguna lo está pero alguna puede estarlo, porque nombra una división de 04 sin una localidad aceptada, solo el país o nada más concreto que «Remote»; y `Fuera` en los demás casos. Una ubicación que nombra otro país de 04 no cuenta para los grupos de un país distinto, porque hay ciudades y divisiones homónimas entre países. Las que pueden estar dentro van en `ubicaciones_por_revisar` y salen como «revisar ubicación»; no se descartan. La excepción es la remota en el alcance (Modalidad).
+- **Región:** clasifica cada ubicación literal con los grupos de 04 («Cómo se lee un grupo»). `region_relacionada` es `Dentro` si todas las ubicaciones están en la región; `Incluye` si alguna lo está; `Indeterminada` si ninguna lo está pero alguna puede estarlo, porque nombra una división de 04 sin una localidad aceptada, solo el país, nada más concreto que «Remote» o, en un grupo de división completa, una localidad de su país sin la división; y `Fuera` en los demás casos. Una ubicación que nombra otro país de 04 no cuenta para los grupos de un país distinto, porque hay ciudades y divisiones homónimas entre países. Las que pueden estar dentro van en `ubicaciones_por_revisar` y salen como «revisar ubicación»; no se descartan. La excepción es la remota en el alcance (Modalidad).
 - **Modalidad:** una vacante es remota si su modalidad publicada lo dice. Si la plataforma no publica la modalidad (vacía o `No publicado`), es remota si su ubicación lo dice («País A (Remote)», «Remoto», «Teletrabajo»). Una remota se decide por el alcance del remoto de 04: si está en él, ya se acepta, y sus ubicaciones no quedan por revisar ni salen como «revisar ubicación», aunque su región sea `Indeterminada`. Si la modalidad publicada dice otra cosa y la ubicación dice remoto, gana la modalidad y la vacante lleva una línea «revisar» con las dos; se confirma en el anuncio.
 - **Salida:**
   - `vacantes`: las de la región, también las indeterminadas.

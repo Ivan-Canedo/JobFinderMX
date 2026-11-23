@@ -46,8 +46,12 @@ def preferencias(localidades, alcance="ninguno", paises_remoto=(), **cambios):
     return bloque
 
 
-def grupo(pais, divisiones=(), nombres=()):
-    return {"pais": pais, "divisiones": list(divisiones), "zona": None, "nombres": list(nombres)}
+def grupo(pais, divisiones=(), nombres=(), incluidas=None):
+    """Un grupo de localidades; sin incluidas, el grupo no lleva el campo, como una copia anterior a la 2.3."""
+    g = {"pais": pais, "divisiones": list(divisiones), "zona": None, "nombres": list(nombres)}
+    if incluidas is not None:
+        g["incluidas"] = list(incluidas)
+    return g
 
 
 def modulo_04(bloque):
@@ -192,6 +196,21 @@ class ConfiguracionFaltante(CopiaFicticia):
                     tabla.write_text(texto, encoding="utf-8")
                 self.escribir(modulo_04(preferencias([grupo("XA", nombres=["Ciudad A1"])])), modulo_06({}))
                 self.assertFallaSinBuscar(self.correr(), "paises.json", "tabla de países")
+
+    def test_incluidas_fuera_de_un_grupo_de_division_completa_falla_y_dice_que_ahi_van_en_nombres(self):
+        casos = {
+            "grupo con nombres": grupo("XA", ["Estado A"], ["Ciudad A1"], incluidas=["Localidad A3"]),
+            "grupo de país completo": grupo("XA", incluidas=["Localidad A3"]),
+        }
+        for caso, g in casos.items():
+            with self.subTest(caso):
+                self.escribir(modulo_04(preferencias([g])), modulo_06({}))
+                self.assertFallaSinBuscar(self.correr(), "PREF-UBICACION", "incluidas", "nombres")
+
+    def test_incluidas_que_no_es_una_lista_de_textos_falla(self):
+        self.escribir(modulo_04(preferencias([{**grupo("XA", ["Estado A"]), "incluidas": "Localidad A3"}])),
+                      modulo_06({}))
+        self.assertFallaSinBuscar(self.correr(), "PREF-UBICACION", "incluidas")
 
 
 class TablaDePaises(unittest.TestCase):
@@ -909,6 +928,55 @@ class ClasificacionDeUbicaciones(ConPortalFalso):
         self.assertEqual(revisar["R-6"], ["Nuevo Estado A, País A"])
         self.assertIn("revisar ubicación: Ciudad X, Estado A, País A (1 vacante: R-3)", errores)
 
+    def test_un_grupo_de_division_completa_revisa_la_localidad_que_no_escribe_su_division(self):
+        bloque = preferencias([grupo("XA", ["Estado A"])], paises={**PAISES, "XA": ["País A", "XAA"]})
+        portal = WorkdayFalso([
+            {"id": "R-1", "pais": "País A", "ubicaciones": ["Localidad A3, País A"]},
+            {"id": "R-2", "pais": "País A", "ubicaciones": ["Localidad A3, País A"]},
+            {"id": "R-3", "pais": "País A", "ubicaciones": ["XAA.Localidad A4"]},
+            # Otra parte entre la localidad y el país es otra división
+            {"id": "R-4", "pais": "País A", "ubicaciones": ["Localidad Z, Estado Z, País A"]},
+            {"id": "R-5", "pais": "País A", "ubicaciones": ["Localidad A5, Estado A, País A"]},
+            # Workday no da el país de cada vacante: sin el país en la ubicación no hay red de seguridad
+            {"id": "R-6", "pais": "País A", "ubicaciones": ["Localidad A6"]},
+            # Lo que no está entre la localidad y el país, o es solo un número, no es otra división
+            {"id": "R-7", "pais": "País A", "ubicaciones": ["Localidad A7, País A (Edificio 1)"]},
+            {"id": "R-8", "pais": "País A", "ubicaciones": ["Localidad A8, 12345, País A"]},
+        ])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r), {"R-1": "Indeterminada", "R-2": "Indeterminada", "R-3": "Indeterminada",
+                                            "R-5": "Dentro", "R-7": "Indeterminada", "R-8": "Indeterminada"})
+        revisar = {v["job_id"]: v["ubicaciones_por_revisar"] for v in r["vacantes"]}
+        self.assertEqual(revisar, {"R-1": ["Localidad A3, País A"], "R-2": ["Localidad A3, País A"],
+                                   "R-3": ["XAA.Localidad A4"], "R-5": [],
+                                   "R-7": ["Localidad A7, País A (Edificio 1)"], "R-8": ["Localidad A8, 12345, País A"]})
+        self.assertEqual(sorted(r["fuera_de_region"]), ["Localidad A6", "Localidad Z, Estado Z, País A"])
+        self.assertIn("revisar ubicación: Localidad A3, País A (2 vacantes: R-1, R-2)", errores)
+        self.assertIn("revisar ubicación: XAA.Localidad A4 (1 vacante: R-3)", errores)
+
+    def test_una_localidad_de_incluidas_sale_dentro_aunque_no_escriba_su_division(self):
+        bloque = preferencias([grupo("XA", ["Estado A"], incluidas=["Localidad A3", "Localidad Ä4"]),
+                               grupo("XB", nombres=["Ciudad B1"])],
+                              paises={**PAISES, "XA": ["País A", "XAA"]})
+        portal = WorkdayFalso([
+            {"id": "R-1", "pais": "País A", "ubicaciones": ["Localidad A3, País A"]},
+            # Se compara como nombres: sin mayúsculas ni acentos
+            {"id": "R-2", "pais": "País A", "ubicaciones": ["XAA.LOCALIDAD A4"]},
+            {"id": "R-3", "pais": "País A", "ubicaciones": ["Localidad A9, País A"]},
+            # En otro país de 04, la localidad homónima no es del grupo
+            {"id": "R-4", "pais": "País B", "ubicaciones": ["Localidad A3, País B"]},
+        ])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r), {"R-1": "Dentro", "R-2": "Dentro", "R-3": "Indeterminada"})
+        self.assertEqual(r["fuera_de_region"], ["Localidad A3, País B"])
+        self.assertNotIn("Localidad A3, País A", errores)
+
+    def test_un_grupo_sin_incluidas_sigue_siendo_valido(self):
+        sin_campo = {"pais": "XA", "divisiones": ["Estado A"], "zona": None, "nombres": []}
+        portal = WorkdayFalso([{"id": "R-1", "pais": "País A", "ubicaciones": ["Localidad A5, Estado A, País A"]}])
+        r, _ = self.buscar(preferencias([sin_campo]), portal)
+        self.assertEqual(self.regiones(r), {"R-1": "Dentro"})
+
     def test_avisa_por_cada_pais_de_la_region_que_el_portal_no_ofrece(self):
         bloque = preferencias([grupo("XA", nombres=["Ciudad A1"]), grupo("XB", nombres=["Ciudad B1"])])
         portal = WorkdayFalso([{"id": "R-1", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]}])
@@ -1337,6 +1405,19 @@ class AdaptadorDeWorkable(ConPortalFalso):
         self.assertEqual(vacantes["WA00"]["descripcion"], "Descripción ficticia.\n\nRequisitos ficticios.")
         self.assertEqual(vacantes["WA00"]["estado_vigencia"], "Confirmada abierta")
         self.assertIn("[OK] EMP-ACME: 20/20 únicos; 18 en la región", errores)
+
+    def test_la_red_de_seguridad_de_division_completa_toma_el_pais_que_da_la_plataforma(self):
+        # La cuenta no escribe el país, pero da su código: la plataforma sitúa la vacante en XA
+        bloque = preferencias([grupo("XA", ["Estado A"])])
+        portal = WorkableFalso([
+            {"id": "W1", "lugares": [("Localidad A6", None, None, "XA")]},
+            {"id": "W2", "lugares": [("Localidad A7", "Estado Z", None, "XA")]},
+            {"id": "W3", "lugares": [("Localidad A8", "Estado A", None, "XA")]},
+        ])
+        r, errores = self.buscar(bloque, portal)
+        self.assertEqual(self.regiones(r), {"W1": "Indeterminada", "W3": "Dentro"})
+        self.assertEqual(r["fuera_de_region"], ["Localidad A7, Estado Z"])
+        self.assertIn("revisar ubicación: Localidad A6 (1 vacante: W1)", errores)
 
     def test_las_remotas_salen_del_filtro_de_remoto_con_su_alcance_por_codigo_de_pais(self):
         anuncios = [

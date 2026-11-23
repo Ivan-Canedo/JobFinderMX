@@ -1,6 +1,6 @@
 # 06 — Empresas objetivo y fichas
 
-**Versión:** 1.7 — 2026-11-22 — CAT-PLATAFORMAS: en Workday, la faceta de remoto no trae las vacantes sin `remoteType`.
+**Versión:** 1.8 — 2026-11-22 — FICHA-PLANTILLA: «Sedes y región» anota si el portal escribe la división de cada localidad.
 **Estado:** plantilla sin empresas. Las agrega el paso 7 de `/configurar` (Empresas), cada una con su ficha y la configuración de su plataforma de reclutamiento.
 
 ## CAT-EMPRESAS — Catálogo
@@ -202,7 +202,7 @@ Cada ficha es una sección `## EMP-<ID> — <Nombre>`. Su primera línea dice `*
 2. **`### Identidad`:** razón social, nombres alternativos y entidad contratante.
 3. **`### Portal`:** portal oficial y plataforma de reclutamiento, con las rutas comprobadas desde el sitio de la empresa y lo que permite su `robots.txt`, con fecha. La raíz de una plataforma no siempre es el buscador público.
 4. **`### Acceso`:** solo lo que esta empresa cambie respecto de CAT-PLATAFORMAS: paginación, total, filtros, comprobación de ID o indicador de vigencia. Si el portal complica leer el anuncio de una vacante con la herramienta de lectura web, una línea opcional **Detalle desde Web:** dice cómo llegar a sus campos (07/BUS-ACCESO-WEB), por ejemplo, con una API de detalle en lugar de la página pública.
-5. **`### Sedes y región`:** ubicación literal y su relación con la región de 04, por separado. No trasladar equivalencias de otra empresa. Límites de cobertura observados, como remotas que el filtro no trae.
+5. **`### Sedes y región`:** ubicación literal y su relación con la región de 04, por separado. No trasladar equivalencias de otra empresa. Límites de cobertura observados, como remotas que el filtro no trae. Si la región de 04 tiene un grupo de división completa, anotar si el portal escribe la división de cada localidad; si no la escribe, sus localidades de la región quedan por revisar hasta que el titular las nombre en `incluidas` (04, «Cómo se lee un grupo»).
 6. **`### Campos y mapeo a los registros`:** los de su plataforma (CAT-PLATAFORMAS); anotar solo lo que cambie en esta empresa y cuál es la fecha de publicación confiable.
 7. **`### Vocabulario observado`:** familias de puestos y vocabulario propio, a partir de 02, 04 y 05; no inferir experiencia por la empresa.
 8. **`### Fuentes y limitaciones`:** fuentes, fecha de comprobación, cobertura de la búsqueda de prueba y pendientes.

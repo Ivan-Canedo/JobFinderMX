@@ -143,6 +143,13 @@ def leer_preferencias(ruta):
             and lista_de_textos(g.get("nombres")) and isinstance(g.get("zona", None), (str, type(None)))
             for g in localidades):
         mal("localidades debe ser una lista de grupos con pais, divisiones, zona y nombres.")
+    for g in localidades:
+        g.setdefault("incluidas", [])
+        if not lista_de_textos(g["incluidas"]):
+            mal(f"incluidas del grupo de {g['pais']} debe ser una lista de textos.")
+        if g["incluidas"] and (g["nombres"] or not g["divisiones"]):
+            mal(f"incluidas solo va en un grupo de división completa (con divisiones y sin nombres); en el grupo "
+                f"de {g['pais']}, las localidades que acepta van en nombres.")
     sin_pais = [g["pais"] for g in localidades if g["pais"] not in paises]
     if remoto["alcance"] not in ("ninguno", "paises", "cualquiera"):
         mal(f"remoto.alcance debe ser \"ninguno\", \"paises\" o \"cualquiera\"; dice {remoto['alcance']!r}.")
@@ -424,13 +431,32 @@ def demasiado_general(s, pref):
     return all(p in GENERALES for p in re.findall(r"[^\W\d_]+", s))
 
 
-def clasificar_ubicacion(literal, pref):
-    """«dentro», «revisar» o «fuera»: una ubicación literal contra los grupos de 04/PREF-UBICACION."""
+def entre_localidad_y_pais(literal, pref):
+    """Las partes de la ubicación entre la de la localidad y la siguiente que es un país (o el final), sin las que
+    son solo un número, como un código postal: «estado z» en «Localidad Z, Estado Z, País A»; ninguna en «Localidad A3,
+    País A (Edificio 1)» ni en «XAA.Localidad A4»."""
+    nombres_pais = nombres_de_paises(pref)
+    partes = partes_ubicacion(literal)
+    i = next((i for i, p in enumerate(partes) if p not in nombres_pais), len(partes))
+    entre = []
+    for p in partes[i + 1:]:
+        if p in nombres_pais:
+            break
+        if not re.fullmatch(r"[\d\s-]+", p):
+            entre.append(p)
+    return entre
+
+
+def clasificar_ubicacion(literal, pref, codigos=None):
+    """«dentro», «revisar» o «fuera»: una ubicación literal contra los grupos de 04/PREF-UBICACION. codigos: los
+    códigos ISO de país de la vacante, si la plataforma los publica; sitúan en su país una ubicación que no nombra
+    ninguno."""
     s = normalizar(literal)
     revisar = demasiado_general(s, pref)
     # Una ubicación que nombra otro país de 04, y no el del grupo, no es de ese grupo: hay ciudades y
     # divisiones homónimas entre países
     nombrados = paises_nombrados(literal, pref)
+    situada = nombrados or set(codigos or ())
     localidad = parte_localidad(literal, pref)
     for g in pref["localidades"]:
         if nombrados and g["pais"] not in nombrados:
@@ -446,18 +472,24 @@ def clasificar_ubicacion(literal, pref):
             # Nombra su división sin una localidad aceptada: puede estar dentro
             revisar = revisar or nombra(s, g["divisiones"])
         elif g["divisiones"]:
-            if nombra(s, g["divisiones"]):
+            if nombra(s, g["divisiones"]) or nombra(s, g["incluidas"]):
                 return "dentro"
+            # Red de seguridad: en su país, una ubicación con solo la localidad («Localidad, País», «XAA.Localidad»)
+            # puede ser de la división si el portal no la escribe; una parte entre la localidad y el país es otra
+            # división
+            if g["pais"] in situada and localidad is not None:
+                revisar = revisar or not entre_localidad_y_pais(literal, pref)
         elif g["pais"] in nombrados:
             return "dentro"
     return "revisar" if revisar else "fuera"
 
 
-def region(literales, pref):
-    """region_relacionada de 11 y las ubicaciones que pueden estar dentro sin nombrar una localidad aceptada."""
+def region(literales, pref, codigos=None):
+    """region_relacionada de 11 y las ubicaciones que pueden estar dentro sin nombrar una localidad aceptada.
+    codigos: los códigos ISO de país de la vacante, si la plataforma los publica (clasificar_ubicacion)."""
     if not literales:
         return "Indeterminada", []
-    clases = [clasificar_ubicacion(l, pref) for l in literales]
+    clases = [clasificar_ubicacion(l, pref, codigos) for l in literales]
     revisar = [l for l, c in zip(literales, clases) if c == "revisar"]
     if all(c == "dentro" for c in clases):
         return "Dentro", revisar
@@ -536,10 +568,11 @@ def fecha_iso(s, pref):
 
 
 def vacante(pref, empresa_id, job_id, titulo, url_oficial, ubicaciones, modalidad, fecha_pub,
-            estado, motivo, url_fuente, departamento, descripcion):
-    """Los campos de `vacantes` y `observaciones` (11), con la región de 04."""
+            estado, motivo, url_fuente, departamento, descripcion, codigos=None):
+    """Los campos de `vacantes` y `observaciones` (11), con la región de 04. codigos: los códigos ISO de país de la
+    vacante, si la plataforma los publica."""
     ubicaciones = [u for u in ubicaciones if u]
-    reg, revisar = region(ubicaciones, pref)
+    reg, revisar = region(ubicaciones, pref, codigos)
     return {
         "empresa_id": empresa_id,
         "job_id": job_id,
@@ -977,7 +1010,7 @@ def ef_vacante(pref, eid, sitio, dominio, p):
         {"position_id": p["id"], "domain": dominio, "hl": "en"})
     return vacante(pref, eid, p.get("displayJobId"), p.get("name"),
                    sitio + p["positionUrl"] if p.get("positionUrl") else None, p.get("locations") or [], modalidad,
-                   publicada, None, None, url_det, p.get("department"), None)
+                   publicada, None, None, url_det, p.get("department"), None, ef_codigos(p))
 
 
 def ef_detalle(v, pid):
@@ -1124,7 +1157,7 @@ def wk_vacante(pref, eid, cuenta, f):
                for l in f.get("locations") or []]
     return vacante(pref, eid, sc, f.get("title"), f"{WK_SITIO}/{cuenta}/j/{sc}/", lugares, f.get("workplace"),
                    fecha_iso(f.get("published"), pref), None, None, f"{WK_SITIO}/api/v2/accounts/{cuenta}/jobs/{sc}",
-                   None, None)
+                   None, None, wk_codigos(f))
 
 
 def wk_codigos(f):
@@ -1549,7 +1582,7 @@ def or_vacante(pref, eid, portal, api, numero, x):
     url_det = (f"{api}/recruitingCEJobRequisitionDetails?expand=all&onlyData=true&"
                + or_finder("ById", {"Id": f'"{rid}"', "siteNumber": numero}))
     return vacante(pref, eid, rid, x.get("Title"), f"{portal}/job/{rid}", lugares, x.get("WorkplaceType") or None,
-                   x.get("PostedDate"), None, None, url_det, x.get("JobFunction"), None)
+                   x.get("PostedDate"), None, None, url_det, x.get("JobFunction"), None, or_codigos(x))
 
 
 def or_detalle(v, rid, pref):

@@ -1,6 +1,6 @@
 # 04 — Preferencias laborales
 
-**Versión:** 1.2 — 2026-11-22 — Una ciudad homónima de su división cuenta como localidad solo en el lugar de la localidad.
+**Versión:** 1.3 — 2026-11-22 — Grupo de división completa: red de seguridad para la localidad escrita sin su división y campo `incluidas`.
 **Estado:** plantilla sin llenar. Lo llena el paso 4 de `/configurar` (Preferencias) con las respuestas del titular; el bloque de PREF-UBICACION no trae valores.
 
 ## PREF-USO — Interpretación
@@ -59,6 +59,7 @@ Dónde acepta trabajar el titular y desde dónde acepta vacantes remotas. Los lu
 | `localidades[].divisiones` | El estado, provincia, departamento u otra división del país que contiene el grupo, con sus abreviaturas usuales. Vacía si el grupo es el país completo o si las localidades no necesitan división para reconocerse |
 | `localidades[].zona` | Nombre de la zona metropolitana que nombró el titular, como referencia; `null` si no nombró una. No se usa para comparar: si los anuncios escriben la zona como ubicación, ese nombre va también en `nombres` |
 | `localidades[].nombres` | Las localidades aceptadas (ciudad, municipio, comuna, distrito o como se llamen en ese país), cada una con las formas en que la escriben los anuncios, como su nombre corto o en inglés. Vacía si el grupo acepta toda su división o todo el país |
+| `localidades[].incluidas` | Opcional, solo en un grupo de división completa (con `divisiones` y sin `nombres`): las localidades de la división que los anuncios escriben sin ella, como «Localidad, País», con las mismas variantes que `nombres`. Si falta, vale `[]` |
 | `remoto.alcance` | `"ninguno"` si no acepta remoto; `"paises"` si acepta vacantes remotas de los países de `remoto.paises`; `"cualquiera"` si las acepta de cualquier país |
 | `remoto.paises` | Códigos de `paises`, solo con el alcance `"paises"`; vacía con los otros dos |
 | `zona_horaria` | La de su residencia (02 §2), con su nombre IANA (`Región/Ciudad`); si la residencia cambia, se revisa. Da las fechas de los registros y la hora de la ventana de jornada (PREF-JORNADA) |
@@ -69,6 +70,8 @@ Dónde acepta trabajar el titular y desde dónde acepta vacantes remotas. Los lu
 - **Con `nombres`:** acepta solo esas localidades. Una ubicación que nombra una de sus `divisiones`, o solo su país, sin nombrar ninguna localidad aceptada queda por revisar, porque puede estar dentro.
   - **Ciudad homónima de su división:** un nombre que también está en `divisiones` cuenta como la localidad solo cuando es la parte de la localidad, la primera sin contar las que son un país; en otro lugar nombra la división. Con «Estado A» en `nombres` y en `divisiones`, «Estado A, País A» y «XAA.Estado A» están dentro, y «Ciudad X, Estado A, País A» queda por revisar.
 - **Sin `nombres`, con `divisiones`:** acepta cualquier localidad de esas divisiones. Una ubicación que solo nombra el país queda por revisar.
+  - **Localidad sin su división:** algunos portales no escriben la división. Una ubicación de su país (que lo nombra, lo da como código, «XAA.Localidad», o que la plataforma sitúa en él por su código de país) que no nombra ninguna de sus `divisiones` queda por revisar si no tiene otra parte entre la de la localidad y la del país: «Localidad A3, País A» y «Localidad A3, País A (Edificio 1)» pueden estar dentro. Si tiene otra parte entre las dos, que no sea solo un número como un código postal, esa parte es otra división y queda fuera: «Localidad Z, Estado Z, País A».
+  - **Con `incluidas`:** una ubicación que nombra una de esas localidades está dentro aunque no nombre la división. Con «Localidad A3» en `incluidas`, «Localidad A3, País A» está dentro.
 - **Sin `nombres` ni `divisiones`:** acepta cualquier localidad del país.
 
 Una ubicación por revisar no se descarta: el script la señala con una línea «revisar» (07). Cada nombre coincide si aparece en la ubicación como palabra o frase completa, sin distinguir mayúsculas ni acentos, así que esas variantes no se repiten; las de idioma o abreviatura, sí.
@@ -78,6 +81,7 @@ Una ubicación por revisar no se descarta: el script la señala con una línea �
 - `remoto.alcance`, `zona_horaria` y `moneda` no pueden quedar en `null`.
 - Con `localidades` vacía, el alcance no puede ser `"ninguno"`: no habría nada que buscar.
 - Cada `pais` de `localidades` y cada código de `remoto.paises` es una clave de `paises`.
+- `incluidas` va solo en un grupo con `divisiones` no vacía y `nombres` vacía; en los demás, las localidades aceptadas van en `nombres`.
 - Los lugares son los que nombró el titular, con el alcance con que los nombró: si nombró una ciudad, va solo la ciudad; si nombró una zona metropolitana, las localidades que confirmó al desglosarla.
 - El bloque cuadra con PREF-MODALIDAD: si el titular acepta presencial o híbrido, `localidades` tiene al menos un grupo; si acepta remoto, el alcance no es `"ninguno"`.
 
@@ -186,6 +190,29 @@ Casos con nombres ficticios y los códigos `XA` y `XB`, que la norma ISO reserva
   "remoto": {
     "alcance": "paises",
     "paises": ["XA", "XB"]
+  }
+}
+```
+
+**Una división completa cuyos anuncios a veces no la escriben, sin remoto:**
+
+```json
+{
+  "paises": {
+    "XA": ["País A", "Country A", "XAA"]
+  },
+  "localidades": [
+    {
+      "pais": "XA",
+      "divisiones": ["Estado A", "Edo. A"],
+      "zona": null,
+      "nombres": [],
+      "incluidas": ["Localidad A3", "Localidad A4", "A4 Town"]
+    }
+  ],
+  "remoto": {
+    "alcance": "ninguno",
+    "paises": []
   }
 }
 ```
