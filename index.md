@@ -5,6 +5,8 @@ title: Guía de inicio de JobFinderMX
 
 Esta guía te lleva paso a paso, desde descargar JobFinderMX hasta tener tu perfil y tu CV listos. Está pensada para Windows y para alguien que nunca ha usado un agente de IA. No necesitas pagar ninguna suscripción.
 
+Tiene dos niveles. El **nivel 1** (pasos 1 a 8) deja listos tu perfil y tu CV, lo más útil y con menos riesgo. El **nivel 2** (paso 9) te lleva a buscar vacantes, cuando ya domines lo básico.
+
 ## 1. Qué es y qué no hace
 
 JobFinderMX es una carpeta con instrucciones para un **agente de IA**: un asistente como los chats que ya conoces, pero que además puede trabajar con los archivos de tu computadora. Con esas instrucciones, el agente:
@@ -63,9 +65,11 @@ Más adelante el agente te va a ofrecer mover tu copia a un lugar más seguro qu
 
 **Antigravity** es el programa de Google donde vive el agente. Está en inglés; aquí va cada pantalla traducida.
 
-1. Entra a <https://antigravity.google/download> y pulsa **«Download for x64»** (descargar para x64). Si tu computadora es de las pocas con procesador ARM, pulsa **«Download for ARM64»**.
+1. Entra a <https://antigravity.google/download> y pulsa **«Download for x64»** (descargar la versión para casi todas las computadoras con Windows). Solo si tu computadora tiene un procesador Snapdragon, pulsa **«Download for ARM64»**.
 
    > **Captura pendiente `04-descarga`:** la página de descarga con el botón «Download for x64» resaltado.
+   >
+   > **Por confirmar en la prueba:** los nombres del botón y del archivo (`Antigravity-x64.exe`), tomados de la documentación de Antigravity.
 
 2. Abre el archivo que bajó (`Antigravity-x64.exe`) y sigue los pasos del instalador.
 
@@ -91,10 +95,12 @@ Más adelante el agente te va a ofrecer mover tu copia a un lugar más seguro qu
 
 ## 5. Abrir tu carpeta y escribir «configura mi copia»
 
-1. En la barra de la izquierda de Antigravity, pulsa el ícono **«New Project»** (proyecto nuevo): una carpeta con un signo de más.
+1. En la barra de la izquierda de Antigravity, pulsa el ícono **«New Project»** (proyecto nuevo; así llama Antigravity a una carpeta en la que trabaja el agente): una carpeta con un signo de más.
 2. Pulsa **«Add Folder»** (agregar carpeta), elige tu copia (la carpeta `JobFinderMX` de adentro, del paso 3) y pulsa **«Create»** (crear).
 
    > **Captura pendiente `05-abrir-carpeta`:** la ventana «New Project» con la carpeta elegida y el botón «Create».
+   >
+   > **Por confirmar en la prueba:** el ícono y los nombres «New Project», «Add Folder» y «Create», tomados de la documentación de Antigravity.
    >
    > **Por confirmar en la prueba:** si, con el rol elegido, Antigravity pregunta entre «Local mode» y «New worktree mode». Si pregunta, la guía dice elegir «Local mode» (trabajar directo en tu carpeta).
 
@@ -124,14 +130,14 @@ Palabras en inglés que vas a ver:
 | Auto | Automático: el agente decide qué comandos corre sin preguntarte. |
 | Turbo | Turbo: corre todo sin preguntarte. **No lo uses.** |
 
-> **Por confirmar en la prueba:** los botones del aviso para aprobar un comando y su traducción, para agregarlos a la tabla.
+> **Por confirmar en la prueba:** los botones del aviso para aprobar un comando y su traducción, para agregarlos a la tabla, y que los cuatro modos de permisos, tomados de la documentación de Antigravity, se llamen así.
 
 «Request Review», «Default», «Auto» y «Turbo» son los **modos de permisos** de Antigravity. Usa «Default» o «Request Review». No uses «Turbo» ni «Auto»: en ellos el agente corre comandos sin preguntarte, y la regla deja de servir.
 
 Según tu Windows:
 
-- **Windows 10, o Windows 11 sin las actualizaciones de 2026:** vas a aprobar cada comando, uno por uno. Es normal; no está fallando nada.
-- **Windows 11 al día:** con «Default», Antigravity corre los comandos en un espacio aislado, sin internet. Cuando un comando necesite internet, como al instalar algo o buscar vacantes, el agente te pide cambiar a «Request Review» y te dice cómo.
+- **Windows 10, o Windows 11 anterior a la versión 24H2 o sin las actualizaciones de agosto de 2026:** vas a aprobar cada comando, uno por uno. Es normal; no está fallando nada.
+- **Windows 11 24H2 o posterior, con las actualizaciones de agosto de 2026 o posteriores:** con «Default», Antigravity corre los comandos en un espacio aislado, sin internet. Cuando un comando necesite internet, como al instalar algo o buscar vacantes, el agente te pide cambiar a «Request Review» y te dice cómo.
 
 > **Captura pendiente `06-modo-de-permisos`:** dónde se cambia el modo de permisos, con «Request Review» elegido.
 
@@ -141,7 +147,7 @@ El plan gratuito tiene una **cuota semanal**: un límite de uso que se renueva c
 
 Para aprovecharla, el agente te propone un paso de la configuración por conversación, y te avisa antes de algo que gaste mucha cuota.
 
-Si se acaba, no se descompuso nada y no pierdes tu trabajo: tu carpeta guarda lo que ya hiciste. Espera a que se renueve, abre una conversación nueva y escribe otra vez **configura mi copia** (o lo que estabas pidiendo). El agente sigue donde se quedó.
+Si se acaba, no se descompuso nada y no pierdes tu trabajo: tu carpeta guarda lo que ya hiciste. Espera a que se renueve, abre una conversación nueva y escribe otra vez **configura mi copia**: la configuración sigue donde se quedó. Si estabas pidiendo otra cosa, como una búsqueda, vuelve a pedirla.
 
 > **Captura pendiente `07-cuota-agotada`:** el mensaje de Antigravity cuando se acaba la cuota.
 >
@@ -171,7 +177,7 @@ El agente corrige el archivo y vuelve a generar el CV si hace falta. Tú no tien
 
 Cuando tu perfil y tu CV estén listos, puedes seguir con la búsqueda. Haz este nivel cuando ya te sientas cómodo con lo anterior.
 
-1. Escribe **configura mi copia**. El agente sigue con los pasos que faltan: te pregunta en qué empresas quieres buscar (si no sabes, te propone algunas) y crea tu archivo de registros, donde anota cada búsqueda y cada vacante.
+1. Escribe **configura mi copia**. El agente sigue con los pasos que faltan: te pregunta en qué empresas quieres buscar (si no sabes, te ofrece buscarlas contigo) y crea tu archivo de registros, donde anota cada búsqueda y cada vacante.
 2. Cuando termine, pídele: **busca vacantes en mis empresas**. Si son muchas empresas, te avisa antes, por la cuota.
 3. El agente te muestra una tabla con las vacantes y qué tanto encaja cada una contigo.
 
@@ -187,7 +193,7 @@ Si una te interesa, pídele que adapte tu CV a esa vacante y revísalo como en e
 
 ## 10. Si algo falla
 
-Si te atoras o algo no funciona como dice esta guía, avísanos en GitHub Issues: <https://github.com/Ivan-Canedo/JobFinderMX/issues>. Necesitas una cuenta gratuita de GitHub.
+Si te atoras o algo no funciona como dice esta guía, avísanos en GitHub Issues: <https://github.com/Ivan-Canedo/JobFinderMX/issues>. GitHub es el sitio donde se publica JobFinderMX, e Issues es su lista de reportes. Necesitas una cuenta gratuita de GitHub.
 
 Pulsa **«New issue»** (reporte nuevo) y cuenta:
 
