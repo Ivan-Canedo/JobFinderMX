@@ -24,7 +24,7 @@ Claude nunca postula ni contacta a nadie por ti.
 - **Tu CV actual**, en PDF o DOCX, y, si lo tienes, el PDF de tu perfil de LinkedIn. Sin CV también se puede: Claude te entrevista sección por sección.
 - **Opcional, una cuenta de GitHub:** para crear tu copia con «Use this template» y usar JobFinderMX en la nube o desde claude.ai. Sin ella, usa el ZIP.
 
-Lo demás lo instala `/configurar` cuando hace falta, siempre con tu permiso: Python, Node y markdownlint-cli2 al empezar; LibreOffice, poppler y la fuente Carlito al generar tu primer CV; y, al crear tus registros, la biblioteca `openpyxl`, en un entorno virtual dentro de tu copia.
+Lo demás lo instala `/configurar` cuando hace falta, siempre con tu permiso: Python al empezar y, al generar tu primer CV o crear tus registros, las bibliotecas de Python que usan, en un entorno virtual dentro de tu copia. La fuente del CV ya viene en la copia.
 
 **Sistemas:** solo Linux está probado. En macOS y Windows, `/configurar` instala con Homebrew o winget, pero un fallo puede venir de ahí.
 

@@ -15,7 +15,7 @@ Cualquier agente con terminal configura la copia completa. No anotes qué agente
 
 1. Corre los pasos 1 y 2 en cada invocación: son revisiones rápidas, y el remoto o el equipo pueden haber cambiado desde la última sesión.
 2. Sigue con el primer paso, en el orden de esta skill, que nombre una fila «Sin llenar» de ESTADO. Si no queda ninguna, la configuración está completa: ofrece el paso 9, que no tiene fila en ESTADO.
-3. Haz un paso por vez. Al terminarlo, marca «Configurado», con su siguiente paso de uso, cada fila de ESTADO que lo nombra: la de cada módulo que el paso escribió y también la de cada módulo de método que solo deja listo, sin editarlo. Cada módulo escrito pasa markdownlint sin advertencias y se versiona según AGENTS.md («Al cerrar»). El paso termina cuando ninguna fila que lo nombra sigue «Sin llenar».
+3. Haz un paso por vez. Al terminarlo, marca «Configurado», con su siguiente paso de uso, cada fila de ESTADO que lo nombra: la de cada módulo que el paso escribió y también la de cada módulo de método que solo deja listo, sin editarlo. Cada módulo escrito pasa markdownlint sin advertencias, si está instalado, y se versiona según AGENTS.md («Al cerrar»). El paso termina cuando ninguna fila que lo nombra sigue «Sin llenar».
 4. Al terminar un paso, di cuál sigue y pregunta si continuar ahora o en otra sesión.
 5. **Fin de la configuración:** cuando ya no queda ninguna fila «Sin llenar» y el titular terminó o declinó lo que se ofrece en el punto 2, cierra en este orden:
    1. Un resumen corto: una línea por paso configurado.
@@ -39,29 +39,35 @@ El paso termina cuando cada remoto es privado, o el titular, ya avisado, decide 
 
 ## Paso 2: Herramientas básicas
 
-Python, Node y markdownlint-cli2 sirven a todos los pasos siguientes. Las bibliotecas de Python del CV y del archivo de registros se instalan cuando hacen falta, en el paso 6 o el 8, el que llegue primero.
+Python sirve a todos los pasos siguientes. Las bibliotecas de Python del CV y del archivo de registros se instalan cuando hacen falta, en el paso 6 o el 8, el que llegue primero.
 
-**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y creó `.venv` con las bibliotecas de Python; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4: corre solo la comprobación de cada herramienta de la tabla. Si alguna falta, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de JobFinderMX»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
+**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y creó `.venv` con las bibliotecas de Python; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4: corre solo la comprobación de Python. Si falla, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de JobFinderMX»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
 
 1. **Sistema:** detecta el sistema operativo con `uname -s`: `Linux`; `Darwin` es macOS; `MINGW…`, `MSYS…` o un `uname` inexistente (PowerShell) es Windows. En Linux, lee `ID` e `ID_LIKE` en `/etc/os-release`: `dnf` sirve a Fedora y derivados; `apt`, a Debian, Ubuntu y derivados. En macOS el gestor es Homebrew (`brew`) y en Windows, `winget`.
 2. **Aviso:** si el sistema no es Linux, dile al titular que JobFinderMX solo se ha probado en Linux, así que un fallo puede venir de ahí.
-3. **Revisión:** corre la comprobación de cada herramienta de la tabla. La que ya cumple no se toca.
+3. **Revisión:** corre la comprobación de cada herramienta que toca revisar: Python y, solo si el titular los pidió, los opcionales. La que ya cumple no se toca.
 4. **Instalación:** muéstrale al titular el comando de cada herramienta que falta y pide su permiso antes de instalar. Un comando con `sudo` pide contraseña: pídele que lo corra él en una terminal y que te avise al terminar. Si su sistema no tiene ninguno de estos gestores, dale el sitio oficial de descarga de la herramienta.
-5. **Comprobación:** vuelve a correr la comprobación de cada herramienta instalada. El paso termina cuando las tres dan una versión que cumple.
+5. **Comprobación:** vuelve a correr la comprobación de cada herramienta instalada. El paso termina cuando Python da una versión que cumple; un opcional que no quedó instalado no lo detiene.
 
 | Herramienta | Comprobación | dnf / apt | brew | winget |
 | --- | --- | --- | --- | --- |
 | Python 3.9 o mayor | `python3 --version` | `sudo dnf install python3` / `sudo apt install python3` | `brew install python` | `winget install -e --id Python.Python.3.13` |
+
+**Opcionales:** Node y markdownlint-cli2 solo revisan el formato de los `.md` que edita el agente (AGENTS.md, «Formato Markdown»); la copia funciona sin ellos. No los revises, ofrezcas ni instales salvo que el titular los pida. Si los pide, sigue con ellos los puntos 3 a 5 con esta tabla:
+
+| Herramienta | Comprobación | dnf / apt | brew | winget |
+| --- | --- | --- | --- | --- |
 | Node | `node --version`, con la versión mayor que pide `npm view markdownlint-cli2 engines.node` | `sudo dnf install nodejs npm` / `sudo apt install nodejs npm` | `brew install node` | `winget install -e --id OpenJS.NodeJS.LTS` |
 | markdownlint-cli2 | `markdownlint-cli2 --help` (la primera línea da la versión; sale con código 2 aunque esté instalado) | `npm install -g --prefix ~/.local markdownlint-cli2` | `brew install markdownlint-cli2` | `npm install -g markdownlint-cli2` |
 
 **Tropiezos conocidos:**
 
+- **Python en Windows:** donde la documentación diga `python3`, usa `py -3`.
+- **`PATH` en Windows:** después de `winget` hay que reiniciar VS Code para que la terminal vea el `PATH` nuevo.
+- **Sin red:** si una instalación falla porque no se resuelve un nombre o se niega la conexión, sigue «Comandos sin red».
 - **Node viejo:** si el gestor instala un Node más viejo que el que pide markdownlint-cli2 (pasa con `apt` en versiones anteriores de Debian y Ubuntu), ofrece la versión LTS con las instrucciones de <https://nodejs.org> para su distribución.
 - **markdownlint-cli2 ya instalado:** cumple si la primera línea de `--help` da la versión, aunque el código de salida no sea 0. No lo busques con `npm list -g`: no ve lo que se instaló con `--prefix ~/.local`.
-- **`PATH`:** si `markdownlint-cli2` no aparece después de instalarlo con `--prefix ~/.local`, falta `~/.local/bin` en el `PATH`; explícale al titular cómo agregarlo en su shell. En Windows, después de `winget` hay que reiniciar VS Code para que la terminal vea el `PATH` nuevo.
-- **Python en Windows:** donde la documentación diga `python3`, usa `py -3`.
-- **Sin red:** si una instalación falla porque no se resuelve un nombre o se niega la conexión, sigue «Comandos sin red».
+- **`PATH` de markdownlint-cli2:** si no aparece después de instalarlo con `--prefix ~/.local`, falta `~/.local/bin` en el `PATH`; explícale al titular cómo agregarlo en su shell.
 
 ## Paso 3: Perfil maestro
 

@@ -1,6 +1,6 @@
 # 01 — Mapa y estado del proyecto
 
-**Versión:** 1.12 — 2026-11-23 — El generador de CV lleva su fuente en `herramientas/fuentes/` y corre con el Python de `.venv/`.
+**Versión:** 1.13 — 2026-11-23 — El lint de Markdown es opcional en la copia: corre solo si `markdownlint-cli2` está instalado.
 
 ## ESTADO — Punto de continuidad
 
@@ -82,7 +82,7 @@ No están en el conocimiento del proyecto. Si una sesión los necesita, hay que 
 - **`.claude/skills/conectar-web/`:** la skill `/conectar-web`, que conecta un proyecto de claude.ai con el repositorio privado de GitHub de la copia, para que lea los módulos y la instantánea. La ofrece el paso 9 de `/configurar`, en otra conversación.
 - **`.claude/skills/conectar-nube/`:** la skill `/conectar-nube`, que prepara la copia para Code en la nube: su repositorio privado de GitHub y el entorno de la nube con la lista de dominios desde 06, y una búsqueda de prueba. La ofrece el paso 9 de `/configurar`, antes que `/conectar-web`, en otra conversación.
 - **`.agents/skills/`:** un puntero por skill, con su mismo nombre y descripción, que remite a la skill completa de `.claude/skills/`. Existen para que otros agentes, que leen esa carpeta y no `.claude/skills/` (Antigravity, Gemini CLI), encuentren `/configurar`, `/actualizar`, `/conectar-web` y `/conectar-nube`; las skills se editan en `.claude/skills/` y el puntero solo cambia si cambia su nombre o su descripción.
-- **`.markdownlint-cli2.jsonc`:** reglas de formato Markdown que se revisan en Code tras editar (AGENTS.md).
+- **`.markdownlint-cli2.jsonc`:** reglas de formato Markdown que se revisan en Code tras editar, si `markdownlint-cli2` está instalado (AGENTS.md).
 - **`herramientas/buscar.py`:** script de búsqueda del canal Code (07/BUS-ACCESO-CODE); no se sube al proyecto.
 - **`herramientas/generar_cv.py` y `herramientas/fuentes/`:** generador y comprobador de CV del canal Code, con la fuente Carlito y su licencia (09/CV-HERRAMIENTAS); no se suben al proyecto.
 - **`.claude/settings.json` y `herramientas/preparar_nube.sh`:** el hook que, al abrir una sesión de Code en la nube, instala las herramientas y crea `.venv`; en Code local no hace nada (ADR 0007). Lo comprueba `/configurar` en los pasos 2 y 8.

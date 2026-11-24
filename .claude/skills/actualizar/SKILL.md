@@ -106,7 +106,7 @@ El paso termina cuando cada acción de esas versiones está hecha o el titular d
 
 ## Paso 6: Cierre
 
-1. **Formato:** corre `markdownlint-cli2` sobre cada `.md` que cambió y deja cero advertencias (AGENTS.md, «Formato Markdown»).
+1. **Formato:** si `markdownlint-cli2` está instalado, córrelo sobre cada `.md` que cambió y deja cero advertencias (AGENTS.md, «Formato Markdown»). Si no lo está, salta este punto.
 2. **Pruebas:** si cambió algún archivo de `herramientas/`, corre las pruebas con el Python de `.venv/` si existe (en Windows, `.venv\Scripts\python.exe`) o, si no, con `python3`:
 
    ```sh
