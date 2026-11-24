@@ -59,8 +59,6 @@ Un archivo `.zip` es una carpeta comprimida: antes de usarla hay que **descompri
 
 No abras el `.zip` con doble clic para trabajar desde ahí: así solo ves su contenido, sin sacarlo, y el agente no puede trabajar con él.
 
-Más adelante el agente te va a ofrecer mover tu copia a un lugar más seguro que Descargas, porque esa carpeta se suele limpiar. Te explica cómo hacerlo cuando llegue el momento.
-
 ## 4. Instalar Antigravity e iniciar sesión
 
 **Antigravity** es el programa de Google donde vive el agente. Está en inglés; aquí va cada pantalla traducida.
@@ -108,7 +106,13 @@ Más adelante el agente te va a ofrecer mover tu copia a un lugar más seguro qu
 
    > **Captura pendiente `05-configura-mi-copia`:** el cuadro de mensaje con «configura mi copia» escrito, dentro del proyecto de la carpeta.
 
-Desde aquí, el agente te guía. Avanza en pasos cortos: revisa tu carpeta, instala lo que hace falta, te entrevista para tu perfil y escribe tu CV. Te explica cada paso en español sencillo.
+Lo primero que hace el agente es revisar dónde quedó tu copia. Si está en Descargas, te ofrece moverla a una carpeta más segura, `C:\Users\<tu usuario>\JobFinderMX`, porque Descargas se suele limpiar. Si aceptas y la mueve, la conversación se detiene: vuelve a abrir la carpeta en su lugar nuevo con «New Project» → «Add Folder», como en el punto 2, abre una conversación nueva y escribe otra vez **configura mi copia**. Sigue donde se quedó.
+
+> **Captura pendiente `05-mover-carpeta`:** el agente ofreciendo mover la carpeta.
+>
+> **Por confirmar en la prueba:** si el agente puede mover la carpeta mientras Antigravity la tiene abierta. Si no puede, la copia se queda en Descargas, y la guía debe pedir que no la borres.
+
+Después, el agente te guía. Avanza en pasos cortos: instala lo que hace falta, te entrevista para tu perfil y escribe tu CV. Te explica cada paso en español sencillo.
 
 En el camino te ofrece **git**, un programa que guarda versiones de tus archivos: si algo sale mal, puedes volver atrás, y además te deja recibir las mejoras de JobFinderMX. Es opcional, pero te conviene aceptarlo.
 
