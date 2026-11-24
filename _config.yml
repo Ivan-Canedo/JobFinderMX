@@ -1,0 +1,5 @@
+# Configuración de Jekyll para la guía de inicio de JobFinderMX (GitHub Pages, rama gh-pages).
+title: Guía de inicio de JobFinderMX
+description: Cómo empezar a usar JobFinderMX en Windows, paso a paso y sin pagar suscripción.
+lang: es
+theme: minima
