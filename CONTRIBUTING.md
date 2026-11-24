@@ -107,6 +107,26 @@ Code en la nube (ADR 0007) no se prueba sobre la plantilla: una sesión trabaja 
 4. **Para un cambio nuevo de la plantilla,** lleva al `main` del repositorio de prueba el diff entre la versión de la que salió y la nueva, y abre una sesión nueva.
 5. **Al terminar,** borra el repositorio de prueba, su entorno de la nube en claude.ai/code y el clon de prueba.
 
+## Guía de inicio
+
+La guía de inicio (ver el glosario, `CONTEXT.md`) es una página de GitHub Pages en <https://ivan-canedo.github.io/JobFinderMX/>. Vive en la rama `gh-pages`, que no comparte historial con `main`. Solo lleva la guía (`index.md`), su configuración de Jekyll (`_config.yml` y `assets/main.scss`) y sus capturas, así que nada de eso viaja en las copias ni en el ZIP. Para editarla sin cambiar de rama, ábrela en otra carpeta:
+
+```sh
+git worktree add "$(mktemp -d)/gh-pages" gh-pages
+```
+
+- **Reglas del texto:** lenguaje sencillo para el titular principiante y ningún modelo de IA por su nombre. Pasa `markdownlint-cli2 --config <plantilla>/.markdownlint-cli2.jsonc index.md` sin advertencias.
+- **Privacidad:** la rama es pública, así que vale «Privacidad»: corre la auditoría de términos sobre la carpeta de `gh-pages` y revisa los metadatos de cada captura. Las capturas se toman en la cuenta de prueba, con un nombre de usuario que no identifique a nadie, porque las rutas de Windows lo muestran (`C:\Users\<nombre>`).
+- **Marcadores:** cada captura que falta es una cita que empieza con «**Captura pendiente**», sigue con el nombre de la captura en código, como `03-extraer-todo`, y dice lo que debe mostrar. Su archivo va en `capturas/<nombre>.png` y reemplaza la cita. Un dato que la prueba tiene que confirmar es una cita que empieza con «**Por confirmar en la prueba:**». El pie dice con qué versiones de Antigravity y de Windows se probó, y la fecha.
+- **Activar Pages:** se hace una vez, después del primer push de `gh-pages`. En GitHub, «Settings» → «Pages» → «Build and deployment»: «Source» en «Deploy from a branch» y la rama `gh-pages` con la carpeta `/ (root)`. O con `gh`:
+
+  ```sh
+  gh api -X POST repos/Ivan-Canedo/JobFinderMX/pages -f 'source[branch]=gh-pages' -f 'source[path]=/'
+  ```
+
+  Cada push a `gh-pages` vuelve a publicar la página en uno o dos minutos. Revísala en un teléfono.
+- **Cuándo volver a probarla:** cuando alguien reporte un problema con la guía. Se repite el recorrido en Windows con Antigravity, se actualizan las capturas y los pasos que cambiaron, y el pie.
+
 ## Versión de la plantilla
 
 Cada versión publicada es una etiqueta `vX.Y` sobre su commit. `/actualizar` fusiona cada archivo de la copia en tres vías, con la etiqueta que anota su 01 como base, así que una etiqueta publicada no se mueve ni se borra. Para publicar una versión:

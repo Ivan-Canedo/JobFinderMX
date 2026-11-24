@@ -1,5 +1,7 @@
 # JobFinderMX
 
+**¿Tienes Windows y nunca has usado un agente de IA?** Empieza por la [guía de inicio](https://ivan-canedo.github.io/JobFinderMX/): te lleva paso a paso, sin pagar suscripción.
+
 JobFinderMX es una plantilla para buscar trabajo con Claude. Tu copia guarda tu perfil, tu CV y tu método de búsqueda en archivos Markdown, y Claude trabaja sobre ellos desde Claude Code, en VS Code y, si quieres, también en la nube o desde un proyecto de claude.ai.
 
 No es una aplicación: son instrucciones, módulos y unos scripts de Python. Claude te entrevista para llenar los módulos y después los usa para buscar vacantes, evaluarlas y adaptar tu CV.
@@ -72,7 +74,7 @@ Así tienes el historial de tus cambios y un respaldo privado en GitHub.
 ### Con el ZIP
 
 1. Descarga la versión más reciente: <https://github.com/Ivan-Canedo/JobFinderMX/releases/latest/download/JobFinderMX.zip>.
-2. Descomprime el archivo donde quieras guardar tu copia. Queda una carpeta `JobFinderMX`: esa es tu copia.
+2. Descomprime el archivo donde quieras guardar tu copia. Queda una carpeta `JobFinderMX`: esa es tu copia. Si Windows la deja dentro de otra carpeta con el mismo nombre, tu copia es la de adentro.
 
 La carpeta no es un repositorio de git: no tiene remoto, así que nada se publica, pero tampoco guarda historial. Si quieres historial, `/configurar` te ofrece git en su paso 2 y convierte la carpeta en repositorio por ti; si algún día le agregas un remoto, que sea privado. Conviene hacerlo, porque git es el único respaldo de tus registros.
 
