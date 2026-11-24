@@ -65,12 +65,12 @@ Al conectar GitHub, claude.ai puede crear un entorno de la nube «Default». No 
 1. **Empresa:** elige una del catálogo que no esté en Workable. Si el catálogo está vacío o solo tiene empresas de Workable, la prueba solo revisa la preparación (punto 2).
 2. **Sesión:** pídele que abra una sesión nueva en claude.ai/code o en la pestaña Code de la app, con su repositorio y el entorno «JobFinderMX», y que escriba, según el caso:
    - con empresa: «Haz una búsqueda de prueba solo en EMP-\<ID\>, sin registrarla, y dime cómo salió»;
-   - sin empresa: «Comprueba que la sesión quedó preparada: markdownlint-cli2, LibreOffice y el `.venv` con openpyxl».
+   - sin empresa: «Comprueba que la sesión quedó preparada: markdownlint-cli2 y el `.venv` con las bibliotecas de Python».
 3. **Resultado:** que te pegue aquí la respuesta. La búsqueda sale bien con `[OK]`, o `[SIN TOTAL]` con la comprobación de su ficha; la revisión, con una versión de cada herramienta. Si es así, Code en la nube quedó conectado.
 4. **Si algo falla,** ayúdale según lo que vea y repite la prueba en la misma sesión:
    - **`[FALLO]` que dice que el host no está en la lista de dominios del entorno de la nube:** falta en la lista el host con que termina el mensaje. Que lo agregue: en esa sesión, el control junto al título → «Edit cloud environment» (o, en la pantalla de sesión nueva, el selector de entorno → el ícono de ajustes junto a «JobFinderMX»), «Network access», una línea más en «Allowed domains» y «Save changes». La sesión toma el cambio en un minuto.
    - **`[FALLO]` que dice que el sitio bloquea las IP de Code en la nube:** esa empresa se busca en Code local, como las de Workable; repite con otra.
-   - **Un aviso que empieza con «Hook de la nube de JobFinderMX», o falta una herramienta:** la preparación no pudo instalar algo. Si nombra `apt`, `npm` o `pip`, casi siempre falta marcar «Also include default list of common package managers» en el entorno de la nube (paso 3, punto 2). Con el entorno de la nube corregido, que abra una sesión nueva.
+   - **Un aviso que empieza con «Hook de la nube de JobFinderMX», o falta una herramienta:** la preparación no pudo instalar algo. Si nombra `npm` o `pip`, casi siempre falta marcar «Also include default list of common package managers» en el entorno de la nube (paso 3, punto 2). Con el entorno de la nube corregido, que abra una sesión nueva.
    - **El agente de la sesión pregunta cómo crear `.venv`:** la preparación no corrió. Revisa aquí con `git ls-files .claude/settings.json herramientas/preparar_nube.sh` que los dos archivos tengan commit, y con `git status -sb`, que no falte un push.
    - **Otro `[FALLO]`,** con un código HTTP, un `robots.txt` o un error de la ficha: no es de la nube; se atiende como en Code local (07/BUS-ACCESO-CODE).
    - **No encuentra su repositorio al abrir la sesión:** el permiso del paso 2, punto 3.

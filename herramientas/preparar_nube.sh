@@ -2,8 +2,9 @@
 # Prepara una sesión de Code en la nube (ADR 0007). Lo corre el hook SessionStart de
 # .claude/settings.json al abrir o retomar la sesión.
 #
-# Instala con apt poppler, Carlito y LibreOffice Writer sin interfaz; con npm, markdownlint-cli2;
-# y crea .venv con openpyxl. Se salta lo que ya está. Solo actúa con CLAUDE_CODE_REMOTE=true: en
+# Instala con npm markdownlint-cli2 y crea .venv con las bibliotecas de Python de la copia: openpyxl
+# para los registros y, para el CV, fpdf2, python-docx, pypdf y pypdfium2 (ADR 0012). No instala
+# paquetes del sistema. Se salta lo que ya está. Solo actúa con CLAUDE_CODE_REMOTE=true: en
 # Code local sale con 0 sin hacer nada ni imprimir nada.
 #
 # Nunca tumba la sesión: si una parte falla, imprime un aviso con qué falló y sigue; siempre sale
@@ -12,7 +13,7 @@
 
 [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 
-PAQUETES_APT=(poppler-utils fonts-crosextra-carlito libreoffice-writer-nogui)
+BIBLIOTECAS=(openpyxl fpdf2 python-docx pypdf pypdfium2)
 avisos=()
 salida=$(mktemp) || salida=/dev/null
 
@@ -29,17 +30,6 @@ cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/..}" || {
 sudo=()
 [ "$(id -u)" = 0 ] || sudo=(sudo -n)
 
-faltan=()
-for paquete in "${PAQUETES_APT[@]}"; do
-    dpkg -s "$paquete" >/dev/null 2>&1 || faltan+=("$paquete")
-done
-if [ ${#faltan[@]} -gt 0 ]; then
-    if ! { "${sudo[@]}" apt-get update -q &&
-           "${sudo[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y -q "${faltan[@]}"; } >"$salida" 2>&1; then
-        avisar "apt no instaló ${faltan[*]}"
-    fi
-fi
-
 # Instalado, la primera línea de --help da la versión, aunque salga con código 2.
 if ! markdownlint-cli2 --help 2>/dev/null | head -n 1 | grep -q markdownlint-cli2; then
     if ! "${sudo[@]}" npm install -g markdownlint-cli2 >"$salida" 2>&1; then
@@ -47,9 +37,10 @@ if ! markdownlint-cli2 --help 2>/dev/null | head -n 1 | grep -q markdownlint-cli
     fi
 fi
 
-if ! .venv/bin/python -I -c "import openpyxl" >/dev/null 2>&1; then
-    if ! { python3 -m venv .venv && .venv/bin/python -m pip install -q openpyxl; } >"$salida" 2>&1; then
-        avisar "no se creó .venv con openpyxl"
+# Un .venv de una versión anterior, solo con openpyxl, no pasa la comprobación y recibe las demás.
+if ! .venv/bin/python -I -c "import openpyxl, fpdf, docx, pypdf, pypdfium2" >/dev/null 2>&1; then
+    if ! { python3 -m venv .venv && .venv/bin/python -m pip install -q "${BIBLIOTECAS[@]}"; } >"$salida" 2>&1; then
+        avisar "pip no instaló en .venv ${BIBLIOTECAS[*]}"
     fi
 fi
 

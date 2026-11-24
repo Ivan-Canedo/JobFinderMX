@@ -13,5 +13,5 @@ El canal Web se conserva por ahora. La nube cubre lo que hace Web, también desd
 
 - Las búsquedas y los registros hechos en la nube siguen las reglas de Code sin cambios.
 - `buscar.py` distingue un host bloqueado por la lista de dominios y el bloqueo de Workable a la nube, y dice qué hacer en cada caso.
-- Lo que necesita la sesión (LibreOffice, poppler, Carlito, `markdownlint-cli2` y el `.venv`) lo instala un hook SessionStart condicionado a `CLAUDE_CODE_REMOTE=true`, que viaja con la copia y con `/actualizar`. El script de instalación del entorno queda vacío, así que el titular solo configura la red, con nivel Custom por defecto: Full deja salir los datos de la sesión a cualquier dominio.
+- Lo que necesita la sesión (`markdownlint-cli2` y el `.venv` con las bibliotecas de Python; sin paquetes del sistema desde el ADR 0012) lo instala un hook SessionStart condicionado a `CLAUDE_CODE_REMOTE=true`, que viaja con la copia y con `/actualizar`. El script de instalación del entorno queda vacío, así que el titular solo configura la red, con nivel Custom por defecto: Full deja salir los datos de la sesión a cualquier dominio.
 - Al cerrar una sesión en la nube, los cambios se integran en `main` con permiso del titular; la rama de la sesión no se conserva.

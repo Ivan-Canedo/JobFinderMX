@@ -4,11 +4,12 @@ Uso:
     python3 -I -B -m unittest discover -s herramientas/pruebas
 
 El hook SessionStart de .claude/settings.json corre herramientas/preparar_nube.sh, que en Code en
-la nube instala las herramientas y crea .venv. La instalación real necesita root y red, así que no se
-prueba aquí. Lo que se prueba es que en Code local no hace nada: el comando, tal como lo lee de la
-configuración del proyecto, corre con bash en una copia ficticia sin CLAUDE_CODE_REMOTE, sale con 0,
-no imprime nada y no crea ningún archivo. El camino de la nube corre con comandos falsos en el PATH
-(apt-get, npm, python3…) que anotan sus llamadas, para ver qué se instala, qué se salta y qué avisa.
+la nube instala markdownlint-cli2 y crea .venv con las bibliotecas de Python. La instalación real
+necesita root y red, así que no se prueba aquí. Lo que se prueba es que en Code local no hace
+nada: el comando, tal como lo lee de la configuración del proyecto, corre con bash en una copia
+ficticia sin CLAUDE_CODE_REMOTE, sale con 0, no imprime nada y no crea ningún archivo. El camino
+de la nube corre con comandos falsos en el PATH (npm, python3…) que anotan sus llamadas, para ver
+qué se instala, qué se salta y qué avisa.
 """
 import json
 import os
@@ -89,17 +90,24 @@ class HookFueraDeLaNube(unittest.TestCase):
 
 
 # Comandos falsos para el camino de la nube: anotan cada llamada en $LLAMADAS y se comportan según
-# las variables de la prueba. Así se ve qué intenta instalar el script sin root ni red.
+# las variables de la prueba. Así se ve qué intenta instalar el script sin root ni red. apt-get y dpkg
+# solo anotan: el script ya no debe llamarlos (ADR 0012). El python3 falso crea un .venv/bin/python
+# que anota cada llamada sin -I (las de pip) y falla con FALLA_PIP.
 FALSOS = {
     "id": 'echo 0',
-    "dpkg": '[ -n "$INSTALADO" ]',
-    "apt-get": 'echo "apt-get $*" >> "$LLAMADAS"; [ -z "$FALLA_APT" ] || { echo "E: sin red"; exit 100; }',
-    "npm": 'echo "npm $*" >> "$LLAMADAS"',
+    "dpkg": 'echo "dpkg $*" >> "$LLAMADAS"',
+    "apt-get": 'echo "apt-get $*" >> "$LLAMADAS"',
+    "npm": ('echo "npm $*" >> "$LLAMADAS"; '
+            '[ -z "$FALLA_NPM" ] || { echo "npm ERR! sin red"; exit 1; }'),
     "markdownlint-cli2": '[ -z "$INSTALADO" ] || echo "markdownlint-cli2 v0 (falso)"',
     "python3": ('echo "python3 $*" >> "$LLAMADAS"; mkdir -p .venv/bin; '
-                'printf "#!/bin/sh\\n[ \\"\\$1\\" = -I ] || echo pip >> \\"$LLAMADAS\\"\\n" > .venv/bin/python; '
+                'printf "#!/bin/sh\\n[ \\"\\$1\\" = -I ] && exit 1\\n'
+                'echo \\"venv \\$*\\" >> \\"$LLAMADAS\\"\\n'
+                '[ -z \\"$FALLA_PIP\\" ] || { echo \\"ERROR: sin red\\"; exit 1; }\\n" > .venv/bin/python; '
                 'chmod +x .venv/bin/python'),
 }
+
+BIBLIOTECAS = ("openpyxl", "fpdf2", "python-docx", "pypdf", "pypdfium2")
 
 
 class HookEnLaNube(unittest.TestCase):
@@ -132,34 +140,61 @@ class HookEnLaNube(unittest.TestCase):
                                    capture_output=True, text=True, timeout=60)
         return resultado, self.llamadas.read_text(encoding="utf-8")
 
+    def venv_existente(self, codigo_import):
+        """Crea .venv/bin/python que, con -I, sale con codigo_import y anota las demás llamadas."""
+        (self.copia / ".venv" / "bin").mkdir(parents=True)
+        python = self.copia / ".venv" / "bin" / "python"
+        python.write_text(f'#!/bin/sh\n[ "$1" = -I ] && exit {codigo_import}\n'
+                          'echo "venv $*" >> "$LLAMADAS"\n', encoding="utf-8")
+        python.chmod(0o755)
+
+    def assert_instala_bibliotecas(self, llamadas):
+        linea = next((l for l in llamadas.splitlines() if l.startswith("venv -m pip install")), "")
+        for biblioteca in BIBLIOTECAS:
+            self.assertIn(biblioteca, linea.split())
+
     def test_en_una_maquina_limpia_instala_todo_y_crea_venv(self):
         resultado, llamadas = self.correr()
         self.assertEqual(resultado.returncode, 0)
         self.assertIn("listos", resultado.stdout)
-        for paquete in ("poppler-utils", "fonts-crosextra-carlito", "libreoffice-writer-nogui"):
-            self.assertIn(paquete, llamadas)
         self.assertIn("npm install -g markdownlint-cli2", llamadas)
         self.assertIn("python3 -m venv .venv", llamadas)
-        self.assertIn("pip", llamadas)
+        self.assert_instala_bibliotecas(llamadas)
 
-    def test_se_salta_lo_ya_instalado_y_un_venv_con_openpyxl(self):
-        (self.copia / ".venv" / "bin").mkdir(parents=True)
-        python = self.copia / ".venv" / "bin" / "python"
-        python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-        python.chmod(0o755)
+    def test_no_instala_paquetes_del_sistema(self):
+        _, llamadas = self.correr()
+        self.assertNotIn("apt-get", llamadas)
+        self.assertNotIn("dpkg", llamadas)
+
+    def test_se_salta_lo_ya_instalado_y_un_venv_con_las_bibliotecas(self):
+        self.venv_existente(0)
         resultado, llamadas = self.correr(INSTALADO="1")
         self.assertEqual(resultado.returncode, 0)
         self.assertIn("listos", resultado.stdout)
         self.assertEqual(llamadas, "")
 
-    def test_si_una_parte_falla_avisa_que_fallo_sigue_y_sale_con_0(self):
-        resultado, llamadas = self.correr(FALLA_APT="1")
+    def test_un_venv_al_que_le_faltan_bibliotecas_las_recibe(self):
+        # Un .venv de una versión anterior, solo con openpyxl: la comprobación falla y se instalan.
+        self.venv_existente(1)
+        resultado, llamadas = self.correr(INSTALADO="1")
         self.assertEqual(resultado.returncode, 0)
-        self.assertIn("apt no instaló", resultado.stdout)
-        self.assertIn("E: sin red", resultado.stdout)
+        self.assertIn("listos", resultado.stdout)
+        self.assert_instala_bibliotecas(llamadas)
+
+    def test_si_una_parte_falla_avisa_que_fallo_sigue_y_sale_con_0(self):
+        resultado, llamadas = self.correr(FALLA_NPM="1")
+        self.assertEqual(resultado.returncode, 0)
+        self.assertIn("npm no instaló", resultado.stdout)
+        self.assertIn("npm ERR! sin red", resultado.stdout)
         self.assertNotIn("listos", resultado.stdout)
-        self.assertIn("npm install -g markdownlint-cli2", llamadas)
-        self.assertIn("python3 -m venv .venv", llamadas)
+        self.assert_instala_bibliotecas(llamadas)
+
+    def test_si_pip_falla_avisa_con_las_bibliotecas(self):
+        resultado, _ = self.correr(FALLA_PIP="1")
+        self.assertEqual(resultado.returncode, 0)
+        self.assertIn("pip no instaló en .venv " + " ".join(BIBLIOTECAS), resultado.stdout)
+        self.assertIn("ERROR: sin red", resultado.stdout)
+        self.assertNotIn("listos", resultado.stdout)
 
 
 if __name__ == "__main__":
