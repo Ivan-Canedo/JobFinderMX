@@ -14,6 +14,15 @@ Recorrido manual de la guía de inicio (CONTRIBUTING, «Guía de inicio») en un
 
 ## 1. Preparación en la cuenta de administrador
 
+- [ ] **Programas solo para esta cuenta.** En PowerShell, sin abrirlo como administrador, instala git, Python y VS Code con `--scope user`. Si se instalan para todo el equipo, la cuenta estándar los encuentra y `/configurar` no prueba su instalación. git va primero porque Claude Code lo necesita en Windows. Si winget no responde en un Windows recién instalado, actualiza «Instalador de aplicaciones» en la Microsoft Store.
+
+  ```powershell
+  winget install -e --id Git.Git --scope user
+  winget install -e --id Python.Python.3.13 --scope user
+  winget install -e --id Microsoft.VisualStudioCode --scope user
+  ```
+
+  Después instala la extensión Claude Code en VS Code, inicia sesión y vuelve a abrir VS Code para que encuentre los programas nuevos.
 - [ ] **Repositorio en la laptop.** Si `main` ya tiene push, clónalo de GitHub. Si no, en la máquina de desarrollo crea un paquete con `git bundle create JobFinderMX.bundle main gh-pages`, llévalo a la laptop junto con la `FICHA.md` y clónalo con `git clone -b main JobFinderMX.bundle JobFinderMX`. En el clon, pon la marca: `git config --local plantilla.mantenedor true`.
 - [ ] **Commit probado.** Anota el hash de `git rev-parse --short HEAD` y la versión de la plantilla que dice la tabla ESTADO de 01.
 - [ ] **VS Code y Claude Code** abren el clon, y el agente trabaja como mantenedor.
@@ -33,6 +42,7 @@ Recorrido manual de la guía de inicio (CONTRIBUTING, «Guía de inicio») en un
 
 - [ ] **FICHA y CV.** Copia la `FICHA.md` a `C:\Users\Public\Documents`. Guarda también ahí el CV de su paso 3 como documento de Word o PDF, porque la guía le pide al titular su CV en ese formato.
 - [ ] **Cuenta estándar** creada sin permisos de administrador, con el nombre de «Antes de empezar». Comprueba en «Configuración» → «Cuentas» → «Otros usuarios» que diga «Usuario estándar».
+- [ ] **Cuenta estándar limpia.** Inicia sesión en ella y corre `py -3 --version` y `git --version` en PowerShell. Ninguno debe dar una versión (`py` puede ofrecer instalarse desde la Store: no aceptes). Si alguno la da, quedó instalado para todo el equipo: desinstálalo desde la cuenta de administrador antes de seguir.
 
 ## 2. Recorrido en la cuenta estándar
 
