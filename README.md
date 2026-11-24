@@ -30,7 +30,9 @@ Lo demás lo instala `/configurar` cuando hace falta, siempre con tu permiso: Py
 
 ## Sin suscripción de Claude
 
-**Experimental.** Tu copia también funciona con Antigravity, el agente de Google, y Gemini en su plan gratuito. Puedes configurarla, buscar vacantes, evaluarlas, generar tu CV y actualizar tu copia, como con Claude Code. Gemini puede seguir peor que Claude las reglas largas de tu copia, como no inventar datos, así que revisa lo que escribe.
+**Experimental.** Tu copia también funciona con Antigravity, el agente de Google, en su plan gratuito. Puedes configurarla, buscar vacantes, evaluarlas, generar tu CV y actualizar tu copia, como con Claude Code. El modelo del plan gratuito puede seguir peor que Claude las reglas largas de tu copia, como no inventar datos, así que revisa lo que escribe.
+
+El plan gratuito tiene una cuota semanal. Para aprovecharla, el agente te propone un paso de la configuración por sesión, que retoma donde quedó, y te avisa antes de algo que gaste mucha cuota, como buscar en muchas empresas. Si se acaba, espera a que se renueve y vuelve a escribir «configura mi copia» o lo que estabas pidiendo: tu copia guarda lo que ya hiciste.
 
 Sin Claude no funciona el canal Web, que es un proyecto de claude.ai.
 
@@ -42,7 +44,12 @@ Necesitas:
 
 Para empezar, escribe `/configurar` o, si tu Antigravity no admite comandos con barra, «configura mi copia». Para actualizar, `/actualizar` o «actualiza mi copia».
 
-En Linux y macOS, con el preset de permisos «Default», Antigravity corre los comandos sin internet. La primera vez que un comando lo necesite, como al revisar o instalar herramientas o al buscar vacantes, el agente te va a pedir que cambies el preset a «Request Review», en el que apruebas cada comando antes de que corra, y no «Turbo», que los corre sin preguntarte.
+Antigravity puede pedirte aprobar cada comando que corre el agente. Antes de cada uno, el agente te explica en español qué hace: si coincide con lo que estás haciendo, apruébalo. Cómo funciona depende de tu sistema:
+
+- **Windows 10 y Windows 11 anterior a 24H2:** Antigravity no tiene ahí su entorno aislado. Con su preset de permisos «Default», funciona como en el preset «Request Review»: los comandos tienen internet y apruebas cada uno antes de que corra. No tienes que cambiar nada.
+- **Windows 11 24H2 o posterior, Linux y macOS:** con el preset «Default», Antigravity corre los comandos en un entorno aislado, sin internet. En Windows, eso pasa si además tiene las actualizaciones de agosto de 2026 o posteriores; sin ellas, funciona como en Windows 10. La primera vez que un comando lo necesite, como al instalar herramientas o al buscar vacantes, el agente te va a pedir que cambies el preset a «Request Review», en el que tienen internet y apruebas cada uno.
+
+En ningún sistema uses el preset «Turbo»: corre los comandos sin preguntarte, así que ninguno pasa por tu revisión.
 
 La línea «Sistemas» de arriba vale también aquí: solo Linux está probado.
 

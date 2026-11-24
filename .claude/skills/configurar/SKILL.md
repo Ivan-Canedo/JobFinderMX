@@ -17,7 +17,8 @@ Cualquier agente con terminal configura la copia completa. No anotes qué agente
 2. Sigue con el primer paso, en el orden de esta skill, que nombre una fila «Sin llenar» de ESTADO. Si no queda ninguna, la configuración está completa: ofrece el paso 9, que no tiene fila en ESTADO.
 3. Haz un paso por vez. Al terminarlo, marca «Configurado», con su siguiente paso de uso, cada fila de ESTADO que lo nombra: la de cada módulo que el paso escribió y también la de cada módulo de método que solo deja listo, sin editarlo. Cada módulo escrito pasa markdownlint sin advertencias, si está instalado, y se versiona según AGENTS.md («Al cerrar»). El paso termina cuando ninguna fila que lo nombra sigue «Sin llenar».
 4. Al terminar un paso, di cuál sigue y pregunta si continuar ahora o en otra sesión.
-5. **Fin de la configuración:** cuando ya no queda ninguna fila «Sin llenar» y el titular terminó o declinó lo que se ofrece en el punto 2, cierra en este orden:
+5. **Agente que no es Claude Code:** valen sus reglas de AGENTS.md, como explicar cada comando antes de que el titular lo apruebe. Además, como el plan del titular puede tener una cuota limitada, propón un solo paso por sesión: al terminarlo, en lugar de la pregunta del punto 4, recomiéndale seguir en una conversación nueva y escribir otra vez «configura mi copia», que retoma donde quedó. Si la cuota se acaba a la mitad de un paso, la configuración retoma en ese paso.
+6. **Fin de la configuración:** cuando ya no queda ninguna fila «Sin llenar» y el titular terminó o declinó lo que se ofrece en el punto 2, cierra en este orden:
    1. Un resumen corto: una línea por paso configurado.
    2. Si esta sesión creó el archivo de registros, ofrece en una línea el commit de 11/REG-LOCAL («Historial y respaldo»), sin que sea la pregunta final.
    3. Como último mensaje, el siguiente paso: la primera búsqueda (07/BUS-PASOS). Recomiéndale abrir una conversación nueva en esta carpeta (en Claude Code, `/clear`) y pedir «busca vacantes en mis empresas»: la de la configuración ya trae mucho contexto que la búsqueda no necesita. Si 06 no tiene empresas ni bolsas, el siguiente paso es agregar una con el paso 7.
@@ -267,7 +268,7 @@ El paso termina cuando el titular volvió de cada skill que quiso o declinó los
 
 ## Comandos sin red
 
-Algunos agentes corren los comandos en un entorno aislado sin internet, como Antigravity en su preset «Default» en Linux y macOS. Entonces fallan todos los que salen a la red (`buscar.py`, `git ls-remote` y `git fetch` de `/actualizar`, `pip`, `npm`, `curl`), aunque el script esté bien.
+Algunos agentes corren los comandos en un entorno aislado sin internet, como Antigravity en su preset «Default» en Linux, macOS y Windows 11 24H2 o posterior con las actualizaciones de agosto de 2026. Entonces fallan todos los que salen a la red (`buscar.py`, `git ls-remote` y `git fetch` de `/actualizar`, `pip`, `npm`, `curl`), aunque el script esté bien. En los demás Windows, Antigravity no tiene ese entorno aislado: aun con «Default», los comandos tienen red y el titular aprueba cada uno.
 
 1. **Cómo se reconoce:** el error no viene de ningún servidor. O no se resuelve el nombre (`Temporary failure in name resolution`, `Name or service not known`, `nodename nor servname`, `getaddrinfo`, `Could not resolve host`), o se niega la conexión (`Connection refused`, `Network is unreachable`, `Operation not permitted`, `Failed to connect`); `curl` da el código `000`.
 2. **No es falta de red:** un `[FALLO]` de `buscar.py` con un código HTTP (`HTTP 403`, `HTTP 404`…), un `robots.txt` que prohíbe una ruta o un error de la configuración de la ficha: ahí el portal respondió, o el problema es de la ficha, y se corrige como dice el paso 7. Tampoco lo es si en la misma búsqueda otra empresa dio `[OK]` o `[SIN TOTAL]`.
@@ -279,6 +280,6 @@ Algunos agentes corren los comandos en un entorno aislado sin internet, como Ant
 
    Si imprime `con red`, el comando sí tiene red y el fallo es de otra cosa.
 4. **Qué decirle al titular:** en palabras simples, que su agente corre los comandos sin acceso a internet, así que no llegan a los portales ni a la plantilla; que no es un error de su copia, y que hay que darle red a su agente:
-   - **Antigravity:** en su configuración, que cambie el preset de permisos a «Request Review». Con él los comandos tienen red y el agente le pide aprobar cada uno antes de correrlo. Que no use «Turbo»: corre los comandos sin preguntarle, así que ninguno pasa por su revisión.
+   - **Antigravity,** en cualquier sistema: en su configuración («Settings» → «General» → «Global Permissions» → «Permission Preset»), que cambie el preset de permisos a «Request Review». Con él los comandos tienen red y el agente le pide aprobar cada uno antes de correrlo. Que no use «Turbo»: corre los comandos sin preguntarle, así que ninguno pasa por su revisión.
    - **Otro agente:** que busque en su configuración cómo dejar que los comandos usen la red, de preferencia con la opción que pide aprobar cada comando antes que con la que los corre todos sin preguntar.
 5. **Después:** cuando diga que ya cambió el ajuste, repite la confirmación del punto 3 y luego el comando que falló. Si no quiere darle red, dile que las búsquedas, las instalaciones y `/actualizar` no van a funcionar hasta que la tenga, y detén el paso donde estás.
