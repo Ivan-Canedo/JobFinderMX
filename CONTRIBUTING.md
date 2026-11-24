@@ -126,6 +126,7 @@ git worktree add "$(mktemp -d)/gh-pages" gh-pages
 
   Cada push a `gh-pages` vuelve a publicar la página en uno o dos minutos. Revísala en un teléfono.
 - **Cuándo volver a probarla:** cuando alguien reporte un problema con la guía. Se repite el recorrido en Windows con Antigravity, se actualizan las capturas y los pasos que cambiaron, y el pie.
+- **Cómo probarla:** con el guion de `docs/guion-prueba-windows.md`, en una laptop con Windows 11 y una cuenta estándar sin permisos de administrador. Deja tomadas las capturas y anotadas las versiones del pie.
 
 ## Versión de la plantilla
 
