@@ -24,9 +24,9 @@ Cualquier agente con terminal configura la copia completa. No anotes qué agente
 
 ## Paso 1: Copia privada
 
-Los módulos van a guardar datos personales del titular, así que su copia debe ser privada o no tener remoto.
+Los módulos van a guardar datos personales del titular, así que su copia debe ser privada o no tener remoto. En Windows, además, debe estar en una carpeta que no se borre ni se sincronice sola.
 
-1. Lista los remotos con `git remote -v`. Si la carpeta no es un repositorio de git o no tiene remotos, dilo en una línea y pasa al paso 2.
+1. Lista los remotos con `git remote -v`. Si la carpeta no es un repositorio de git o no tiene remotos, dilo en una línea y salta los puntos 2 a 4.
 2. Si un remoto apunta a la plantilla pública (`github.com/Ivan-Canedo/JobFinderMX`, por HTTPS o SSH), el titular clonó la plantilla en lugar de crear su copia. Ofrécele dos caminos, en este orden:
    - **Solo en su equipo:** con su permiso, quita ese remoto (`git remote remove <nombre>`). Dile en una línea que su copia queda solo en su equipo y que en el paso 8 le explicas su respaldo. Sigue con el punto 3.
    - **Copia en GitHub:** en la página de la plantilla, «Use this template» → «Create a new repository» con visibilidad **Private**; después clona ese repositorio y ábrelo con su agente. Detén la configuración hasta que trabaje en esa copia: al configurarla, este paso revisa su visibilidad.
@@ -34,24 +34,68 @@ Los módulos van a guardar datos personales del titular, así que su copia debe 
    - **GitHub:** `gh repo view <dueño>/<repo> --json visibility --jq .visibility`, si `gh` está instalado y con sesión. Si no, `curl -s -o /dev/null -w '%{http_code}' https://api.github.com/repos/<dueño>/<repo>`: `200` es público; `404`, privado; `000`, que el comando no llegó a la red («Comandos sin red»).
    - **Otro servicio:** pídele al titular que confirme la visibilidad en la configuración del repositorio.
 4. Si alguno es público, avísale que todo lo que llene quedará publicado en cuanto haga push, y recomiéndale volverlo privado antes de seguir (en GitHub: «Settings» → «General» → «Danger Zone» → «Change visibility»).
+5. **Ubicación, solo en Windows y dentro de esta skill** (la revisión del paso 1 que piden AGENTS.md y `/actualizar` termina en el punto 4): el sistema se detecta como en el paso 2, punto 1. Revisa la ruta de la copia, que es tu carpeta de trabajo. Está en un lugar de riesgo si queda dentro de `%USERPROFILE%\Downloads` (el Explorador la llama «Descargas») o si algún tramo de la ruta empieza con `OneDrive` (`OneDrive`, `OneDrive - <organización>`). En OneDrive caen también Documentos y el Escritorio cuando OneDrive los respalda. Si no está en ninguno, no digas nada.
+   1. **Oferta:** explícale en dos frases sin jerga por qué conviene moverla. Descargas es una carpeta que se suele limpiar. OneDrive sube a internet cada archivo que cambia, también los miles que agrega la configuración, y mientras sube el archivo de registros puede no dejar guardarlo. Ofrécele moverla a `%USERPROFILE%\JobFinderMX`, una carpeta de su usuario fuera de las dos; dile la ruta completa, con su nombre de usuario.
+   2. **Mover:** si acepta, comprueba que `%USERPROFILE%\JobFinderMX` no exista. Si existe, no la toques: pregúntale qué es y sigue con el subpunto 4. Si no existe, muévela con su permiso (en PowerShell; desde otra terminal, dentro de `powershell -NoProfile -Command "…"`):
 
-El paso termina cuando cada remoto es privado, o el titular, ya avisado, decide seguir.
+      ```powershell
+      Move-Item -LiteralPath "<ruta actual>" -Destination "$env:USERPROFILE\JobFinderMX"
+      ```
+
+   3. **Volver a abrirla:** si se movió, detén la configuración: esta conversación quedó en la ruta vieja. Dile cómo volver, paso por paso: que abra `C:\Users\<usuario>\JobFinderMX` en su agente como abrió la carpeta la primera vez (en los editores como VS Code, «File» → «Open Folder…»), abre una conversación nueva y escribe «configura mi copia». Lo que ya hizo viaja con la carpeta, y la configuración retoma donde quedó.
+   4. **Si no se puede mover** (Windows no deja mover una carpeta abierta y responde, por ejemplo, que la usa otro proceso o que el acceso se denegó), o si el titular no quiere: la copia se queda donde está. No intentes otro comando. Pídele que no la borre ni la mueva al limpiar Descargas. Si está en OneDrive, dile además que OneDrive va a subir sus archivos y que, si un día no se puede guardar el archivo de registros, espere a que termine de sincronizar y lo vuelva a pedir.
+
+El paso termina cuando cada remoto es privado, o el titular, ya avisado, decide seguir, y en Windows la copia quedó fuera de Descargas y de OneDrive o el titular recibió el aviso del punto 5.4.
 
 ## Paso 2: Herramientas básicas
 
-Python sirve a todos los pasos siguientes. Las bibliotecas de Python del CV y del archivo de registros se instalan cuando hacen falta, en el paso 6 o el 8, el que llegue primero.
+Python sirve a todos los pasos siguientes. git es opcional pero recomendado: guarda las versiones de la copia. Las bibliotecas de Python del CV y del archivo de registros se instalan cuando hacen falta, en el paso 6 o el 8, el que llegue primero.
 
-**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y creó `.venv` con las bibliotecas de Python; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4: corre solo la comprobación de Python. Si falla, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de JobFinderMX»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
+**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y creó `.venv` con las bibliotecas de Python; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4 y la oferta de git, porque la copia en la nube siempre es un repositorio: corre solo la comprobación de Python. Si falla, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de JobFinderMX»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
 
 1. **Sistema:** detecta el sistema operativo con `uname -s`: `Linux`; `Darwin` es macOS; `MINGW…`, `MSYS…` o un `uname` inexistente (PowerShell) es Windows. En Linux, lee `ID` e `ID_LIKE` en `/etc/os-release`: `dnf` sirve a Fedora y derivados; `apt`, a Debian, Ubuntu y derivados. En macOS el gestor es Homebrew (`brew`) y en Windows, `winget`.
 2. **Aviso:** si el sistema no es Linux, dile al titular que JobFinderMX solo se ha probado en Linux, así que un fallo puede venir de ahí.
-3. **Revisión:** corre la comprobación de cada herramienta que toca revisar: Python y, solo si el titular los pidió, los opcionales. La que ya cumple no se toca.
-4. **Instalación:** muéstrale al titular el comando de cada herramienta que falta y pide su permiso antes de instalar. Un comando con `sudo` pide contraseña: pídele que lo corra él en una terminal y que te avise al terminar. Si su sistema no tiene ninguno de estos gestores, dale el sitio oficial de descarga de la herramienta.
-5. **Comprobación:** vuelve a correr la comprobación de cada herramienta instalada. El paso termina cuando Python da una versión que cumple; un opcional que no quedó instalado no lo detiene.
+3. **Revisión:** corre la comprobación de cada herramienta que toca revisar: Python, git si el titular lo acepta (ver «git») y, solo si el titular los pidió, los opcionales. La que ya cumple no se toca.
+4. **Instalación:** muéstrale al titular el comando de cada herramienta que falta y pide su permiso antes de instalar. Un comando con `sudo` pide contraseña: pídele que lo corra él en una terminal y que te avise al terminar. Si su sistema no tiene ninguno de estos gestores, dale el sitio oficial de descarga de la herramienta. En Windows, ninguna instalación de este paso pide permisos de administrador (ver «Windows sin administrador»).
+5. **Comprobación:** vuelve a correr la comprobación de cada herramienta instalada. Si dice que el programa no existe justo después de instalarlo, no lo reinstales: sigue el tropiezo «Programa recién instalado». El paso termina cuando Python da una versión que cumple y, si el titular aceptó git, cuando la copia es un repositorio con su primer commit. Un opcional que no quedó instalado no lo detiene, y git tampoco: si no se pudo instalar, sigue como si lo hubiera rechazado («git», punto 4).
 
 | Herramienta | Comprobación | dnf / apt | brew | winget |
 | --- | --- | --- | --- | --- |
-| Python 3.9 o mayor | `python3 --version` | `sudo dnf install python3` / `sudo apt install python3` | `brew install python` | `winget install -e --id Python.Python.3.13` |
+| Python 3.9 o mayor | `python3 --version`; en Windows, `py -3 --version` | `sudo dnf install python3` / `sudo apt install python3` | `brew install python` | `winget install -e --id Python.Python.3.13 --scope user --silent --accept-package-agreements --accept-source-agreements` |
+| git (opcional, recomendado) | `git --version` | `sudo dnf install git` / `sudo apt install git` | `brew install git` | `winget install -e --id Git.Git --scope user --location "%LOCALAPPDATA%\Programs\Git" --silent --accept-package-agreements --accept-source-agreements` (en PowerShell, `"$env:LOCALAPPDATA\Programs\Git"`) |
+
+**git:** si `git rev-parse --is-inside-work-tree` da `true`, la copia ya es un repositorio: no hay nada que ofrecer. Si no, ofrécelo una vez por conversación; si ya lo rechazó en esta, no insistas.
+
+1. **Oferta:** explícaselo sin jerga, más o menos así: «git guarda versiones de tus archivos: si algo sale mal, puedes volver a una versión anterior, y te deja recibir las mejoras de JobFinderMX con `/actualizar`. Es opcional: sin él tu copia funciona igual, pero sin ese respaldo ni las mejoras.» Pregúntale si lo quiere.
+2. **Instalación:** si lo acepta y la comprobación de git falla, instálalo con los puntos 4 y 5. Si no queda instalado, ni con la alternativa de «Windows sin administrador», díselo en una línea y sigue con el punto 4 de esta lista.
+3. **Repositorio:** con git instalado y su permiso, convierte la carpeta en repositorio:
+   1. `git init -b main`.
+   2. Si `git config user.name` o `git config user.email` no dan nada, pregúntale qué nombre y qué correo quiere que firmen sus versiones, y guárdalos solo en la copia con `git config user.name "<nombre>"` y `git config user.email "<correo>"`. Dile que esos datos solo viajan si un día sube su copia a un repositorio privado; si prefiere no dar un correo, el que elija sirve aunque no exista, como el de GitHub sin respuesta (`<usuario>@users.noreply.github.com`) si tiene cuenta.
+   3. `git add -A` y `git commit -m "Copia de JobFinderMX"`.
+
+   Dile en una línea que, desde ahora, al terminar cada sesión que cambie su copia le vas a ofrecer guardar una versión (AGENTS.md, «Al cerrar una sesión…»).
+4. **Si lo rechaza o no se pudo instalar:** sigue sin git; el aviso del paso 8 le dice lo que deja de tener.
+
+**Windows sin administrador:** el titular puede no tener permisos de administrador, y no sabe qué contestar si Windows se los pide. Las instalaciones con `winget` de la tabla son solo para su usuario (`--scope user`) y no preguntan nada (`--silent` y los `--accept-…`). Si aun así aparece la ventana de Windows que pide permiso para hacer cambios en el equipo, dile que elija «No». Con esa ventana, o si `winget` falla por otra causa que no sea la red (por ejemplo, que no encuentra un instalador para su usuario), sigue con la alternativa de esa herramienta:
+
+- **Python:** el instalador de <https://www.python.org/downloads/windows/>, con «Use admin privileges when installing py.exe» sin marcar.
+- **git:** MinGit, la versión mínima de git para Windows, que se descomprime en su perfil sin instalador. Con su permiso, en PowerShell:
+
+  ```powershell
+  $ProgressPreference = 'SilentlyContinue'
+  $r = Invoke-RestMethod -UseBasicParsing https://api.github.com/repos/git-for-windows/git/releases/latest
+  $a = $r.assets | Where-Object name -Match '^MinGit-[\d.]+-64-bit\.zip$' | Select-Object -First 1
+  $zip = Join-Path $env:TEMP $a.name
+  Invoke-WebRequest -UseBasicParsing $a.browser_download_url -OutFile $zip
+  $dir = "$env:LOCALAPPDATA\Programs\MinGit"
+  Expand-Archive $zip -DestinationPath $dir -Force
+  $p = [Environment]::GetEnvironmentVariable('Path', 'User')
+  if (-not (($p -split ';') -contains "$dir\cmd")) {
+    [Environment]::SetEnvironmentVariable('Path', ((@($p -split ';') + "$dir\cmd") | Where-Object { $_ }) -join ';', 'User')
+  }
+  ```
+
+  El bloque `if` agrega git al `PATH` de su usuario una sola vez, que se lee al reiniciar el agente (tropiezo «Programa recién instalado»).
 
 **Opcionales:** Node y markdownlint-cli2 solo revisan el formato de los `.md` que edita el agente (AGENTS.md, «Formato Markdown»); la copia funciona sin ellos. No los revises, ofrezcas ni instales salvo que el titular los pida. Si los pide, sigue con ellos los puntos 3 a 5 con esta tabla:
 
@@ -63,7 +107,7 @@ Python sirve a todos los pasos siguientes. Las bibliotecas de Python del CV y de
 **Tropiezos conocidos:**
 
 - **Python en Windows:** donde la documentación diga `python3`, usa `py -3`.
-- **`PATH` en Windows:** después de `winget` hay que reiniciar VS Code para que la terminal vea el `PATH` nuevo.
+- **Programa recién instalado:** si la comprobación no lo encuentra justo después de instalarlo, la terminal todavía no ve el `PATH` nuevo; pasa sobre todo en Windows. Dile al titular que cierre y vuelva a abrir su agente (o la terminal, si instaló él el programa) y te vuelva a pedir «configura mi copia»: la configuración retoma en este paso.
 - **Sin red:** si una instalación falla porque no se resuelve un nombre o se niega la conexión, sigue «Comandos sin red».
 - **Node viejo:** si el gestor instala un Node más viejo que el que pide markdownlint-cli2 (pasa con `apt` en versiones anteriores de Debian y Ubuntu), ofrece la versión LTS con las instrucciones de <https://nodejs.org> para su distribución.
 - **markdownlint-cli2 ya instalado:** cumple si la primera línea de `--help` da la versión, aunque el código de salida no sea 0. No lo busques con `npm list -g`: no ve lo que se instaló con `--prefix ~/.local`.
@@ -196,7 +240,7 @@ Llena `06_EMPRESAS_OBJETIVO.md` con las empresas donde el titular quiere buscar,
 
 Crea el archivo de registros `Registros.xlsx` en la raíz de la copia (11/REG-LUGAR), que escribe y lee `herramientas/registros.py` (11/REG-LOCAL). Funciona igual con cualquier agente.
 
-1. **Aviso:** antes de instalar o crear nada, dile al titular que sus registros viven en ese archivo de su copia, y que su respaldo y su historial son los commits de la copia. Sin un remoto privado, solo viven en su equipo: si lo pierde, pierde su copia y sus registros. Si no tiene remoto, dile que, si conecta Code en la nube o el canal Web en el paso 9, su copia queda también en un repositorio privado de GitHub; si no, que la respalde con un remoto privado o una copia de la carpeta.
+1. **Aviso:** antes de instalar o crear nada, dile al titular que sus registros viven en ese archivo de su copia, y que su respaldo y su historial son los commits de la copia. Sin un remoto privado, solo viven en su equipo: si lo pierde, pierde su copia y sus registros. Si no tiene remoto, dile que, si conecta Code en la nube o el canal Web en el paso 9, su copia queda también en un repositorio privado de GitHub; si no, que la respalde con un remoto privado o una copia de la carpeta. Si además la copia no es un repositorio de git, porque en el paso 2 no aceptó git o no se pudo instalar, dile también, sin jerga, que su copia no guarda versiones: no tiene respaldo de sus registros ni forma de volver atrás un error, y no podrá usar `/actualizar` para recibir las mejoras de JobFinderMX. Si cambia de opinión, `/configurar` se lo vuelve a ofrecer en el paso 2.
 2. **Entorno virtual:** la herramienta de registros usa `openpyxl`, y el generador de CV, fpdf2, python-docx, pypdf y pypdfium2. Todas van en un entorno virtual dentro de la copia (`.venv/`, que git ignora), no en el Python del sistema, y ninguna pide permisos de administrador. Las instala este punto o el 1 del paso 6, el que llegue primero: si la comprobación ya imprime «listo», el punto termina. Si no, muéstrale los comandos de su sistema (paso 2) y pide su permiso antes de correrlos. Si `.venv/` ya existe, no lo crees de nuevo: basta la instalación.
 
    | Sistema | Crear el entorno | Instalar las bibliotecas | Comprobación |

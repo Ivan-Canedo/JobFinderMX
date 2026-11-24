@@ -67,7 +67,7 @@ Así tienes el historial de tus cambios y un respaldo privado en GitHub.
 1. En esta página, selecciona «Code» → «Download ZIP».
 2. Descomprime el archivo donde quieras guardar tu copia.
 
-La carpeta no es un repositorio de git: no tiene remoto, así que nada se publica, pero tampoco guarda historial. Si quieres historial, conviértela en repositorio con `git init` y un primer commit; si algún día le agregas un remoto, que sea privado. Conviene hacerlo, porque git es el único respaldo de tus registros.
+La carpeta no es un repositorio de git: no tiene remoto, así que nada se publica, pero tampoco guarda historial. Si quieres historial, `/configurar` te ofrece git en su paso 2 y convierte la carpeta en repositorio por ti; si algún día le agregas un remoto, que sea privado. Conviene hacerlo, porque git es el único respaldo de tus registros.
 
 ## Empieza
 
@@ -95,7 +95,7 @@ Con la copia configurada, pídele a Claude lo que necesites con tus palabras: bu
 
 La plantilla publica versiones nuevas, con lo que trae cada una en [CAMBIOS.md](CAMBIOS.md). Tu copia no se entera sola: cuando quieras las mejoras, escribe `/actualizar` en Claude Code. Claude trae la versión más reciente, la fusiona archivo por archivo con tu copia y conserva lo que escribiste; si un cambio choca con tus datos, te pregunta. Al final te propone un solo commit, que puedes revisar antes.
 
-Necesita que tu copia sea un repositorio de git sin cambios pendientes. Si la creaste con el ZIP y todavía no es repositorio, conviértela con `git init` y un primer commit con todo.
+Necesita que tu copia sea un repositorio de git sin cambios pendientes. Si la creaste con el ZIP y todavía no es repositorio, escribe `/configurar`: en su paso 2 te ofrece git y convierte la carpeta en repositorio.
 
 ## Dónde se usa
 
