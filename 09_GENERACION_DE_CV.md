@@ -1,6 +1,6 @@
 # 09 — Generación de CV
 
-**Versión:** 1.4 — 2026-10-29 — La generación y la comprobación del canal Code también se probaron en Code en la nube (CV-HERRAMIENTAS).
+**Versión:** 1.5 — 2026-11-23 — El CV se genera con bibliotecas de Python en el entorno virtual de la copia, sin LibreOffice ni poppler (CV-HERRAMIENTAS).
 **Estado:** método de la plantilla, con el diseño por defecto. El color del CV es un dato del titular (CV-PLANTILLA).
 
 ## CV-ALCANCE — Responsabilidad
@@ -107,9 +107,9 @@ Se puede trabajar el contenido aunque falten presentación o contacto; un borrad
 
 - Comprobar que el archivo existe y abre, su formato real y los requisitos de la convocatoria.
 - Revisar visualmente todas las páginas: cortes, desbordes, legibilidad, saltos, espacios y consistencia. No comprimir hasta volverlo ilegible.
-- Revisar el texto extraíble y su orden: nombre, contacto, encabezados, experiencia, fechas, tecnologías y caracteres especiales. Compararlo con el contenido aprobado. El script lo hace palabra por palabra y avisa («revisar») si un compuesto con guion queda partido al final de una línea: `pdftotext` lo une sin guion («state-of-theart») y una plataforma de reclutamiento podría hacer lo mismo al leer el CV.
+- Revisar el texto extraíble y su orden: nombre, contacto, encabezados, experiencia, fechas, tecnologías y caracteres especiales. Compararlo con el contenido aprobado. El script lo hace palabra por palabra, en el PDF y en el DOCX, y avisa («revisar») si un compuesto con guion queda partido al final de una línea: al extraer el texto puede unirse sin guion («state-of-theart») y una plataforma de reclutamiento podría hacer lo mismo al leer el CV.
 - Evitar palabras solas al final de un párrafo cuando se busca ganar espacio; no es una falla.
-- DOCX: convertirlo de nuevo a PDF y comparar páginas y texto. Sus viñetas se guardan como el carácter de viñeta de Word (fuente Symbol), que se extrae como un carácter privado; no es una falla.
+- DOCX: el script compara su texto con el contenido, pero no lo pagina. Si se va a enviar el DOCX, abrirlo en Word o Google Docs y comparar sus páginas con las del PDF. Sus viñetas son listas de Word, así que no forman parte del texto de cada párrafo; no es una falla.
 - En entregas para formularios, revisar límites de caracteres y legibilidad al copiar.
 - Distinguir comprobación satisfactoria, fallo detectado y comprobación no realizada. Si una herramienta impide revisar algo, decirlo.
 - Repetir los controles afectados si cambia el contenido o la exportación.
@@ -124,26 +124,28 @@ Entregar el borrador o los archivos que efectivamente existan, con idioma, forma
 
 | Canal | Generación | Comprobación | Estado |
 | --- | --- | --- | --- |
-| **Code** | LibreOffice sin interfaz: FODT → PDF y FODT → DOCX | `pdftotext` (texto y orden), `pdftoppm` (vistas PNG para revisar), `pdfinfo` (páginas, tamaño) y `pdffonts` (fuentes incrustadas), de poppler | **Probado en Linux, también en Code en la nube.** En Code local, el paso 6 de `/configurar` instala LibreOffice, poppler y la fuente Carlito; en la nube, el hook de la sesión |
+| **Code** | fpdf2 (PDF) y python-docx (DOCX), cada uno con el diseño de CV-PLANTILLA | pypdf (páginas, fuentes incrustadas, texto y orden del PDF), python-docx (texto del DOCX) y pypdfium2 (vistas PNG para revisar) | **Probado en Linux.** Las bibliotecas van en el entorno virtual de la copia (`.venv`), el mismo de `openpyxl`, y no piden permisos de administrador; las instala el paso de `/configurar` que llegue primero, el 6 o el 8. La fuente Carlito viaja con la plantilla en `herramientas/fuentes/` |
 | **Web** (proyecto en claude.ai; necesita Claude) | No comprobado | No comprobado | El contenido se puede adaptar en la web y el archivo se genera en Code |
 
-No hacen falta pandoc, python-docx ni reportlab.
+No hacen falta LibreOffice, poppler, pandoc ni reportlab, ni instalar Carlito en el sistema.
 
 **Code en la nube:** el CV se genera igual, pero los archivos quedan en la máquina de la sesión. El que se guarda en `muestras_cv/` le llega al titular con el commit y el push a `main` del cierre (11/REG-LOCAL, «Historial y respaldo»). Después del push, el agente le da el enlace de GitHub de cada archivo, `https://github.com/<dueño>/<repositorio>/blob/main/muestras_cv/<archivo>`, con el dueño y el repositorio con que termina `git remote get-url origin` (en la nube, esa URL puede pasar por un proxy local, pero termina igual); como el repositorio es privado, lo abre con su sesión de GitHub, también desde el teléfono.
 
 **Script `herramientas/generar_cv.py`** (local, no se sube al proyecto):
 
 ```text
-python3 -I herramientas/generar_cv.py ENTRADA.md --idioma es|en --salida RUTA/NOMBRE
+.venv/bin/python -I herramientas/generar_cv.py ENTRADA.md --idioma es|en --salida RUTA/NOMBRE
 ```
+
+Corre con el Python del entorno virtual de la copia (en Windows, `.venv\Scripts\python.exe`); con otro Python, el script se detiene y dice qué biblioteca falta.
 
 - **Entrada:** `03_CV_BASE.md` (toma CV-ES o CV-EN) o un CV adaptado con el mismo formato: `###` por sección, `**negritas**`, viñetas con `-` seguido de un espacio y subviñetas con dos espacios de sangría. Los marcadores `[CV-E##]` se retiran solos, así que la fuente adaptada puede conservarlos para la traza. Los correos y URL van entre `<>` (Markdown estándar); el script quita los picos.
 - **Secciones con formato propio:** el script reconoce dos por su nombre exacto.
   - **«Encabezado» o «Header»:** la primera línea solo en negritas es el nombre; la segunda, el título descriptivo; las demás, el contacto. La sección no imprime su título.
   - **«Experiencia profesional» o «Professional experience»:** una línea solo en negritas es un puesto, y la línea que la sigue, su lugar y periodo.
 - **Color:** sale del bloque de configuración de CV-PLANTILLA. Si este módulo no lo tiene o el color no es `#RRGGBB`, el script se detiene con un mensaje y no genera nada.
-- **Salida:** FODT, PDF, DOCX, vista PNG por página y TXT extraído.
-- **Informe:** páginas, palabras, fuentes incrustadas, coincidencia palabra por palabra del texto extraído con el contenido y avisos de compuestos partidos. Si el texto no coincide, termina con error.
+- **Salida:** PDF, DOCX, vista PNG por página (`NOMBRE_p-1.png`, `NOMBRE_p-2.png`…) y TXT extraído del PDF. El PDF y el DOCX salen de generadores distintos, sin archivo intermedio; al volver a generar, se borran las vistas PNG de la versión anterior.
+- **Informe:** páginas, palabras, fuentes incrustadas y si todas son Carlito, coincidencia palabra por palabra del texto del PDF y del DOCX con el contenido, y avisos de compuestos partidos. Si el texto de alguno no coincide, termina con error.
 - **Nombre del archivo:** `CV_<Nombre>_<Apellido>_<ES|EN>_<Empresa>_<JobID>_<fecha>_v<NN>`; para la base, `CV_<Nombre>_<Apellido>_<ES|EN>_base_<fecha>_v<NN>`.
 
 ## CV-PLANTILLA — Presentación
@@ -160,12 +162,12 @@ Todo el diseño es un valor por defecto de la plantilla, y el titular puede camb
 
 - **Página:** carta y una columna. Márgenes de 1.4 cm arriba y abajo y 1.7 cm a los lados (ajustables con `--margen`).
 - **Sin** tablas, cuadros de texto, encabezado ni pie de página, columnas, iconos, fotos ni barras de habilidad: dificultan la extracción (ver la evidencia de abajo). El contacto va en el cuerpo, bajo el nombre.
-- **Tipografía:** Carlito, con las mismas métricas que Calibri, así que el DOCX abierto en Word conserva los saltos. Texto de 10.5 pt (ajustable con `--tam`), con interlineado del 113 %; el resto se escala con él: nombre de 19.5 pt en negrita; título descriptivo de 11.5 pt en negrita gris; contacto, ubicación y fechas de 10 pt en gris.
+- **Tipografía:** Carlito, con las mismas métricas que Calibri, así que el DOCX abierto en Word conserva los saltos. El PDF la lleva incrustada; el DOCX solo la nombra, así que se ve en Carlito donde esté instalada. Texto de 10.5 pt (ajustable con `--tam`), con interlineado del 113 %; el resto se escala con él: nombre de 19.5 pt en negrita; título descriptivo de 11.5 pt en negrita gris; contacto, ubicación y fechas de 10 pt en gris.
 - **Texto:** #1A1A1A y gris #4D4D4D.
 - **Jerarquía:** por tamaño, negritas y espacio. Las viñetas son listas reales («•» y «–» para el ejemplo subordinado).
 - **Estructura:** la de 03 (CV-DECISIONES).
 - **Tono:** el de 03, técnico y directo, sin adjetivos promocionales. La plantilla no cambia la redacción.
-- **Formatos (ajustable):** PDF para enviar y DOCX como editable; el FODT es intermedio. El formato de envío se decide por vacante (CV-ACUERDOS).
+- **Formatos (ajustable):** PDF para enviar y DOCX como editable, con el mismo diseño; el DOCX nombra Carlito como fuente. El formato de envío se decide por vacante (CV-ACUERDOS).
 - **Extensión (ajustable):** una página por candidatura; la base de 03 puede ocupar más. Dos páginas son aceptables si una obliga a quitar evidencia pertinente. Para compactar: primero se acortan o unen los bloques opcionales (proyectos, formación), después se quitan los detalles secundarios de las viñetas; ajustar las líneas que terminan con una o dos palabras ahorra espacio sin quitar hechos.
 
 **Evidencia sobre color y diseño, consultada el 2026-10-11.** No se encontró evidencia sólida de un color ganador para CV. Atraer la mirada, facilitar la lectura, mejorar una valoración simulada y conseguir entrevistas son resultados distintos. El color se usa por identidad y legibilidad, sin prometer efectos en la contratación. Fuentes:

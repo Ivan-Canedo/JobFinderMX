@@ -39,9 +39,9 @@ El paso termina cuando cada remoto es privado, o el titular, ya avisado, decide 
 
 ## Paso 2: Herramientas básicas
 
-Python, Node y markdownlint-cli2 sirven a todos los pasos siguientes. Las herramientas del CV y las del archivo de registros se instalan en sus propios pasos, cuando hacen falta.
+Python, Node y markdownlint-cli2 sirven a todos los pasos siguientes. Las bibliotecas de Python del CV y del archivo de registros se instalan cuando hacen falta, en el paso 6 o el 8, el que llegue primero.
 
-**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y las herramientas del CV, y creó `.venv`; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4: corre solo la comprobación de cada herramienta de la tabla. Si alguna falta, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de JobFinderMX»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
+**Code en la nube:** si `CLAUDE_CODE_REMOTE` vale `true`, la sesión corre en la nube y el hook de la copia (`herramientas/preparar_nube.sh`) ya instaló al abrirla markdownlint-cli2 y creó `.venv` con las bibliotecas de Python; Python y Node vienen con la máquina de la nube. Salta los puntos 1, 2 y 4: corre solo la comprobación de cada herramienta de la tabla. Si alguna falta, no le pidas al titular comandos de instalación: dile que el hook de la nube falló y qué aviso dio al abrir la sesión (empieza con «Hook de la nube de JobFinderMX»). Si no ves el aviso, repítelo con `CLAUDE_CODE_REMOTE=true bash herramientas/preparar_nube.sh`, que solo instala lo que falta.
 
 1. **Sistema:** detecta el sistema operativo con `uname -s`: `Linux`; `Darwin` es macOS; `MINGW…`, `MSYS…` o un `uname` inexistente (PowerShell) es Windows. En Linux, lee `ID` e `ID_LIKE` en `/etc/os-release`: `dnf` sirve a Fedora y derivados; `apt`, a Debian, Ubuntu y derivados. En macOS el gestor es Homebrew (`brew`) y en Windows, `winget`.
 2. **Aviso:** si el sistema no es Linux, dile al titular que JobFinderMX solo se ha probado en Linux, así que un fallo puede venir de ahí.
@@ -127,21 +127,14 @@ Llena `05_MAPA_HABILIDADES_Y_ROLES.md` relacionando lo que ya está en 02 y 04, 
 
 Redacta el CV base de `03_CV_BASE.md` en español e inglés desde 02, con las reglas de 03 (CV-REGLAS y los acuerdos por defecto de CV-DECISIONES) y de 09 (CV-SINTESIS y CV-PLANTILLA), y genera el primero con el color que elija el titular.
 
-1. **Herramientas del CV:** revisa e instala, con permiso, las de la tabla, igual que en el paso 2: mismo sistema y gestor, mismos tropiezos con `sudo` y el `PATH`. En Code en la nube, solo compruébalas, como dice el paso 2. En Windows, si `soffice` no aparece, falta en el `PATH` la carpeta `program` de LibreOffice (normalmente `C:\Program Files\LibreOffice\program`).
-
-   | Herramienta | Comprobación | dnf / apt | brew | winget |
-   | --- | --- | --- | --- | --- |
-   | LibreOffice | `soffice --version` | `sudo dnf install libreoffice-writer` / `sudo apt install libreoffice-writer` | `brew install --cask libreoffice` | `winget install -e --id TheDocumentFoundation.LibreOffice` |
-   | poppler | `pdftotext -v` | `sudo dnf install poppler-utils` / `sudo apt install poppler-utils` | `brew install poppler` | `winget install -e --id oschwartz10612.Poppler` |
-   | Fuente Carlito | En Linux, `fc-match Carlito` responde con Carlito; en todos, `pdffonts` del punto 2 | `sudo dnf install google-carlito-fonts` / `sudo apt install fonts-crosextra-carlito` | `brew install --cask font-carlito` | Viene con LibreOffice |
-
-2. **Prueba con el esqueleto:** antes de redactar, genera el esqueleto de 03 en `<directorio temporal>`, no en la copia:
+1. **Bibliotecas del CV:** el generador usa fpdf2, python-docx, pypdf y pypdfium2, que van en el entorno virtual de la copia, el mismo de los registros. Si el paso 8 ya lo creó, corre la comprobación de su punto 2. Si falta el entorno o alguna biblioteca, sigue ese punto, que instala también `openpyxl`, así el paso 8 ya no instala nada. La fuente Carlito viaja con la copia (`herramientas/fuentes/`): no se instala.
+2. **Prueba con el esqueleto:** antes de redactar, genera el esqueleto de 03 en `<directorio temporal>`, no en la copia (en Windows, con `.venv\Scripts\python.exe`):
 
    ```sh
-   python3 -I herramientas/generar_cv.py 03_CV_BASE.md --idioma es --salida <directorio temporal>/esqueleto
+   .venv/bin/python -I herramientas/generar_cv.py 03_CV_BASE.md --idioma es --salida <directorio temporal>/esqueleto
    ```
 
-   El informe debe decir «sí» en fuentes y en texto, y `pdffonts` sobre el PDF debe listar Carlito; si lista otra fuente, Carlito no está instalada. Así se sabe que la instalación funciona antes de poner trabajo en el CV.
+   El informe debe decir «sí» en fuentes, en Carlito y en el texto del PDF y del DOCX. Así se sabe que las bibliotecas funcionan antes de poner trabajo en el CV.
 3. **Enfoque:** con sus familias de roles (05) y sus objetivos (04), proponle en pocas líneas qué perfil presenta la base y en qué orden van los hechos de su empleo principal. Pregúntale también si cambia algún acuerdo por defecto de CV-DECISIONES. Lo que decida se anota ahí como `CV-U##`.
 4. **Redacción:** reemplaza el esqueleto de CV-ES y CV-EN con el CV redactado desde 02, en el formato literal de 09/CV-HERRAMIENTAS, y borra de CV-USO el párrafo del esqueleto. Cada línea o viñeta lleva su `[CV-E##]`, con su fila en CV-TRAZABILIDAD. Escribe la síntesis general al final, según CV-SINTESIS. Lo pertinente que no cabe va a CV-OPCIONALES. Si a 02 le falta un dato que el CV necesita, pregúntalo (entra a 02 como `U##`) o déjalo fuera y anótalo como `CV-P##`. La versión en inglés lleva los mismos hechos.
 5. **Revisión:** muéstrale el CV por bloques (encabezado y perfil, experiencia, el resto) y aplica sus correcciones en los dos idiomas. Un hecho nuevo o corregido entra primero a 02, con su `U##`.
@@ -149,11 +142,11 @@ Redacta el CV base de `03_CV_BASE.md` en español e inglés desde 02, con las re
 7. **Primer CV:** genera la base en los dos idiomas, en `muestras_cv/` y con el nombre de 09/CV-HERRAMIENTAS:
 
    ```sh
-   python3 -I herramientas/generar_cv.py 03_CV_BASE.md --idioma es --salida muestras_cv/CV_<Nombre>_<Apellido>_ES_base_<fecha>_v01
-   python3 -I herramientas/generar_cv.py 03_CV_BASE.md --idioma en --salida muestras_cv/CV_<Nombre>_<Apellido>_EN_base_<fecha>_v01
+   .venv/bin/python -I herramientas/generar_cv.py 03_CV_BASE.md --idioma es --salida muestras_cv/CV_<Nombre>_<Apellido>_ES_base_<fecha>_v01
+   .venv/bin/python -I herramientas/generar_cv.py 03_CV_BASE.md --idioma en --salida muestras_cv/CV_<Nombre>_<Apellido>_EN_base_<fecha>_v01
    ```
 
-   El informe debe decir «sí» en fuentes y texto, y cada línea «revisar» se corrige en 03. Revisa las vistas PNG de cada página según 09/CV-CONTROLES y dile al titular dónde quedaron los PDF y los DOCX. Si quiere otro color, cambia el bloque y vuelve a generar.
+   El informe debe decir «sí» en fuentes, Carlito y texto, y cada línea «revisar» se corrige en 03. Revisa las vistas PNG de cada página según 09/CV-CONTROLES y dile al titular dónde quedaron los PDF y los DOCX. Si quiere otro color, cambia el bloque y vuelve a generar.
 8. **Cierre:** en 03, actualiza la línea **Estado** para describir su CV base y anota la versión de 02 que usaste como fuente de trayectoria; súbelo de versión. Sube también la de 09 si el color cambió. Las filas de 03 y 09 en ESTADO quedan «Configurado», con el siguiente paso «Adaptar a cada vacante con 09; actualizar si cambia 02» para 03 y «Adaptar y exportar CV para vacantes (CV-FLUJO)» para 09.
 
 ## Paso 7: Empresas
@@ -198,16 +191,16 @@ Llena `06_EMPRESAS_OBJETIVO.md` con las empresas donde el titular quiere buscar,
 Crea el archivo de registros `Registros.xlsx` en la raíz de la copia (11/REG-LUGAR), que escribe y lee `herramientas/registros.py` (11/REG-LOCAL). Funciona igual con cualquier agente.
 
 1. **Aviso:** antes de instalar o crear nada, dile al titular que sus registros viven en ese archivo de su copia, y que su respaldo y su historial son los commits de la copia. Sin un remoto privado, solo viven en su equipo: si lo pierde, pierde su copia y sus registros. Si no tiene remoto, dile que, si conecta Code en la nube o el canal Web en el paso 9, su copia queda también en un repositorio privado de GitHub; si no, que la respalde con un remoto privado o una copia de la carpeta.
-2. **Entorno virtual:** la herramienta usa `openpyxl`, que va en un entorno virtual dentro de la copia (`.venv/`, que git ignora), no en el Python del sistema. Muéstrale los comandos de su sistema (paso 2) y pide su permiso antes de correrlos:
+2. **Entorno virtual:** la herramienta de registros usa `openpyxl`, y el generador de CV, fpdf2, python-docx, pypdf y pypdfium2. Todas van en un entorno virtual dentro de la copia (`.venv/`, que git ignora), no en el Python del sistema, y ninguna pide permisos de administrador. Las instala este punto o el 1 del paso 6, el que llegue primero: si la comprobación ya imprime «listo», el punto termina. Si no, muéstrale los comandos de su sistema (paso 2) y pide su permiso antes de correrlos. Si `.venv/` ya existe, no lo crees de nuevo: basta la instalación.
 
-   | Sistema | Crear el entorno | Instalar `openpyxl` | Comprobación |
+   | Sistema | Crear el entorno | Instalar las bibliotecas | Comprobación |
    | --- | --- | --- | --- |
-   | Linux y macOS | `python3 -m venv .venv` | `.venv/bin/python -m pip install openpyxl` | `.venv/bin/python -I -c "import openpyxl; print(openpyxl.__version__)"` |
-   | Windows | `py -3 -m venv .venv` | `.venv\Scripts\python.exe -m pip install openpyxl tzdata` (Windows no trae la base de zonas horarias) | `.venv\Scripts\python.exe -I -c "import openpyxl; print(openpyxl.__version__)"` |
+   | Linux y macOS | `python3 -m venv .venv` | `.venv/bin/python -m pip install openpyxl fpdf2 python-docx pypdf pypdfium2` | `.venv/bin/python -I -c "import openpyxl, fpdf, docx, pypdf, pypdfium2; print('listo')"` |
+   | Windows | `py -3 -m venv .venv` | `.venv\Scripts\python.exe -m pip install openpyxl tzdata fpdf2 python-docx pypdf pypdfium2` (Windows no trae la base de zonas horarias, `tzdata`) | `.venv\Scripts\python.exe -I -c "import openpyxl, fpdf, docx, pypdf, pypdfium2; print('listo')"` |
 
-   En Debian y Ubuntu, si crear el entorno falla por `ensurepip`, falta el paquete del sistema: `sudo apt install python3-venv`, que corre el titular (paso 2, «Instalación»). El punto termina cuando la comprobación da una versión.
+   En Debian y Ubuntu, si crear el entorno falla por `ensurepip`, falta el paquete del sistema: `sudo apt install python3-venv`, que corre el titular (paso 2, «Instalación»). El punto termina cuando la comprobación imprime «listo».
 
-   **Code en la nube:** el hook ya creó `.venv` con `openpyxl` al abrir la sesión, y lo vuelve a crear en cada sesión, porque `.venv` no viaja con el repositorio. No muestres los comandos ni pidas permiso: corre solo la comprobación de Linux. Si no da una versión, dile al titular que el hook de la nube falló y qué aviso dio, como en el paso 2 («Code en la nube»).
+   **Code en la nube:** el hook ya creó `.venv` con las bibliotecas al abrir la sesión, y lo vuelve a crear en cada sesión, porque `.venv` no viaja con el repositorio. No muestres los comandos ni pidas permiso: corre solo la comprobación de Linux. Si no imprime «listo», dile al titular que el hook de la nube falló y qué aviso dio, como en el paso 2 («Code en la nube»).
 3. **Crear el archivo:** `.venv/bin/python -I herramientas/registros.py crear` (en Windows, con `.venv\Scripts\python.exe`). Su salida lista las siete pestañas de 11/REG-ESQUEMA; si dice que el archivo ya existe, no lo toques y pregúntale al titular de dónde salió.
 4. **Cierre:** 00 («Registros») ya nombra el archivo, así que no se edita. En ESTADO, las filas de 00, 10 y 11 quedan «Configurado», con los siguientes pasos «Registrar desde Code con `herramientas/registros.py` (11/REG-LOCAL); si hay proyecto web, volver a pegarlo en «Instrucciones» cada vez que cambie» para 00, «Analizar tendencias en Code cuando haya muestras comparables» para 10 y «Cambiar columnas solo según REG-DECISIONES («Encabezados»)» para 11.
 

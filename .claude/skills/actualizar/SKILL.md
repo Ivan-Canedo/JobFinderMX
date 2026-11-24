@@ -113,7 +113,7 @@ El paso termina cuando cada acción de esas versiones está hecha o el titular d
    .venv/bin/python -I -B -m unittest discover -s herramientas/pruebas
    ```
 
-   Las que necesitan LibreOffice, poppler u `openpyxl` se saltan si faltan; un salto no es una falla. Si alguna falla, muéstrale la salida al titular antes de proponer el commit.
+   Las que necesitan las bibliotecas del CV u `openpyxl` se saltan si faltan; un salto no es una falla. Si alguna falla, muéstrale la salida al titular antes de proponer el commit.
 3. **Módulos:** cada módulo (00–11) que cambió, por la fusión o por una acción, sube de versión desde la que tiene en el último commit (`git show HEAD:<módulo>`), no desde la de la plantilla: versión, fecha de hoy y la línea de cambio «Actualizado a la plantilla vX.Y». Su fila de ESTADO toma esa versión. En 01, **Versión de la plantilla** pasa a la destino, sin la `v`.
 4. **Resumen:** muéstrale el resumen del paso 4, con las acciones del paso 5 y lo pospuesto.
 5. **Canal Web:** si el titular tiene proyecto web, recuérdale que, cuando suba a su remoto el commit del paso 6, pulse «Sync» en él; si cambió 00, se vuelve a pegar en «Instrucciones».

@@ -60,10 +60,10 @@ Las pruebas automáticas usan `unittest`, sin red, y llaman a cada script por su
 python3 -I -B -m unittest discover -s herramientas/pruebas
 ```
 
-Las que generan un CV se saltan si faltan LibreOffice o poppler; las de la herramienta de registros, si falta `openpyxl`, y la que revisa el formato de la instantánea, si falta `markdownlint-cli2`. Para correrlas, usa el Python de un entorno virtual con `openpyxl`, el mismo que crea `/configurar` en el paso 8 (Registros):
+Las que generan un CV se saltan si faltan fpdf2, python-docx, pypdf o pypdfium2; las de la herramienta de registros, si falta `openpyxl`, y la que revisa el formato de la instantánea, si falta `markdownlint-cli2`. Para correrlas, usa el Python de un entorno virtual con esas bibliotecas, el mismo que crea `/configurar` en el paso 6 (CV base) o el 8 (Registros):
 
 ```sh
-python3 -m venv .venv && .venv/bin/python -m pip install openpyxl
+python3 -m venv .venv && .venv/bin/python -m pip install openpyxl fpdf2 python-docx pypdf pypdfium2
 .venv/bin/python -I -B -m unittest discover -s herramientas/pruebas
 ```
 

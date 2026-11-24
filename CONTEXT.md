@@ -8,6 +8,14 @@ Plantilla de instrucciones, módulos y herramientas para que un agente de IA apo
 La persona que busca trabajo y usa su copia de JobFinderMX con sus propios datos.
 _Avoid_: usuario, candidato
 
+**Titular principiante**:
+Un titular con Windows, sin suscripción de ningún agente ni cuenta de GitHub, que ha usado chats de IA pero nunca un agente, una terminal ni git. Puede necesitar ayuda para descomprimir un archivo, tener una computadora con poca memoria y no tener permisos de administrador.
+_Avoid_: usuario novato, usuario básico, no técnico
+
+**Guía de inicio**:
+La página web, publicada aparte de la plantilla, que lleva a un titular principiante desde descargar JobFinderMX hasta pedirle al agente que configure su copia, y le explica qué revisar después. No viaja en las copias.
+_Avoid_: tutorial, manual, README
+
 **Mantenedor**:
 Quien desarrolla y publica la plantilla.
 _Avoid_: usuario, autor

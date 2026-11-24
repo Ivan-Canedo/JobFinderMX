@@ -1,6 +1,6 @@
 # 01 — Mapa y estado del proyecto
 
-**Versión:** 1.11 — 2026-11-23 — La plantilla se llama JobFinderMX, en la versión 3.0, y el archivo de registros, `Registros.xlsx`.
+**Versión:** 1.12 — 2026-11-23 — El generador de CV lleva su fuente en `herramientas/fuentes/` y corre con el Python de `.venv/`.
 
 ## ESTADO — Punto de continuidad
 
@@ -18,7 +18,7 @@
 | 06 Empresas | 1.10 | Sin llenar | `/configurar`, paso 7 (Empresas): fichas de las empresas objetivo |
 | 07 Método de búsqueda | 1.13 | Sin llenar | `/configurar`, paso 7 (Empresas): queda listo con la región de 04 y las fichas de 06 |
 | 08 Evaluación | 1.5 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): queda listo con las condiciones de 04 y las familias de 05 |
-| 09 Generación de CV | 1.4 | Sin llenar | `/configurar`, paso 6 (CV base): color del CV |
+| 09 Generación de CV | 1.5 | Sin llenar | `/configurar`, paso 6 (CV base): color del CV |
 | 10 Tendencias | 1.1 | Sin llenar | `/configurar`, paso 8 (Registros): queda listo cuando existen los registros |
 | 11 Esquema de registros | 1.11 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
 
@@ -84,7 +84,7 @@ No están en el conocimiento del proyecto. Si una sesión los necesita, hay que 
 - **`.agents/skills/`:** un puntero por skill, con su mismo nombre y descripción, que remite a la skill completa de `.claude/skills/`. Existen para que otros agentes, que leen esa carpeta y no `.claude/skills/` (Antigravity, Gemini CLI), encuentren `/configurar`, `/actualizar`, `/conectar-web` y `/conectar-nube`; las skills se editan en `.claude/skills/` y el puntero solo cambia si cambia su nombre o su descripción.
 - **`.markdownlint-cli2.jsonc`:** reglas de formato Markdown que se revisan en Code tras editar (AGENTS.md).
 - **`herramientas/buscar.py`:** script de búsqueda del canal Code (07/BUS-ACCESO-CODE); no se sube al proyecto.
-- **`herramientas/generar_cv.py`:** generador y comprobador de CV del canal Code (09/CV-HERRAMIENTAS); no se sube al proyecto.
+- **`herramientas/generar_cv.py` y `herramientas/fuentes/`:** generador y comprobador de CV del canal Code, con la fuente Carlito y su licencia (09/CV-HERRAMIENTAS); no se suben al proyecto.
 - **`.claude/settings.json` y `herramientas/preparar_nube.sh`:** el hook que, al abrir una sesión de Code en la nube, instala las herramientas y crea `.venv`; en Code local no hace nada (ADR 0007). Lo comprueba `/configurar` en los pasos 2 y 8.
-- **`herramientas/registros.py` y `.venv/`:** la herramienta del archivo de registros y el entorno virtual de Python con que corre (11/REG-LOCAL); no se suben al proyecto.
+- **`herramientas/registros.py` y `.venv/`:** la herramienta del archivo de registros (11/REG-LOCAL) y el entorno virtual de Python con que corren ella y el generador de CV; no se suben al proyecto.
 - **`README.md`, `LICENSE`, `CONTRIBUTING.md`, `CONTEXT.md`, `docs/`, `herramientas/auditar_terminos.py` y `herramientas/pruebas/`:** presentación y licencia de la plantilla, y material de quien la mantiene; el titular no los necesita.
