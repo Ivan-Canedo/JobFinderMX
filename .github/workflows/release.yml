@@ -1,0 +1,44 @@
+# Publica cada versión de la plantilla como Release, con el ZIP que descarga
+# el enlace fijo .../releases/latest/download/JobFinderMX.zip
+# (CONTRIBUTING.md, «Versión de la plantilla»).
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # Las copias de los titulares heredan este archivo: solo publica la plantilla.
+    if: github.repository == 'Ivan-Canedo/JobFinderMX'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Armar el ZIP
+        run: git archive --format=zip --prefix=JobFinderMX/ -o JobFinderMX.zip HEAD
+
+      - name: Notas desde CAMBIOS.md
+        env:
+          ETIQUETA: ${{ github.ref_name }}
+        run: |
+          awk -v t="## ${ETIQUETA} " \
+            'index($0, t) == 1 { dentro = 1; next } dentro && /^## / { exit } dentro' \
+            CAMBIOS.md > notas.md
+          if ! grep -q '[^[:space:]]' notas.md; then
+            echo "Ver CAMBIOS.md." > notas.md
+          fi
+
+      - name: Crear el Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ETIQUETA: ${{ github.ref_name }}
+        run: |
+          gh release create "$ETIQUETA" JobFinderMX.zip \
+            --title "JobFinderMX $ETIQUETA" \
+            --notes-file notas.md \
+            --latest

@@ -122,4 +122,16 @@ Cada versión publicada es una etiqueta `vX.Y` sobre su commit. `/actualizar` fu
    git push origin main vX.Y
    ```
 
+4. **Release:** el push de la etiqueta activa `.github/workflows/release.yml`, que arma `JobFinderMX.zip` con el repositorio completo en una carpeta `JobFinderMX/` y crea el Release de la etiqueta, con las notas de su sección de `CAMBIOS.md` y el ZIP adjunto. Usa solo el token del repositorio y no corre en las copias. Cuando termine, descarga el enlace fijo, <https://github.com/Ivan-Canedo/JobFinderMX/releases/latest/download/JobFinderMX.zip>, y comprueba que sea la versión nueva: el ZIP trae la carpeta `JobFinderMX/`, el 01 de esa carpeta dice la versión que publicaste y, abierta con el agente, la copia ofrece `/configurar`.
+
 `v1.0` es el commit que trae `/actualizar` y `CAMBIOS.md`.
+
+### Probar el ZIP sin publicar
+
+El mismo ZIP del Release se arma en local con `git archive`, que toma lo que tiene commit en la referencia dada (`HEAD` o una etiqueta) y deja fuera `.git` y lo que no tiene commit, como `.scratch/`:
+
+```sh
+git archive --format=zip --prefix=JobFinderMX/ -o "$(mktemp -d)/JobFinderMX.zip" HEAD
+```
+
+Una copia salida del ZIP le sirve a `/actualizar` cuando la convierte en repositorio el paso 2 de `/configurar` (`git init` y un primer commit con todo): sus archivos son idénticos a los de la etiqueta que anota su 01, que es la base de la fusión.

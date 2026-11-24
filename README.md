@@ -71,8 +71,8 @@ Así tienes el historial de tus cambios y un respaldo privado en GitHub.
 
 ### Con el ZIP
 
-1. En esta página, selecciona «Code» → «Download ZIP».
-2. Descomprime el archivo donde quieras guardar tu copia.
+1. Descarga la versión más reciente: <https://github.com/Ivan-Canedo/JobFinderMX/releases/latest/download/JobFinderMX.zip>.
+2. Descomprime el archivo donde quieras guardar tu copia. Queda una carpeta `JobFinderMX`: esa es tu copia.
 
 La carpeta no es un repositorio de git: no tiene remoto, así que nada se publica, pero tampoco guarda historial. Si quieres historial, `/configurar` te ofrece git en su paso 2 y convierte la carpeta en repositorio por ti; si algún día le agregas un remoto, que sea privado. Conviene hacerlo, porque git es el único respaldo de tus registros.
 

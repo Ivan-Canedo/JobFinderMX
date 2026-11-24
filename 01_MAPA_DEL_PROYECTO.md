@@ -1,6 +1,6 @@
 # 01 — Mapa y estado del proyecto
 
-**Versión:** 1.13 — 2026-11-23 — El lint de Markdown es opcional en la copia: corre solo si `markdownlint-cli2` está instalado.
+**Versión:** 1.14 — 2026-11-23 — `.github/` (el proceso de GitHub que publica el ZIP de cada versión) es material de quien mantiene la plantilla.
 
 ## ESTADO — Punto de continuidad
 
@@ -87,4 +87,4 @@ No están en el conocimiento del proyecto. Si una sesión los necesita, hay que 
 - **`herramientas/generar_cv.py` y `herramientas/fuentes/`:** generador y comprobador de CV del canal Code, con la fuente Carlito y su licencia (09/CV-HERRAMIENTAS); no se suben al proyecto.
 - **`.claude/settings.json` y `herramientas/preparar_nube.sh`:** el hook que, al abrir una sesión de Code en la nube, instala las herramientas y crea `.venv`; en Code local no hace nada (ADR 0007). Lo comprueba `/configurar` en los pasos 2 y 8.
 - **`herramientas/registros.py` y `.venv/`:** la herramienta del archivo de registros (11/REG-LOCAL) y el entorno virtual de Python con que corren ella y el generador de CV; no se suben al proyecto.
-- **`README.md`, `LICENSE`, `CONTRIBUTING.md`, `CONTEXT.md`, `docs/`, `herramientas/auditar_terminos.py` y `herramientas/pruebas/`:** presentación y licencia de la plantilla, y material de quien la mantiene; el titular no los necesita.
+- **`README.md`, `LICENSE`, `CONTRIBUTING.md`, `CONTEXT.md`, `docs/`, `.github/`, `herramientas/auditar_terminos.py` y `herramientas/pruebas/`:** presentación y licencia de la plantilla, y material de quien la mantiene; el titular no los necesita.
