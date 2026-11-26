@@ -20,6 +20,10 @@ _Avoid_: tutorial, manual, README
 Una de las dos etapas por las que la guía de inicio lleva al titular principiante: el nivel 1 deja listos su perfil y su CV; el nivel 2, la búsqueda.
 _Avoid_: fase, etapa, modo
 
+**Conversación técnica**:
+La primera parte de `/configurar` (pasos 1 y 2), que corre mientras ninguna fila de ESTADO diga «Configurado»: revisa la copia y deja instalado todo lo que hace falta, antes de cualquier pregunta sobre el titular. Termina cuando el esqueleto del CV sale bien.
+_Avoid_: instalación, revisión del equipo, paso técnico
+
 **Mantenedor**:
 Quien desarrolla y publica la plantilla.
 _Avoid_: usuario, autor
