@@ -16,6 +16,10 @@ _Avoid_: usuario novato, usuario básico, no técnico
 La página web, publicada aparte de la plantilla, que lleva a un titular principiante desde descargar JobFinderMX hasta pedirle al agente que configure su copia, y le explica qué revisar después. No viaja en las copias.
 _Avoid_: tutorial, manual, README
 
+**Nivel**:
+Una de las dos etapas por las que la guía de inicio lleva al titular principiante: el nivel 1 deja listos su perfil y su CV; el nivel 2, la búsqueda.
+_Avoid_: fase, etapa, modo
+
 **Mantenedor**:
 Quien desarrolla y publica la plantilla.
 _Avoid_: usuario, autor
