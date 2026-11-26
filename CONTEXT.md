@@ -124,6 +124,10 @@ _Avoid_: zona (esa es la zona metropolitana de un grupo de localidades), área
 Un elemento de `localidades`: de división completa (con `divisiones` y sin `nombres`), con `nombres` (solo esas localidades) o de país completo (sin ninguno de los dos).
 _Avoid_: localidad (esa es una sola ciudad, municipio o comuna)
 
+**Zona metropolitana**:
+Un conjunto de localidades que el titular nombra como un solo lugar, como «la zona metropolitana de Puebla». En México se desglosa con la delimitación oficial, que incluye también zonas conurbadas y metrópolis municipales.
+_Avoid_: metrópoli (es la categoría oficial, no lo que dice el titular), área metropolitana, zona
+
 **Alcance del remoto**:
 Desde qué países acepta el titular vacantes remotas: ninguno, los de `remoto.paises` o cualquiera.
 _Avoid_: región remota

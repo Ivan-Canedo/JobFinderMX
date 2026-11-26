@@ -1,0 +1,611 @@
+{
+"fuente": "«Metrópolis de México 2020», SEDATU, CONAPO e INEGI. Datos abiertos de CONAPO en datos.gob.mx, conjunto «Las metrópolis de México, 2020», archivo metropolis_2020.zip; la fecha es la de ese archivo. Nombres de las entidades: Marco Geoestadístico de INEGI.",
+"fecha": "2025-02-26",
+"metropolis": [
+  {"nombre": "Aguascalientes", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Aguascalientes", "entidad": "Aguascalientes", "clave": "01001"},
+    {"nombre": "Jesús María", "entidad": "Aguascalientes", "clave": "01005"},
+    {"nombre": "San Francisco de los Romo", "entidad": "Aguascalientes", "clave": "01011"}
+  ]},
+  {"nombre": "Tijuana", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Tijuana", "entidad": "Baja California", "clave": "02004"},
+    {"nombre": "Playas de Rosarito", "entidad": "Baja California", "clave": "02005"}
+  ]},
+  {"nombre": "Ensenada", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Ensenada", "entidad": "Baja California", "clave": "02001"}
+  ]},
+  {"nombre": "Mexicali", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Mexicali", "entidad": "Baja California", "clave": "02002"}
+  ]},
+  {"nombre": "La Paz", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "La Paz", "entidad": "Baja California Sur", "clave": "03003"}
+  ]},
+  {"nombre": "Los Cabos", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Los Cabos", "entidad": "Baja California Sur", "clave": "03008"}
+  ]},
+  {"nombre": "Campeche", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Campeche", "entidad": "Campeche", "clave": "04002"}
+  ]},
+  {"nombre": "La Laguna", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Matamoros", "entidad": "Coahuila de Zaragoza", "clave": "05017"},
+    {"nombre": "Torreón", "entidad": "Coahuila de Zaragoza", "clave": "05035"},
+    {"nombre": "Gómez Palacio", "entidad": "Durango", "clave": "10007"},
+    {"nombre": "Lerdo", "entidad": "Durango", "clave": "10012"}
+  ]},
+  {"nombre": "Monclova-Frontera", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Castaños", "entidad": "Coahuila de Zaragoza", "clave": "05006"},
+    {"nombre": "Frontera", "entidad": "Coahuila de Zaragoza", "clave": "05010"},
+    {"nombre": "Monclova", "entidad": "Coahuila de Zaragoza", "clave": "05018"},
+    {"nombre": "San Buenaventura", "entidad": "Coahuila de Zaragoza", "clave": "05031"}
+  ]},
+  {"nombre": "Piedras Negras", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Nava", "entidad": "Coahuila de Zaragoza", "clave": "05022"},
+    {"nombre": "Piedras Negras", "entidad": "Coahuila de Zaragoza", "clave": "05025"}
+  ]},
+  {"nombre": "Saltillo", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Arteaga", "entidad": "Coahuila de Zaragoza", "clave": "05004"},
+    {"nombre": "Ramos Arizpe", "entidad": "Coahuila de Zaragoza", "clave": "05027"},
+    {"nombre": "Saltillo", "entidad": "Coahuila de Zaragoza", "clave": "05030"}
+  ]},
+  {"nombre": "Sabinas", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Sabinas", "entidad": "Coahuila de Zaragoza", "clave": "05028"},
+    {"nombre": "San Juan de Sabinas", "entidad": "Coahuila de Zaragoza", "clave": "05032"}
+  ]},
+  {"nombre": "Colima-Villa de Álvarez", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Colima", "entidad": "Colima", "clave": "06002"},
+    {"nombre": "Comala", "entidad": "Colima", "clave": "06003"},
+    {"nombre": "Villa de Álvarez", "entidad": "Colima", "clave": "06010"}
+  ]},
+  {"nombre": "Tecomán", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Armería", "entidad": "Colima", "clave": "06001"},
+    {"nombre": "Tecomán", "entidad": "Colima", "clave": "06009"}
+  ]},
+  {"nombre": "Tapachula", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Metapa", "entidad": "Chiapas", "clave": "07055"},
+    {"nombre": "Tapachula", "entidad": "Chiapas", "clave": "07089"},
+    {"nombre": "Tuxtla Chico", "entidad": "Chiapas", "clave": "07102"}
+  ]},
+  {"nombre": "Tuxtla Gutiérrez", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Berriozábal", "entidad": "Chiapas", "clave": "07012"},
+    {"nombre": "Chiapa de Corzo", "entidad": "Chiapas", "clave": "07027"},
+    {"nombre": "San Fernando", "entidad": "Chiapas", "clave": "07079"},
+    {"nombre": "Suchiapa", "entidad": "Chiapas", "clave": "07086"},
+    {"nombre": "Tuxtla Gutiérrez", "entidad": "Chiapas", "clave": "07101"}
+  ]},
+  {"nombre": "Chihuahua", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Aldama", "entidad": "Chihuahua", "clave": "08002"},
+    {"nombre": "Aquiles Serdán", "entidad": "Chihuahua", "clave": "08004"},
+    {"nombre": "Chihuahua", "entidad": "Chihuahua", "clave": "08019"}
+  ]},
+  {"nombre": "Delicias", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Delicias", "entidad": "Chihuahua", "clave": "08021"},
+    {"nombre": "Meoqui", "entidad": "Chihuahua", "clave": "08045"},
+    {"nombre": "Rosales", "entidad": "Chihuahua", "clave": "08055"}
+  ]},
+  {"nombre": "Juárez", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Juárez", "entidad": "Chihuahua", "clave": "08037"}
+  ]},
+  {"nombre": "Hidalgo del Parral", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Hidalgo del Parral", "entidad": "Chihuahua", "clave": "08032"},
+    {"nombre": "San Francisco del Oro", "entidad": "Chihuahua", "clave": "08059"}
+  ]},
+  {"nombre": "Ciudad de México", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Azcapotzalco", "entidad": "Ciudad de México", "clave": "09002"},
+    {"nombre": "Coyoacán", "entidad": "Ciudad de México", "clave": "09003"},
+    {"nombre": "Cuajimalpa de Morelos", "entidad": "Ciudad de México", "clave": "09004"},
+    {"nombre": "Gustavo A. Madero", "entidad": "Ciudad de México", "clave": "09005"},
+    {"nombre": "Iztacalco", "entidad": "Ciudad de México", "clave": "09006"},
+    {"nombre": "Iztapalapa", "entidad": "Ciudad de México", "clave": "09007"},
+    {"nombre": "La Magdalena Contreras", "entidad": "Ciudad de México", "clave": "09008"},
+    {"nombre": "Milpa Alta", "entidad": "Ciudad de México", "clave": "09009"},
+    {"nombre": "Álvaro Obregón", "entidad": "Ciudad de México", "clave": "09010"},
+    {"nombre": "Tláhuac", "entidad": "Ciudad de México", "clave": "09011"},
+    {"nombre": "Tlalpan", "entidad": "Ciudad de México", "clave": "09012"},
+    {"nombre": "Xochimilco", "entidad": "Ciudad de México", "clave": "09013"},
+    {"nombre": "Benito Juárez", "entidad": "Ciudad de México", "clave": "09014"},
+    {"nombre": "Cuauhtémoc", "entidad": "Ciudad de México", "clave": "09015"},
+    {"nombre": "Miguel Hidalgo", "entidad": "Ciudad de México", "clave": "09016"},
+    {"nombre": "Venustiano Carranza", "entidad": "Ciudad de México", "clave": "09017"},
+    {"nombre": "Atotonilco de Tula", "entidad": "Hidalgo", "clave": "13013"},
+    {"nombre": "Tizayuca", "entidad": "Hidalgo", "clave": "13069"},
+    {"nombre": "Acolman", "entidad": "México", "clave": "15002"},
+    {"nombre": "Atenco", "entidad": "México", "clave": "15011"},
+    {"nombre": "Atizapán de Zaragoza", "entidad": "México", "clave": "15013"},
+    {"nombre": "Coacalco de Berriozábal", "entidad": "México", "clave": "15020"},
+    {"nombre": "Cocotitlán", "entidad": "México", "clave": "15022"},
+    {"nombre": "Coyotepec", "entidad": "México", "clave": "15023"},
+    {"nombre": "Cuautitlán", "entidad": "México", "clave": "15024"},
+    {"nombre": "Chalco", "entidad": "México", "clave": "15025"},
+    {"nombre": "Chiautla", "entidad": "México", "clave": "15028"},
+    {"nombre": "Chicoloapan", "entidad": "México", "clave": "15029"},
+    {"nombre": "Chiconcuac", "entidad": "México", "clave": "15030"},
+    {"nombre": "Chimalhuacán", "entidad": "México", "clave": "15031"},
+    {"nombre": "Ecatepec de Morelos", "entidad": "México", "clave": "15033"},
+    {"nombre": "Huehuetoca", "entidad": "México", "clave": "15035"},
+    {"nombre": "Huixquilucan", "entidad": "México", "clave": "15037"},
+    {"nombre": "Isidro Fabela", "entidad": "México", "clave": "15038"},
+    {"nombre": "Ixtapaluca", "entidad": "México", "clave": "15039"},
+    {"nombre": "Jaltenco", "entidad": "México", "clave": "15044"},
+    {"nombre": "Jilotzingo", "entidad": "México", "clave": "15046"},
+    {"nombre": "Melchor Ocampo", "entidad": "México", "clave": "15053"},
+    {"nombre": "Naucalpan de Juárez", "entidad": "México", "clave": "15057"},
+    {"nombre": "Nezahualcóyotl", "entidad": "México", "clave": "15058"},
+    {"nombre": "Nextlalpan", "entidad": "México", "clave": "15059"},
+    {"nombre": "Nicolás Romero", "entidad": "México", "clave": "15060"},
+    {"nombre": "Papalotla", "entidad": "México", "clave": "15069"},
+    {"nombre": "La Paz", "entidad": "México", "clave": "15070"},
+    {"nombre": "San Martín de las Pirámides", "entidad": "México", "clave": "15075"},
+    {"nombre": "Tecámac", "entidad": "México", "clave": "15081"},
+    {"nombre": "Temamatla", "entidad": "México", "clave": "15083"},
+    {"nombre": "Temascalapa", "entidad": "México", "clave": "15084"},
+    {"nombre": "Tenango del Aire", "entidad": "México", "clave": "15089"},
+    {"nombre": "Teoloyucan", "entidad": "México", "clave": "15091"},
+    {"nombre": "Teotihuacán", "entidad": "México", "clave": "15092"},
+    {"nombre": "Tepetlaoxtoc", "entidad": "México", "clave": "15093"},
+    {"nombre": "Tepotzotlán", "entidad": "México", "clave": "15095"},
+    {"nombre": "Texcoco", "entidad": "México", "clave": "15099"},
+    {"nombre": "Tezoyuca", "entidad": "México", "clave": "15100"},
+    {"nombre": "Tlalmanalco", "entidad": "México", "clave": "15103"},
+    {"nombre": "Tlalnepantla de Baz", "entidad": "México", "clave": "15104"},
+    {"nombre": "Tultepec", "entidad": "México", "clave": "15108"},
+    {"nombre": "Tultitlán", "entidad": "México", "clave": "15109"},
+    {"nombre": "Zumpango", "entidad": "México", "clave": "15120"},
+    {"nombre": "Cuautitlán Izcalli", "entidad": "México", "clave": "15121"},
+    {"nombre": "Valle de Chalco Solidaridad", "entidad": "México", "clave": "15122"},
+    {"nombre": "Tonanitla", "entidad": "México", "clave": "15125"}
+  ]},
+  {"nombre": "Durango", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Durango", "entidad": "Durango", "clave": "10005"}
+  ]},
+  {"nombre": "Celaya", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Celaya", "entidad": "Guanajuato", "clave": "11007"},
+    {"nombre": "Cortazar", "entidad": "Guanajuato", "clave": "11011"},
+    {"nombre": "Villagrán", "entidad": "Guanajuato", "clave": "11044"}
+  ]},
+  {"nombre": "León", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "León", "entidad": "Guanajuato", "clave": "11020"},
+    {"nombre": "Purísima del Rincón", "entidad": "Guanajuato", "clave": "11025"},
+    {"nombre": "San Francisco del Rincón", "entidad": "Guanajuato", "clave": "11031"}
+  ]},
+  {"nombre": "Guanajuato", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Guanajuato", "entidad": "Guanajuato", "clave": "11015"}
+  ]},
+  {"nombre": "Irapuato", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Irapuato", "entidad": "Guanajuato", "clave": "11017"}
+  ]},
+  {"nombre": "Moroleon-Uriangato", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Moroleón", "entidad": "Guanajuato", "clave": "11021"},
+    {"nombre": "Uriangato", "entidad": "Guanajuato", "clave": "11041"},
+    {"nombre": "Cuitzeo", "entidad": "Michoacán de Ocampo", "clave": "16020"}
+  ]},
+  {"nombre": "Silao", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Romita", "entidad": "Guanajuato", "clave": "11026"},
+    {"nombre": "Silao de la Victoria", "entidad": "Guanajuato", "clave": "11037"}
+  ]},
+  {"nombre": "Chilpancingo", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Chilpancingo de los Bravo", "entidad": "Guerrero", "clave": "12029"},
+    {"nombre": "Eduardo Neri", "entidad": "Guerrero", "clave": "12075"}
+  ]},
+  {"nombre": "Acapulco", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Acapulco de Juárez", "entidad": "Guerrero", "clave": "12001"}
+  ]},
+  {"nombre": "Pachuca", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Mineral del Monte", "entidad": "Hidalgo", "clave": "13039"},
+    {"nombre": "Pachuca de Soto", "entidad": "Hidalgo", "clave": "13048"},
+    {"nombre": "Mineral de la Reforma", "entidad": "Hidalgo", "clave": "13051"},
+    {"nombre": "Zapotlán de Juárez", "entidad": "Hidalgo", "clave": "13082"},
+    {"nombre": "Zempoala", "entidad": "Hidalgo", "clave": "13083"}
+  ]},
+  {"nombre": "Tulancingo", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Cuautepec de Hinojosa", "entidad": "Hidalgo", "clave": "13016"},
+    {"nombre": "Santiago Tulantepec de Lugo Guerrero", "entidad": "Hidalgo", "clave": "13056"},
+    {"nombre": "Tulancingo de Bravo", "entidad": "Hidalgo", "clave": "13077"}
+  ]},
+  {"nombre": "Atitalaquia", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Atitalaquia", "entidad": "Hidalgo", "clave": "13010"},
+    {"nombre": "Tlaxcoapan", "entidad": "Hidalgo", "clave": "13074"}
+  ]},
+  {"nombre": "Guadalajara", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Guadalajara", "entidad": "Jalisco", "clave": "14039"},
+    {"nombre": "Juanacatlán", "entidad": "Jalisco", "clave": "14051"},
+    {"nombre": "El Salto", "entidad": "Jalisco", "clave": "14070"},
+    {"nombre": "Tlajomulco de Zúñiga", "entidad": "Jalisco", "clave": "14097"},
+    {"nombre": "San Pedro Tlaquepaque", "entidad": "Jalisco", "clave": "14098"},
+    {"nombre": "Tonalá", "entidad": "Jalisco", "clave": "14101"},
+    {"nombre": "Zapopan", "entidad": "Jalisco", "clave": "14120"}
+  ]},
+  {"nombre": "Puerto Vallarta", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Puerto Vallarta", "entidad": "Jalisco", "clave": "14067"},
+    {"nombre": "Bahía de Banderas", "entidad": "Nayarit", "clave": "18020"}
+  ]},
+  {"nombre": "Ocotlán", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Jamay", "entidad": "Jalisco", "clave": "14047"},
+    {"nombre": "Ocotlán", "entidad": "Jalisco", "clave": "14063"},
+    {"nombre": "Poncitlán", "entidad": "Jalisco", "clave": "14066"}
+  ]},
+  {"nombre": "Toluca", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Almoloya de Juárez", "entidad": "México", "clave": "15005"},
+    {"nombre": "Calimaya", "entidad": "México", "clave": "15018"},
+    {"nombre": "Chapultepec", "entidad": "México", "clave": "15027"},
+    {"nombre": "Lerma", "entidad": "México", "clave": "15051"},
+    {"nombre": "Metepec", "entidad": "México", "clave": "15054"},
+    {"nombre": "Mexicaltzingo", "entidad": "México", "clave": "15055"},
+    {"nombre": "Ocoyoacac", "entidad": "México", "clave": "15062"},
+    {"nombre": "Otzolotepec", "entidad": "México", "clave": "15067"},
+    {"nombre": "Rayón", "entidad": "México", "clave": "15072"},
+    {"nombre": "San Antonio la Isla", "entidad": "México", "clave": "15073"},
+    {"nombre": "San Mateo Atenco", "entidad": "México", "clave": "15076"},
+    {"nombre": "Temoaya", "entidad": "México", "clave": "15087"},
+    {"nombre": "Tenango del Valle", "entidad": "México", "clave": "15090"},
+    {"nombre": "Toluca", "entidad": "México", "clave": "15106"},
+    {"nombre": "Xonacatlán", "entidad": "México", "clave": "15115"},
+    {"nombre": "Zinacantepec", "entidad": "México", "clave": "15118"}
+  ]},
+  {"nombre": "Ozumba", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Atlautla", "entidad": "México", "clave": "15015"},
+    {"nombre": "Ozumba", "entidad": "México", "clave": "15068"},
+    {"nombre": "Tepetlixpa", "entidad": "México", "clave": "15094"}
+  ]},
+  {"nombre": "Tianguistenco", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Almoloya del Río", "entidad": "México", "clave": "15006"},
+    {"nombre": "Atizapán", "entidad": "México", "clave": "15012"},
+    {"nombre": "Capulhuac", "entidad": "México", "clave": "15019"},
+    {"nombre": "Xalatlaco", "entidad": "México", "clave": "15043"},
+    {"nombre": "Texcalyacac", "entidad": "México", "clave": "15098"},
+    {"nombre": "Tianguistenco", "entidad": "México", "clave": "15101"}
+  ]},
+  {"nombre": "La Piedad-Pénjamo", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Pénjamo", "entidad": "Guanajuato", "clave": "11023"},
+    {"nombre": "La Piedad", "entidad": "Michoacán de Ocampo", "clave": "16069"}
+  ]},
+  {"nombre": "Morelia", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Charo", "entidad": "Michoacán de Ocampo", "clave": "16022"},
+    {"nombre": "Morelia", "entidad": "Michoacán de Ocampo", "clave": "16053"},
+    {"nombre": "Tarímbaro", "entidad": "Michoacán de Ocampo", "clave": "16088"}
+  ]},
+  {"nombre": "Zamora", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Jacona", "entidad": "Michoacán de Ocampo", "clave": "16043"},
+    {"nombre": "Zamora", "entidad": "Michoacán de Ocampo", "clave": "16108"}
+  ]},
+  {"nombre": "Uruapan", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Uruapan", "entidad": "Michoacán de Ocampo", "clave": "16102"}
+  ]},
+  {"nombre": "Lázaro Cárdenas", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "La Unión de Isidoro Montes de Oca", "entidad": "Guerrero", "clave": "12068"},
+    {"nombre": "Lázaro Cárdenas", "entidad": "Michoacán de Ocampo", "clave": "16052"}
+  ]},
+  {"nombre": "Sahuayo", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Jiquilpan", "entidad": "Michoacán de Ocampo", "clave": "16045"},
+    {"nombre": "Sahuayo", "entidad": "Michoacán de Ocampo", "clave": "16076"}
+  ]},
+  {"nombre": "Cuautla", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Atlatlahucan", "entidad": "Morelos", "clave": "17002"},
+    {"nombre": "Ayala", "entidad": "Morelos", "clave": "17004"},
+    {"nombre": "Cuautla", "entidad": "Morelos", "clave": "17006"},
+    {"nombre": "Yecapixtla", "entidad": "Morelos", "clave": "17030"}
+  ]},
+  {"nombre": "Cuernavaca", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Cuernavaca", "entidad": "Morelos", "clave": "17007"},
+    {"nombre": "Emiliano Zapata", "entidad": "Morelos", "clave": "17008"},
+    {"nombre": "Huitzilac", "entidad": "Morelos", "clave": "17009"},
+    {"nombre": "Jiutepec", "entidad": "Morelos", "clave": "17011"},
+    {"nombre": "Temixco", "entidad": "Morelos", "clave": "17018"},
+    {"nombre": "Tepoztlán", "entidad": "Morelos", "clave": "17020"},
+    {"nombre": "Xochitepec", "entidad": "Morelos", "clave": "17028"},
+    {"nombre": "Yautepec", "entidad": "Morelos", "clave": "17029"},
+    {"nombre": "Coatetelco", "entidad": "Morelos", "clave": "17034"},
+    {"nombre": "Xoxocotla", "entidad": "Morelos", "clave": "17035"}
+  ]},
+  {"nombre": "Tepic", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Xalisco", "entidad": "Nayarit", "clave": "18008"},
+    {"nombre": "Tepic", "entidad": "Nayarit", "clave": "18017"}
+  ]},
+  {"nombre": "Monterrey", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Apodaca", "entidad": "Nuevo León", "clave": "19006"},
+    {"nombre": "Cadereyta Jiménez", "entidad": "Nuevo León", "clave": "19009"},
+    {"nombre": "El Carmen", "entidad": "Nuevo León", "clave": "19010"},
+    {"nombre": "Ciénega de Flores", "entidad": "Nuevo León", "clave": "19012"},
+    {"nombre": "García", "entidad": "Nuevo León", "clave": "19018"},
+    {"nombre": "San Pedro Garza García", "entidad": "Nuevo León", "clave": "19019"},
+    {"nombre": "General Escobedo", "entidad": "Nuevo León", "clave": "19021"},
+    {"nombre": "General Zuazua", "entidad": "Nuevo León", "clave": "19025"},
+    {"nombre": "Guadalupe", "entidad": "Nuevo León", "clave": "19026"},
+    {"nombre": "Juárez", "entidad": "Nuevo León", "clave": "19031"},
+    {"nombre": "Monterrey", "entidad": "Nuevo León", "clave": "19039"},
+    {"nombre": "Pesquería", "entidad": "Nuevo León", "clave": "19041"},
+    {"nombre": "Salinas Victoria", "entidad": "Nuevo León", "clave": "19045"},
+    {"nombre": "San Nicolás de los Garza", "entidad": "Nuevo León", "clave": "19046"},
+    {"nombre": "Santa Catarina", "entidad": "Nuevo León", "clave": "19048"},
+    {"nombre": "Santiago", "entidad": "Nuevo León", "clave": "19049"}
+  ]},
+  {"nombre": "Oaxaca", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Cuilápam de Guerrero", "entidad": "Oaxaca", "clave": "20023"},
+    {"nombre": "Magdalena Apasco", "entidad": "Oaxaca", "clave": "20045"},
+    {"nombre": "Nazareno Etla", "entidad": "Oaxaca", "clave": "20063"},
+    {"nombre": "Oaxaca de Juárez", "entidad": "Oaxaca", "clave": "20067"},
+    {"nombre": "San Agustín de las Juntas", "entidad": "Oaxaca", "clave": "20083"},
+    {"nombre": "San Agustín Yatareni", "entidad": "Oaxaca", "clave": "20087"},
+    {"nombre": "San Andrés Huayápam", "entidad": "Oaxaca", "clave": "20091"},
+    {"nombre": "San Antonio de la Cal", "entidad": "Oaxaca", "clave": "20107"},
+    {"nombre": "San Bartolo Coyotepec", "entidad": "Oaxaca", "clave": "20115"},
+    {"nombre": "San Jacinto Amilpas", "entidad": "Oaxaca", "clave": "20157"},
+    {"nombre": "Ánimas Trujano", "entidad": "Oaxaca", "clave": "20174"},
+    {"nombre": "San Lorenzo Cacaotepec", "entidad": "Oaxaca", "clave": "20227"},
+    {"nombre": "San Pablo Etla", "entidad": "Oaxaca", "clave": "20293"},
+    {"nombre": "Villa de Etla", "entidad": "Oaxaca", "clave": "20338"},
+    {"nombre": "San Raymundo Jalpan", "entidad": "Oaxaca", "clave": "20342"},
+    {"nombre": "San Sebastián Tutla", "entidad": "Oaxaca", "clave": "20350"},
+    {"nombre": "Santa Cruz Amilpas", "entidad": "Oaxaca", "clave": "20375"},
+    {"nombre": "Santa Cruz Xoxocotlán", "entidad": "Oaxaca", "clave": "20385"},
+    {"nombre": "Santa Lucía del Camino", "entidad": "Oaxaca", "clave": "20390"},
+    {"nombre": "Santa María Atzompa", "entidad": "Oaxaca", "clave": "20399"},
+    {"nombre": "Santa María Coyotepec", "entidad": "Oaxaca", "clave": "20403"},
+    {"nombre": "Santa María del Tule", "entidad": "Oaxaca", "clave": "20409"},
+    {"nombre": "Santo Domingo Tomaltepec", "entidad": "Oaxaca", "clave": "20519"},
+    {"nombre": "Soledad Etla", "entidad": "Oaxaca", "clave": "20539"},
+    {"nombre": "Tlalixtac de Cabrera", "entidad": "Oaxaca", "clave": "20553"},
+    {"nombre": "Villa de Zaachila", "entidad": "Oaxaca", "clave": "20565"}
+  ]},
+  {"nombre": "Juchitán", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "El Espinal", "entidad": "Oaxaca", "clave": "20030"},
+    {"nombre": "Juchitán de Zaragoza", "entidad": "Oaxaca", "clave": "20043"},
+    {"nombre": "Santa María Xadani", "entidad": "Oaxaca", "clave": "20441"}
+  ]},
+  {"nombre": "Salina Cruz", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Salina Cruz", "entidad": "Oaxaca", "clave": "20079"},
+    {"nombre": "San Pedro Huilotepec", "entidad": "Oaxaca", "clave": "20308"}
+  ]},
+  {"nombre": "Tehuantepec", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "San Blas Atempa", "entidad": "Oaxaca", "clave": "20124"},
+    {"nombre": "Santo Domingo Tehuantepec", "entidad": "Oaxaca", "clave": "20515"}
+  ]},
+  {"nombre": "Puebla-Tlaxcala", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Acajete", "entidad": "Puebla", "clave": "21001"},
+    {"nombre": "Amozoc", "entidad": "Puebla", "clave": "21015"},
+    {"nombre": "Coronango", "entidad": "Puebla", "clave": "21034"},
+    {"nombre": "Cuautlancingo", "entidad": "Puebla", "clave": "21041"},
+    {"nombre": "Juan C. Bonilla", "entidad": "Puebla", "clave": "21090"},
+    {"nombre": "Ocoyucan", "entidad": "Puebla", "clave": "21106"},
+    {"nombre": "Puebla", "entidad": "Puebla", "clave": "21114"},
+    {"nombre": "San Andrés Cholula", "entidad": "Puebla", "clave": "21119"},
+    {"nombre": "San Gregorio Atzompa", "entidad": "Puebla", "clave": "21125"},
+    {"nombre": "San Miguel Xoxtla", "entidad": "Puebla", "clave": "21136"},
+    {"nombre": "San Pedro Cholula", "entidad": "Puebla", "clave": "21140"},
+    {"nombre": "Tepatlaxco de Hidalgo", "entidad": "Puebla", "clave": "21163"},
+    {"nombre": "Tlaltenango", "entidad": "Puebla", "clave": "21181"},
+    {"nombre": "Mazatecochco de José María Morelos", "entidad": "Tlaxcala", "clave": "29017"},
+    {"nombre": "Acuamanala de Miguel Hidalgo", "entidad": "Tlaxcala", "clave": "29022"},
+    {"nombre": "San Pablo del Monte", "entidad": "Tlaxcala", "clave": "29025"},
+    {"nombre": "Tenancingo", "entidad": "Tlaxcala", "clave": "29027"},
+    {"nombre": "Teolocholco", "entidad": "Tlaxcala", "clave": "29028"},
+    {"nombre": "Tepeyanco", "entidad": "Tlaxcala", "clave": "29029"},
+    {"nombre": "Tetlatlahuca", "entidad": "Tlaxcala", "clave": "29032"},
+    {"nombre": "Papalotla de Xicohténcatl", "entidad": "Tlaxcala", "clave": "29041"},
+    {"nombre": "Xicohtzinco", "entidad": "Tlaxcala", "clave": "29042"},
+    {"nombre": "Zacatelco", "entidad": "Tlaxcala", "clave": "29044"},
+    {"nombre": "San Jerónimo Zacualpan", "entidad": "Tlaxcala", "clave": "29051"},
+    {"nombre": "San Juan Huactzinco", "entidad": "Tlaxcala", "clave": "29053"},
+    {"nombre": "San Lorenzo Axocomanitla", "entidad": "Tlaxcala", "clave": "29054"},
+    {"nombre": "Santa Catarina Ayometla", "entidad": "Tlaxcala", "clave": "29058"},
+    {"nombre": "Santa Cruz Quilehtla", "entidad": "Tlaxcala", "clave": "29059"}
+  ]},
+  {"nombre": "San Martín Texmelucan", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Chiautzingo", "entidad": "Puebla", "clave": "21048"},
+    {"nombre": "Huejotzingo", "entidad": "Puebla", "clave": "21074"},
+    {"nombre": "San Felipe Teotlalcingo", "entidad": "Puebla", "clave": "21122"},
+    {"nombre": "San Martín Texmelucan", "entidad": "Puebla", "clave": "21132"},
+    {"nombre": "San Salvador el Verde", "entidad": "Puebla", "clave": "21143"}
+  ]},
+  {"nombre": "Tehuacán", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Santiago Miahuatlán", "entidad": "Puebla", "clave": "21149"},
+    {"nombre": "Tehuacán", "entidad": "Puebla", "clave": "21156"}
+  ]},
+  {"nombre": "Huauchinango", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Huauchinango", "entidad": "Puebla", "clave": "21071"},
+    {"nombre": "Juan Galindo", "entidad": "Puebla", "clave": "21091"}
+  ]},
+  {"nombre": "Teziutlán", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Chignautla", "entidad": "Puebla", "clave": "21054"},
+    {"nombre": "Teziutlán", "entidad": "Puebla", "clave": "21174"}
+  ]},
+  {"nombre": "Querétaro", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Corregidora", "entidad": "Querétaro", "clave": "22006"},
+    {"nombre": "Huimilpan", "entidad": "Querétaro", "clave": "22008"},
+    {"nombre": "El Marqués", "entidad": "Querétaro", "clave": "22011"},
+    {"nombre": "Querétaro", "entidad": "Querétaro", "clave": "22014"}
+  ]},
+  {"nombre": "Cancún", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Isla Mujeres", "entidad": "Quintana Roo", "clave": "23003"},
+    {"nombre": "Benito Juárez", "entidad": "Quintana Roo", "clave": "23005"}
+  ]},
+  {"nombre": "Chetumal", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Othón P. Blanco", "entidad": "Quintana Roo", "clave": "23004"}
+  ]},
+  {"nombre": "Playa del Carmen", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Solidaridad", "entidad": "Quintana Roo", "clave": "23008"}
+  ]},
+  {"nombre": "San Luis Potosí", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "San Luis Potosí", "entidad": "San Luis Potosí", "clave": "24028"},
+    {"nombre": "Soledad de Graciano Sánchez", "entidad": "San Luis Potosí", "clave": "24035"}
+  ]},
+  {"nombre": "Matehuala", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Matehuala", "entidad": "San Luis Potosí", "clave": "24020"},
+    {"nombre": "Villa de la Paz", "entidad": "San Luis Potosí", "clave": "24048"}
+  ]},
+  {"nombre": "Rioverde", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Ciudad Fernández", "entidad": "San Luis Potosí", "clave": "24011"},
+    {"nombre": "Rioverde", "entidad": "San Luis Potosí", "clave": "24024"}
+  ]},
+  {"nombre": "Culiacán", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Culiacán", "entidad": "Sinaloa", "clave": "25006"}
+  ]},
+  {"nombre": "Los Mochis", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Ahome", "entidad": "Sinaloa", "clave": "25001"}
+  ]},
+  {"nombre": "Mazatlán", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Mazatlán", "entidad": "Sinaloa", "clave": "25012"}
+  ]},
+  {"nombre": "Guaymas", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Empalme", "entidad": "Sonora", "clave": "26025"},
+    {"nombre": "Guaymas", "entidad": "Sonora", "clave": "26029"}
+  ]},
+  {"nombre": "Ciudad Obregón", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Cajeme", "entidad": "Sonora", "clave": "26018"}
+  ]},
+  {"nombre": "Hermosillo", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Hermosillo", "entidad": "Sonora", "clave": "26030"}
+  ]},
+  {"nombre": "Nogales", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Nogales", "entidad": "Sonora", "clave": "26043"}
+  ]},
+  {"nombre": "Caborca", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Caborca", "entidad": "Sonora", "clave": "26017"},
+    {"nombre": "Pitiquito", "entidad": "Sonora", "clave": "26047"}
+  ]},
+  {"nombre": "Villahermosa", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Centro", "entidad": "Tabasco", "clave": "27004"},
+    {"nombre": "Nacajuca", "entidad": "Tabasco", "clave": "27013"}
+  ]},
+  {"nombre": "Reynosa", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Reynosa", "entidad": "Tamaulipas", "clave": "28032"},
+    {"nombre": "Río Bravo", "entidad": "Tamaulipas", "clave": "28033"}
+  ]},
+  {"nombre": "Tampico", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Altamira", "entidad": "Tamaulipas", "clave": "28003"},
+    {"nombre": "Ciudad Madero", "entidad": "Tamaulipas", "clave": "28009"},
+    {"nombre": "Tampico", "entidad": "Tamaulipas", "clave": "28038"},
+    {"nombre": "Pánuco", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30123"},
+    {"nombre": "Pueblo Viejo", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30133"}
+  ]},
+  {"nombre": "Ciudad Victoria", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Victoria", "entidad": "Tamaulipas", "clave": "28041"}
+  ]},
+  {"nombre": "Matamoros", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Matamoros", "entidad": "Tamaulipas", "clave": "28022"}
+  ]},
+  {"nombre": "Nuevo Laredo", "tipo": "Metrópoli municipal", "municipios": [
+    {"nombre": "Nuevo Laredo", "entidad": "Tamaulipas", "clave": "28027"}
+  ]},
+  {"nombre": "Tlaxcala-Apizaco", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Amaxac de Guerrero", "entidad": "Tlaxcala", "clave": "29001"},
+    {"nombre": "Apetatitlán de Antonio Carvajal", "entidad": "Tlaxcala", "clave": "29002"},
+    {"nombre": "Atlangatepec", "entidad": "Tlaxcala", "clave": "29003"},
+    {"nombre": "Apizaco", "entidad": "Tlaxcala", "clave": "29005"},
+    {"nombre": "Cuaxomulco", "entidad": "Tlaxcala", "clave": "29009"},
+    {"nombre": "Chiautempan", "entidad": "Tlaxcala", "clave": "29010"},
+    {"nombre": "Muñoz de Domingo Arenas", "entidad": "Tlaxcala", "clave": "29011"},
+    {"nombre": "Ixtacuixtla de Mariano Matamoros", "entidad": "Tlaxcala", "clave": "29015"},
+    {"nombre": "Contla de Juan Cuamatzi", "entidad": "Tlaxcala", "clave": "29018"},
+    {"nombre": "Panotla", "entidad": "Tlaxcala", "clave": "29024"},
+    {"nombre": "Santa Cruz Tlaxcala", "entidad": "Tlaxcala", "clave": "29026"},
+    {"nombre": "Tetla de la Solidaridad", "entidad": "Tlaxcala", "clave": "29031"},
+    {"nombre": "Tlaxcala", "entidad": "Tlaxcala", "clave": "29033"},
+    {"nombre": "Tlaxco", "entidad": "Tlaxcala", "clave": "29034"},
+    {"nombre": "Tocatlán", "entidad": "Tlaxcala", "clave": "29035"},
+    {"nombre": "Totolac", "entidad": "Tlaxcala", "clave": "29036"},
+    {"nombre": "Tzompantepec", "entidad": "Tlaxcala", "clave": "29038"},
+    {"nombre": "Xaloztoc", "entidad": "Tlaxcala", "clave": "29039"},
+    {"nombre": "Yauhquemehcan", "entidad": "Tlaxcala", "clave": "29043"},
+    {"nombre": "La Magdalena Tlaltelulco", "entidad": "Tlaxcala", "clave": "29048"},
+    {"nombre": "San Damián Texóloc", "entidad": "Tlaxcala", "clave": "29049"},
+    {"nombre": "San Francisco Tetlanohcan", "entidad": "Tlaxcala", "clave": "29050"},
+    {"nombre": "Santa Ana Nopalucan", "entidad": "Tlaxcala", "clave": "29056"},
+    {"nombre": "Santa Isabel Xiloxoxtla", "entidad": "Tlaxcala", "clave": "29060"}
+  ]},
+  {"nombre": "Huamantla", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Huamantla", "entidad": "Tlaxcala", "clave": "29013"},
+    {"nombre": "Ixtenco", "entidad": "Tlaxcala", "clave": "29016"}
+  ]},
+  {"nombre": "Coatzacoalcos", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Coatzacoalcos", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30039"},
+    {"nombre": "Ixhuatlán del Sureste", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30082"},
+    {"nombre": "Nanchital de Lázaro Cárdenas del Río", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30206"}
+  ]},
+  {"nombre": "Cordoba", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Amatlán de los Reyes", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30014"},
+    {"nombre": "Córdoba", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30044"},
+    {"nombre": "Fortín", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30068"},
+    {"nombre": "Naranjal", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30113"},
+    {"nombre": "Yanga", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30196"}
+  ]},
+  {"nombre": "Minatitlán", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Cosoleacaque", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30048"},
+    {"nombre": "Chinameca", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30059"},
+    {"nombre": "Minatitlán", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30108"},
+    {"nombre": "Oteapan", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30120"},
+    {"nombre": "Zaragoza", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30199"}
+  ]},
+  {"nombre": "Orizaba", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Acultzingo", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30006"},
+    {"nombre": "Camerino Z. Mendoza", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30030"},
+    {"nombre": "Huiloapan de Cuauhtémoc", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30074"},
+    {"nombre": "Ixhuatlancillo", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30081"},
+    {"nombre": "Ixtaczoquitlán", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30085"},
+    {"nombre": "Magdalena", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30098"},
+    {"nombre": "Maltrata", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30099"},
+    {"nombre": "Mariano Escobedo", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30101"},
+    {"nombre": "Nogales", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30115"},
+    {"nombre": "Orizaba", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30118"},
+    {"nombre": "Rafael Delgado", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30135"},
+    {"nombre": "Río Blanco", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30138"},
+    {"nombre": "San Andrés Tenejapan", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30140"},
+    {"nombre": "Tlilapan", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30185"}
+  ]},
+  {"nombre": "Poza Rica", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Coatzintla", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30040"},
+    {"nombre": "Poza Rica de Hidalgo", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30131"},
+    {"nombre": "Tihuatlán", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30175"}
+  ]},
+  {"nombre": "Veracruz", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Boca del Río", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30028"},
+    {"nombre": "Jamapa", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30090"},
+    {"nombre": "Manlio Fabio Altamirano", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30100"},
+    {"nombre": "Medellín de Bravo", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30105"},
+    {"nombre": "Veracruz", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30193"}
+  ]},
+  {"nombre": "Xalapa", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Acajete", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30001"},
+    {"nombre": "Banderilla", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30026"},
+    {"nombre": "Coacoatzintla", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30036"},
+    {"nombre": "Coatepec", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30038"},
+    {"nombre": "Emiliano Zapata", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30065"},
+    {"nombre": "Xalapa", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30087"},
+    {"nombre": "Xico", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30092"},
+    {"nombre": "Jilotepec", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30093"},
+    {"nombre": "Rafael Lucio", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30136"},
+    {"nombre": "Tlalnelhuayocan", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30182"}
+  ]},
+  {"nombre": "Acayucan", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Acayucan", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30003"},
+    {"nombre": "Oluta", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30116"},
+    {"nombre": "Soconusco", "entidad": "Veracruz de Ignacio de la Llave", "clave": "30145"}
+  ]},
+  {"nombre": "Mérida", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Acanceh", "entidad": "Yucatán", "clave": "31002"},
+    {"nombre": "Conkal", "entidad": "Yucatán", "clave": "31013"},
+    {"nombre": "Chicxulub Pueblo", "entidad": "Yucatán", "clave": "31020"},
+    {"nombre": "Hunucmá", "entidad": "Yucatán", "clave": "31038"},
+    {"nombre": "Ixil", "entidad": "Yucatán", "clave": "31039"},
+    {"nombre": "Kanasín", "entidad": "Yucatán", "clave": "31041"},
+    {"nombre": "Mérida", "entidad": "Yucatán", "clave": "31050"},
+    {"nombre": "Samahil", "entidad": "Yucatán", "clave": "31063"},
+    {"nombre": "Timucuy", "entidad": "Yucatán", "clave": "31090"},
+    {"nombre": "Tixkokob", "entidad": "Yucatán", "clave": "31093"},
+    {"nombre": "Tixpéhual", "entidad": "Yucatán", "clave": "31095"},
+    {"nombre": "Ucú", "entidad": "Yucatán", "clave": "31100"},
+    {"nombre": "Umán", "entidad": "Yucatán", "clave": "31101"}
+  ]},
+  {"nombre": "Valladolid", "tipo": "Zona conurbada", "municipios": [
+    {"nombre": "Chichimilá", "entidad": "Yucatán", "clave": "31021"},
+    {"nombre": "Uayma", "entidad": "Yucatán", "clave": "31099"},
+    {"nombre": "Valladolid", "entidad": "Yucatán", "clave": "31102"}
+  ]},
+  {"nombre": "Zacatecas-Guadalupe", "tipo": "Zona metropolitana", "municipios": [
+    {"nombre": "Guadalupe", "entidad": "Zacatecas", "clave": "32017"},
+    {"nombre": "Morelos", "entidad": "Zacatecas", "clave": "32032"},
+    {"nombre": "Vetagrande", "entidad": "Zacatecas", "clave": "32050"},
+    {"nombre": "Zacatecas", "entidad": "Zacatecas", "clave": "32056"},
+    {"nombre": "Trancoso", "entidad": "Zacatecas", "clave": "32057"}
+  ]}
+]
+}
