@@ -5,7 +5,7 @@ title: Guía de inicio de JobFinderMX
 
 Esta guía te lleva paso a paso, desde descargar JobFinderMX hasta tener tu perfil y tu CV listos. Está pensada para Windows y para alguien que nunca ha usado un agente de IA. No necesitas pagar ninguna suscripción.
 
-Tiene dos niveles. El **nivel 1** (pasos 1 a 8) deja listos tu perfil y tu CV, lo más útil y con menos riesgo. El **nivel 2** (paso 9) te lleva a buscar vacantes, cuando ya domines lo básico.
+Tiene dos niveles. El **nivel 1** (pasos 1 a 8) deja listos tu perfil y tu CV, lo más útil para empezar. El **nivel 2** (paso 9) te lleva a buscar vacantes, cuando ya domines lo básico.
 
 ## 1. Qué es y qué no hace
 
@@ -61,7 +61,7 @@ No abras el `.zip` con doble clic para trabajar desde ahí: así solo ves su con
 
 ## 4. Instalar Antigravity e iniciar sesión
 
-**Antigravity** es el programa de Google donde vive el agente. Está en inglés; aquí va cada pantalla traducida.
+**Antigravity** es el programa de Google donde vive el agente. Casi todo está en inglés: en cada paso te decimos qué significa lo que ves en pantalla y qué pulsar.
 
 1. Entra a <https://antigravity.google/download>. La página sale en español: en la pestaña «Windows», pulsa **«Descargar para x64»** (la versión para casi todas las computadoras con Windows). Solo si tu computadora tiene un procesador Snapdragon, pulsa **«Descargar para ARM64»**.
 
