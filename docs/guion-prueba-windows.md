@@ -8,7 +8,7 @@ Recorrido manual de la guía de inicio (CONTRIBUTING, «Guía de inicio») en un
 
 - **Dos cuentas de Windows:** la de administrador, con VS Code y Claude Code, para preparar y para correr las pruebas automáticas; y una cuenta estándar sin permisos de administrador, que hace de titular principiante.
 - **Nombre de la cuenta estándar:** uno que no identifique a nadie, como `titular`, porque las rutas de Windows lo muestran en las capturas (`C:\Users\titular`).
-- **Cuenta de Google nueva:** créala para la prueba, con un nombre que no identifique a nadie, porque Antigravity saluda con él («Hey <nombre>») en casi todas sus pantallas. Con ella inicias sesión en Antigravity y abres el CV en Google Docs. Una cuenta nueva también mide la cuota desde cero.
+- **Cuenta de Google nueva:** créala para la prueba, con un nombre que no identifique a nadie, porque Antigravity saluda con él («Hey `<nombre>`») en casi todas sus pantallas. Con ella inicias sesión en Antigravity y abres el CV en Google Docs. Una cuenta nueva también mide la cuota desde cero.
 - **Titular de prueba:** la `FICHA.md` de un titular de prueba (CONTRIBUTING, «Titulares de prueba») cuyos lugares incluyan una zona metropolitana que esté en la tabla de metrópolis de la plantilla, para probarla en el paso 4. Contesta la entrevista de `/configurar` solo con ella, como al generar un titular de prueba. Su paso 7 nombra la empresa real de la búsqueda.
 - **Tiempo y cuota:** el nivel 1 (pasos 1 a 6) puede usar casi toda la cuota semanal del plan gratuito. Si se agota, toma la captura `07-cuota-agotada` y retoma cuando se renueve: la prueba sigue en la misma casilla.
 
