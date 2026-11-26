@@ -176,7 +176,7 @@ def biblioteca_xlsx():
     except ImportError:
         error("Falta openpyxl. Corre la herramienta con el Python del entorno virtual de la copia "
               "(.venv/bin/python; en Windows, .venv\\Scripts\\python.exe). Si no existe, lo instala "
-              "`/configurar`, paso 8 (Registros).")
+              "`/configurar`, paso 2 (Herramientas básicas).")
     return biblioteca
 
 

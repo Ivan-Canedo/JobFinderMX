@@ -15,11 +15,13 @@ Este archivo es el índice: lleva cómo avanzar, las reglas que valen en todos l
 
 ## Cómo avanzar
 
-1. Corre los pasos 1 y 2 en cada invocación: son revisiones rápidas, y el remoto o el equipo pueden haber cambiado desde la última sesión.
+1. **Conversación técnica:** mientras ninguna fila de ESTADO diga «Configurado», empieza por los pasos 1 y 2 completos, antes de cualquier pregunta sobre el titular. Dejan listo todo lo que se instala, y el paso 2 termina cuando el esqueleto del CV sale bien. Si el paso 2 no terminó, la configuración retoma en él.
+   - **Después,** con alguna fila «Configurado», no corras el paso 2 ni repitas el aviso de ubicación ni la oferta de git. Del paso 1 haz solo la revisión de privacidad (sus puntos 1 a 4), en silencio salvo que un remoto sea público o apunte a la plantilla.
+   - **Al fallar:** si un comando falla por el `.venv` o por git, sigue «Diagnóstico al fallar» de AGENTS.md, que repara con el paso 2.
 2. Sigue con el primer paso, en el orden de esta skill, que nombre una fila «Sin llenar» de ESTADO. Si no queda ninguna, la configuración está completa: ofrece el paso 9, que no tiene fila en ESTADO.
-3. Haz un paso por vez. Al terminarlo, marca «Configurado», con su siguiente paso de uso, cada fila de ESTADO que lo nombra: la de cada módulo que el paso escribió y también la de cada módulo de método que solo deja listo, sin editarlo. Cada módulo escrito pasa markdownlint sin advertencias, si está instalado, y se versiona según AGENTS.md («Al cerrar»). El paso termina cuando ninguna fila que lo nombra sigue «Sin llenar».
+3. Haz un paso por vez. Al terminarlo, marca «Configurado», con su siguiente paso de uso, cada fila de ESTADO que lo nombra: la de cada módulo que el paso escribió y también la de cada módulo de método que solo deja listo, sin editarlo. Cada módulo escrito pasa markdownlint sin advertencias, si está instalado, y se versiona según AGENTS.md («Al cerrar»). El paso termina cuando ninguna fila que lo nombra sigue «Sin llenar». Si el titular dio en el paso 2 el permiso para guardar versiones, guarda una al terminar el paso y avísalo en una línea (paso 2, «Guardar versiones»).
 4. Al terminar un paso, di cuál sigue y pregunta si continuar ahora o en otra sesión.
-5. **Agente que no es Claude Code:** valen sus reglas de AGENTS.md, como explicar cada comando antes de que el titular lo apruebe. Además, como el plan del titular puede tener una cuota limitada, propón un solo paso por sesión: al terminarlo, en lugar de la pregunta del punto 4, recomiéndale seguir en una conversación nueva y escribir otra vez «configura mi copia», que retoma donde quedó. Si la cuota se acaba a la mitad de un paso, la configuración retoma en ese paso.
+5. **Agente que no es Claude Code:** valen sus reglas de AGENTS.md, como explicar cada comando antes de que el titular lo apruebe. Además, como el plan del titular puede tener una cuota limitada, propón un solo paso por sesión, con los pasos 1 y 2 como uno solo: al terminarlo, en lugar de la pregunta del punto 4, recomiéndale seguir en una conversación nueva y escribir otra vez «configura mi copia», que retoma donde quedó. Si la cuota se acaba a la mitad de un paso, la configuración retoma en ese paso.
 6. **Fin de la configuración:** cuando ya no queda ninguna fila «Sin llenar» y el titular terminó o declinó lo que se ofrece en el punto 2, cierra en este orden:
    1. Un resumen corto: una línea por paso configurado.
    2. Si esta sesión creó el archivo de registros, ofrece en una línea el commit de 11/REG-LOCAL («Historial y respaldo»), sin que sea la pregunta final.
@@ -40,8 +42,8 @@ Este archivo es el índice: lleva cómo avanzar, las reglas que valen en todos l
 
 Cada línea da el paso, lo que hace y el archivo que hay que leer para hacerlo.
 
-1. **Paso 1: Copia privada.** Remotos privados y, en Windows, una carpeta que no se borre ni se sincronice sola. Archivo: `paso-1-copia-privada.md`.
-2. **Paso 2: Herramientas básicas.** Python y, si el titular lo acepta, git. Archivo: `paso-2-herramientas.md`.
+1. **Paso 1: Copia privada.** Remotos privados y, en Windows, el aviso si la copia está en Descargas o en OneDrive. Archivo: `paso-1-copia-privada.md`.
+2. **Paso 2: Herramientas básicas.** Python, git si el titular lo acepta, el entorno de Python con las bibliotecas del CV y de los registros, y la prueba del esqueleto del CV. Archivo: `paso-2-herramientas.md`.
 3. **Paso 3: Perfil maestro.** Llena 02 desde los documentos del titular y una entrevista. Archivo: `paso-3-perfil-maestro.md`.
 4. **Paso 4: Preferencias.** Llena 04 con sus respuestas. Archivo: `paso-4-preferencias.md`.
 5. **Paso 5: Habilidades y roles.** Llena 05 desde 02 y 04, y deja listo 08. Archivo: `paso-5-habilidades-y-roles.md`.

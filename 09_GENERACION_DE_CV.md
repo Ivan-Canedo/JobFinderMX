@@ -1,6 +1,6 @@
 # 09 — Generación de CV
 
-**Versión:** 1.5 — 2026-11-23 — El CV se genera con bibliotecas de Python en el entorno virtual de la copia, sin LibreOffice ni poppler (CV-HERRAMIENTAS).
+**Versión:** 1.6 — 2026-11-25 — Las bibliotecas del CV las instala el paso 2 de `/configurar` (CV-HERRAMIENTAS).
 **Estado:** método de la plantilla, con el diseño por defecto. El color del CV es un dato del titular (CV-PLANTILLA).
 
 ## CV-ALCANCE — Responsabilidad
@@ -124,7 +124,7 @@ Entregar el borrador o los archivos que efectivamente existan, con idioma, forma
 
 | Canal | Generación | Comprobación | Estado |
 | --- | --- | --- | --- |
-| **Code** | fpdf2 (PDF) y python-docx (DOCX), cada uno con el diseño de CV-PLANTILLA | pypdf (páginas, fuentes incrustadas, texto y orden del PDF), python-docx (texto del DOCX) y pypdfium2 (vistas PNG para revisar) | **Probado en Linux.** Las bibliotecas van en el entorno virtual de la copia (`.venv`), el mismo de `openpyxl`, y no piden permisos de administrador; las instala el paso de `/configurar` que llegue primero, el 6 o el 8. La fuente Carlito viaja con la plantilla en `herramientas/fuentes/` |
+| **Code** | fpdf2 (PDF) y python-docx (DOCX), cada uno con el diseño de CV-PLANTILLA | pypdf (páginas, fuentes incrustadas, texto y orden del PDF), python-docx (texto del DOCX) y pypdfium2 (vistas PNG para revisar) | **Probado en Linux y Windows.** Las bibliotecas van en el entorno virtual de la copia (`.venv`), el mismo de `openpyxl`, y no piden permisos de administrador; las instala el paso 2 de `/configurar` (Herramientas básicas). La fuente Carlito viaja con la plantilla en `herramientas/fuentes/` |
 | **Web** (proyecto en claude.ai; necesita Claude) | No comprobado | No comprobado | El contenido se puede adaptar en la web y el archivo se genera en Code |
 
 No hacen falta LibreOffice, poppler, pandoc ni reportlab, ni instalar Carlito en el sistema.

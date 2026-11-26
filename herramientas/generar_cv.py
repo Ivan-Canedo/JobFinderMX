@@ -82,7 +82,7 @@ def comprobar_bibliotecas():
     if faltan:
         error(f"Faltan {', '.join(faltan)}. Corre el script con el Python del entorno virtual de la copia "
               "(.venv/bin/python; en Windows, .venv\\Scripts\\python.exe). Si no existe o no las tiene, "
-              "las instala el paso del CV de /configurar (09/CV-HERRAMIENTAS).")
+              "las instala /configurar, paso 2 (Herramientas básicas).")
 
 
 def extraer_cv(md, idioma):

@@ -1,6 +1,6 @@
 # 01 — Mapa y estado del proyecto
 
-**Versión:** 1.14 — 2026-11-23 — `.github/` (el proceso de GitHub que publica el ZIP de cada versión) es material de quien mantiene la plantilla.
+**Versión:** 1.15 — 2026-11-25 — El hook de Code en la nube lo comprueba `/configurar` en el paso 2.
 
 ## ESTADO — Punto de continuidad
 
@@ -18,7 +18,7 @@
 | 06 Empresas | 1.10 | Sin llenar | `/configurar`, paso 7 (Empresas): fichas de las empresas objetivo |
 | 07 Método de búsqueda | 1.13 | Sin llenar | `/configurar`, paso 7 (Empresas): queda listo con la región de 04 y las fichas de 06 |
 | 08 Evaluación | 1.5 | Sin llenar | `/configurar`, paso 5 (Habilidades y roles): queda listo con las condiciones de 04 y las familias de 05 |
-| 09 Generación de CV | 1.5 | Sin llenar | `/configurar`, paso 6 (CV base): color del CV |
+| 09 Generación de CV | 1.6 | Sin llenar | `/configurar`, paso 6 (CV base): color del CV |
 | 10 Tendencias | 1.1 | Sin llenar | `/configurar`, paso 8 (Registros): queda listo cuando existen los registros |
 | 11 Esquema de registros | 1.11 | Sin llenar | `/configurar`, paso 8 (Registros): crea los registros desde este esquema |
 
@@ -85,6 +85,6 @@ No están en el conocimiento del proyecto. Si una sesión los necesita, hay que 
 - **`.markdownlint-cli2.jsonc`:** reglas de formato Markdown que se revisan en Code tras editar, si `markdownlint-cli2` está instalado (AGENTS.md).
 - **`herramientas/buscar.py`:** script de búsqueda del canal Code (07/BUS-ACCESO-CODE); no se sube al proyecto.
 - **`herramientas/generar_cv.py` y `herramientas/fuentes/`:** generador y comprobador de CV del canal Code, con la fuente Carlito y su licencia (09/CV-HERRAMIENTAS); no se suben al proyecto.
-- **`.claude/settings.json` y `herramientas/preparar_nube.sh`:** el hook que, al abrir una sesión de Code en la nube, instala las herramientas y crea `.venv`; en Code local no hace nada (ADR 0007). Lo comprueba `/configurar` en los pasos 2 y 8.
+- **`.claude/settings.json` y `herramientas/preparar_nube.sh`:** el hook que, al abrir una sesión de Code en la nube, instala las herramientas y crea `.venv`; en Code local no hace nada (ADR 0007). Lo comprueba `/configurar` en el paso 2.
 - **`herramientas/registros.py` y `.venv/`:** la herramienta del archivo de registros (11/REG-LOCAL) y el entorno virtual de Python con que corren ella y el generador de CV; no se suben al proyecto.
 - **`README.md`, `LICENSE`, `CONTRIBUTING.md`, `CONTEXT.md`, `docs/`, `.github/`, `herramientas/auditar_terminos.py` y `herramientas/pruebas/`:** presentación y licencia de la plantilla, y material de quien la mantiene; el titular no los necesita.

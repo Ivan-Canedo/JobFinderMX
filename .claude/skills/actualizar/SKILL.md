@@ -23,7 +23,7 @@ La actualización necesita red para traer la plantilla. Si `git ls-remote` o `gi
 Revisa todo antes de cambiar nada. Si algo falla, detente y dile al titular qué pasa y qué hacer:
 
 1. **Plantilla:** si `git config --local --get plantilla.mantenedor` da `true`, esta carpeta es la plantilla y no se actualiza: dile al mantenedor que pruebe en un clon temporal (`CONTRIBUTING.md`, «Probar como titular»).
-2. **Repositorio:** `git rev-parse --is-inside-work-tree` debe dar `true`. Si no, la copia salió del ZIP sin `git init`: explícale que la actualización necesita un repositorio y que lo cree con `/configurar`, cuyo paso 2 le ofrece git y crea el repositorio con su primer commit.
+2. **Repositorio:** `git rev-parse --is-inside-work-tree` debe dar `true`. Si no, la copia salió del ZIP sin `git init`: explícale que la actualización necesita un repositorio y ofrécele crearlo con la sección «git» del paso 2 de `/configurar` (`.claude/skills/configurar/paso-2-herramientas.md`), que instala git si falta y crea el repositorio con su primer commit.
 3. **Sin cambios pendientes:** `git status --porcelain` debe salir vacío, para que la actualización quede en un solo commit y se pueda deshacer. Si no, pídele que haga commit de sus cambios o de sus archivos nuevos, o que los descarte.
 4. **01:** la línea **Versión de la plantilla** debe tener la versión y la URL. Si falta alguna, no se puede elegir la base: pregúntale de qué versión y de qué URL salió su copia (la URL pública es la de su página de GitHub, «generated from …»). Sin esos dos datos, detente.
 5. **Copia privada:** haz la revisión del paso 1 de `/configurar` (`.claude/skills/configurar/paso-1-copia-privada.md`), porque la actualización edita módulos (AGENTS.md, «Copia privada»).

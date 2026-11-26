@@ -8,8 +8,8 @@
 # Code local sale con 0 sin hacer nada ni imprimir nada.
 #
 # Nunca tumba la sesión: si una parte falla, imprime un aviso con qué falló y sigue; siempre sale
-# con 0. Lo que imprime llega al agente como contexto de la sesión, y /configurar lo usa en los
-# pasos 2 y 8.
+# con 0. Lo que imprime llega al agente como contexto de la sesión, y /configurar lo usa en el
+# paso 2.
 
 [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 

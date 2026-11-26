@@ -104,7 +104,7 @@ Con la copia configurada, pídele a Claude lo que necesites con tus palabras: bu
 
 La plantilla publica versiones nuevas, con lo que trae cada una en [CAMBIOS.md](CAMBIOS.md). Tu copia no se entera sola: cuando quieras las mejoras, escribe `/actualizar` en Claude Code. Claude trae la versión más reciente, la fusiona archivo por archivo con tu copia y conserva lo que escribiste; si un cambio choca con tus datos, te pregunta. Al final te propone un solo commit, que puedes revisar antes.
 
-Necesita que tu copia sea un repositorio de git sin cambios pendientes. Si la creaste con el ZIP y todavía no es repositorio, escribe `/configurar`: en su paso 2 te ofrece git y convierte la carpeta en repositorio.
+Necesita que tu copia sea un repositorio de git sin cambios pendientes. Si la creaste con el ZIP y todavía no es repositorio, pídele a tu agente que instale git: lo hace con el paso 2 de `/configurar` y convierte la carpeta en repositorio.
 
 ## Dónde se usa
 
