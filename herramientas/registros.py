@@ -421,45 +421,48 @@ def agregar(esquema, entrada):
     return {"agregadas": {nombre: len(filas) for nombre, filas in nuevas.items()}}
 
 
-def columnas_del_libro(libro, filas):
-    """{pestaña: {columna: número}} según la fila 1 de cada pestaña del libro que nombran las filas,
-    {pestaña: [{columna: valor}]}. Si una fila trae columnas que su pestaña no tiene, como las que importar escribe
-    en un archivo de un 11 anterior, las rechaza todas sin escribir ninguna."""
-    columnas, errores = {}, []
+def columnas_de_la_pestana(libro, nombre):
+    """{columna: número} según la fila 1 de la pestaña del libro."""
+    return {celda.value: celda.column for celda in libro[nombre][1] if celda.value}
+
+
+def columnas_que_faltan(libro, filas):
+    """Errores de las filas, {pestaña: [{columna: valor}]}, que traen columnas que su pestaña del libro no tiene,
+    como las de bolsas que importar escribe en un archivo de un 11 anterior a ellas."""
+    errores = []
     for nombre, de_la_pestana in filas.items():
-        columnas[nombre] = {celda.value: celda.column for celda in libro[nombre][1] if celda.value}
-        faltan = list(dict.fromkeys(c for fila in de_la_pestana for c in fila if c not in columnas[nombre]))
+        columnas = columnas_de_la_pestana(libro, nombre)
+        faltan = list(dict.fromkeys(c for fila in de_la_pestana for c in fila if c not in columnas))
         if faltan:
             errores.append(f"{nombre}: la pestaña no tiene las columnas {', '.join(faltan)}, que esta herramienta "
-                           "escribe. El 11 de la copia es de una versión anterior de la plantilla: ponla al día con "
-                           "/actualizar, que también pone al día el archivo de registros.")
-    if errores:
-        rechazar(errores)
-    return columnas
+                           "escribe. El 11 de la copia es de una versión anterior de la plantilla: pon al día la "
+                           "copia con /actualizar, que también pone al día el archivo de registros.")
+    return errores
 
 
 def anexar(libro, nuevas):
     """Escribe en el libro las filas nuevas, {pestaña: [{columna: valor}]}, al final, cada valor en la columna de su
     nombre."""
-    columnas = columnas_del_libro(libro, nuevas)
     for nombre, filas in nuevas.items():
-        pestana = libro[nombre]
+        pestana, columnas = libro[nombre], columnas_de_la_pestana(libro, nombre)
         for fila in filas:
             numero = pestana.max_row + 1
             for columna, valor in fila.items():
-                escribir(pestana.cell(numero, columnas[nombre][columna]), valor)
+                escribir(pestana.cell(numero, columnas[columna]), valor)
 
 
 def escribir_cambios(esquema, libro, cambios):
-    """Escribe en el libro las columnas dadas, {pestaña: [{columna_id: ID, columna: valor}]}, en la fila de su ID."""
-    columnas = columnas_del_libro(libro, cambios)
+    """Escribe en el libro las columnas dadas, {pestaña: [{columna_id: ID, columna: valor}]}, en la fila de su ID,
+    cada valor en la columna de su nombre."""
     for nombre, filas in cambios.items():
-        pestana = libro[nombre]
-        id_ = clave(pestana_del_esquema(esquema, nombre))["nombre"]
+        pestana, columnas = libro[nombre], columnas_de_la_pestana(libro, nombre)
+        columna_id = clave(pestana_del_esquema(esquema, nombre))["nombre"]
+        de_la_columna_id = dict(min_col=columnas[columna_id], max_col=columnas[columna_id])
         for cambio in filas:
-            numero = next(celda.row for celda in pestana["A"] if celda.value == cambio[id_])
+            numero = next(celda.row for (celda,) in pestana.iter_rows(**de_la_columna_id)
+                          if celda.value == cambio[columna_id])
             for columna, valor in cambio.items():
-                escribir(pestana.cell(numero, columnas[nombre][columna]), valor)
+                escribir(pestana.cell(numero, columnas[columna]), valor)
 
 
 def actualizar(esquema, entrada):
@@ -959,6 +962,7 @@ def importar(esquema, salida, decisiones):
     errores += [f"Esta salida de buscar.py ya se importó como {b['busqueda_id']}: misma fecha_hora y mismas fuentes."
                 for b in registradas["busquedas"] if (b["fecha_hora"], b["fuentes_consultas_filtros"])
                 == (busqueda["fecha_hora"], busqueda["fuentes_consultas_filtros"])]
+    errores += columnas_que_faltan(libro, nuevas | {"vacantes": nuevas["vacantes"] + list(cambios.values())})
     for nombre, filas in nuevas.items():
         todas[nombre] += filas
     errores += comprobar(esquema, todas, [("busquedas", nuevas["busquedas"][0], busqueda_id)] + revisar_filas)
