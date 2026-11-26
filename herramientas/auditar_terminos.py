@@ -13,8 +13,9 @@ pueden ir juntas o separadas por signos (ver `patron`). Las carpetas se recorren
 .git, y la propia lista no se revisa. Los binarios no se revisan: se avisan en stderr para
 revisar sus metadatos aparte.
 
-Cada coincidencia sale en stdout como `ruta:línea:columna: término «texto»`; con --conteo, una
-línea por término con su número de coincidencias, incluso cero.
+Cada coincidencia sale en stdout como `ruta:línea:columna: término «texto»`, con la ruta separada
+por «/» en cualquier sistema; con --conteo, una línea por término con su número de coincidencias,
+incluso cero.
 Termina con 0 si no hay coincidencias, 1 si las hay y 2 si hubo un error (ruta inexistente,
 archivo ilegible o término sin letras ni números). Solo biblioteca estándar.
 """
@@ -73,8 +74,14 @@ def coincidencias(contenido, terminos, excepciones):
                 yield termino, inicio, fin
 
 
+def con_barras(ruta):
+    """La ruta normalizada y separada por «/», también en Windows."""
+    return os.path.normpath(ruta).replace(os.sep, "/")
+
+
 def archivos(rutas, excluidas):
-    """Los archivos de las rutas, recorriendo carpetas. Omite .git y las rutas excluidas."""
+    """Las rutas de los archivos, recorriendo carpetas y separadas por «/». Omite .git y las rutas
+    excluidas."""
     fuera = {os.path.realpath(e) for e in excluidas}
 
     def excluida(ruta):
@@ -84,14 +91,14 @@ def archivos(rutas, excluidas):
         if excluida(ruta):
             continue
         if not os.path.isdir(ruta):
-            yield os.path.normpath(ruta)
+            yield con_barras(ruta)
             continue
         for base, carpetas, nombres in os.walk(ruta):
             carpetas[:] = sorted(c for c in carpetas
                                  if c != ".git" and not excluida(os.path.join(base, c)))
             for nombre in sorted(nombres):
                 if not excluida(os.path.join(base, nombre)):
-                    yield os.path.normpath(os.path.join(base, nombre))
+                    yield con_barras(os.path.join(base, nombre))
 
 
 def main():

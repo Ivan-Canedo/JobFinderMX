@@ -55,7 +55,7 @@ class HookFueraDeLaNube(unittest.TestCase):
         entorno = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_REMOTE"}
         entorno.update(CLAUDE_PROJECT_DIR=self.copia, **variables)
         return subprocess.run(["bash", "-c", comando], cwd=self.copia, env=entorno,
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, text=True, encoding="utf-8", timeout=60)
 
     def test_hay_un_hook_sessionstart(self):
         self.assertTrue(comandos_del_hook())
@@ -91,8 +91,9 @@ class HookFueraDeLaNube(unittest.TestCase):
 
 # Comandos falsos para el camino de la nube: anotan cada llamada en $LLAMADAS y se comportan según
 # las variables de la prueba. Así se ve qué intenta instalar el script sin root ni red. apt-get y dpkg
-# solo anotan: el script ya no debe llamarlos (ADR 0012). El python3 falso crea un .venv/bin/python
-# que anota cada llamada sin -I (las de pip) y falla con FALLA_PIP.
+# solo anotan: el script ya no debe llamarlos (ADR 0012). El python3 falso copia a .venv/bin/python
+# el python del venv que deja la prueba junto a los falsos, sin printf: en Windows, $LLAMADAS lleva
+# «\», que printf leería como escapes.
 FALSOS = {
     "id": 'echo 0',
     "dpkg": 'echo "dpkg $*" >> "$LLAMADAS"',
@@ -101,11 +102,24 @@ FALSOS = {
             '[ -z "$FALLA_NPM" ] || { echo "npm ERR! sin red"; exit 1; }'),
     "markdownlint-cli2": '[ -z "$INSTALADO" ] || echo "markdownlint-cli2 v0 (falso)"',
     "python3": ('echo "python3 $*" >> "$LLAMADAS"; mkdir -p .venv/bin; '
-                'printf "#!/bin/sh\\n[ \\"\\$1\\" = -I ] && exit 1\\n'
-                'echo \\"venv \\$*\\" >> \\"$LLAMADAS\\"\\n'
-                '[ -z \\"$FALLA_PIP\\" ] || { echo \\"ERROR: sin red\\"; exit 1; }\\n" > .venv/bin/python; '
-                'chmod +x .venv/bin/python'),
+                'cp "$(dirname "$0")/python-del-venv" .venv/bin/python; chmod +x .venv/bin/python'),
 }
+
+
+def python_del_venv(codigo_import):
+    """Cuerpo de un .venv/bin/python falso: con -I (la comprobación de las bibliotecas) sale con
+    codigo_import; las demás llamadas (las de pip) las anota y fallan con FALLA_PIP."""
+    return (f'#!/bin/sh\n[ "$1" = -I ] && exit {codigo_import}\n'
+            'echo "venv $*" >> "$LLAMADAS"\n'
+            '[ -z "$FALLA_PIP" ] || { echo "ERROR: sin red"; exit 1; }\n')
+
+
+def escribir_ejecutable(ruta, contenido):
+    """Escribe un script de sh con fin de línea «\\n» también en Windows, donde un «\\r» al final
+    de cada línea lo rompería."""
+    ruta.write_text(contenido, encoding="utf-8", newline="\n")
+    ruta.chmod(0o755)
+
 
 BIBLIOTECAS = ("openpyxl", "fpdf2", "python-docx", "pypdf", "pypdfium2")
 
@@ -118,9 +132,9 @@ class HookEnLaNube(unittest.TestCase):
         self.bin = pathlib.Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.bin)
         for nombre, cuerpo in FALSOS.items():
-            falso = self.bin / nombre
-            falso.write_text(f"#!/bin/sh\n{cuerpo}\n", encoding="utf-8")
-            falso.chmod(0o755)
+            escribir_ejecutable(self.bin / nombre, f"#!/bin/sh\n{cuerpo}\n")
+        # Un venv recién creado no tiene las bibliotecas: su comprobación falla.
+        escribir_ejecutable(self.bin / "python-del-venv", python_del_venv(1))
         self.llamadas = self.bin / "llamadas.txt"
         self.llamadas.touch()
 
@@ -137,16 +151,13 @@ class HookEnLaNube(unittest.TestCase):
         }
         comando = comandos_del_hook()[0]
         resultado = subprocess.run(["bash", "-c", comando], cwd=self.copia, env=entorno,
-                                   capture_output=True, text=True, timeout=60)
+                                   capture_output=True, text=True, encoding="utf-8", timeout=60)
         return resultado, self.llamadas.read_text(encoding="utf-8")
 
     def venv_existente(self, codigo_import):
-        """Crea .venv/bin/python que, con -I, sale con codigo_import y anota las demás llamadas."""
+        """Crea un .venv/bin/python falso que, con -I, sale con codigo_import."""
         (self.copia / ".venv" / "bin").mkdir(parents=True)
-        python = self.copia / ".venv" / "bin" / "python"
-        python.write_text(f'#!/bin/sh\n[ "$1" = -I ] && exit {codigo_import}\n'
-                          'echo "venv $*" >> "$LLAMADAS"\n', encoding="utf-8")
-        python.chmod(0o755)
+        escribir_ejecutable(self.copia / ".venv" / "bin" / "python", python_del_venv(codigo_import))
 
     def assert_instala_bibliotecas(self, llamadas):
         linea = next((l for l in llamadas.splitlines() if l.startswith("venv -m pip install")), "")
