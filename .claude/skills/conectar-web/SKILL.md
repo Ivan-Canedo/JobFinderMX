@@ -11,7 +11,7 @@ Escribe para alguien que nunca usó git: nada de jerga sin explicar, y los coman
 
 Si `git config --local --get plantilla.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal con un repositorio de prueba aparte (`CONTRIBUTING.md`).
 
-Si un comando que sale a la red falla porque no se resuelve el nombre o se niega la conexión, sigue «Comandos sin red» de `.claude/skills/configurar/SKILL.md`.
+Si un comando que sale a la red falla porque no se resuelve el nombre o se niega la conexión, sigue «Comandos sin red» de `/configurar` (`.claude/skills/configurar/comandos-sin-red.md`).
 
 ## En palabras simples
 
@@ -34,7 +34,7 @@ Por eso, cada vez que algo cambia en Code: el agente hace el commit y el push (c
 5. **Cambios sin guardar:** `git status --porcelain`. Si lista algo, muéstraselo en pocas líneas y ofrécele el commit: el proyecto solo recibe lo que tiene commit y push.
 6. **Remoto:** `git remote -v`.
    - **Apunta a la plantilla** (`github.com/Ivan-Canedo/JobFinderMX`): su copia es un clon de la plantilla pública. Dile que escriba `/configurar`, cuyo paso 1 lo resuelve, y detente.
-   - **Un repositorio de GitHub:** revisa su visibilidad como en el paso 1 de `/configurar` (punto 3). Si es público, no sigas: la instantánea lleva sus datos personales. Dile cómo volverlo privado («Settings» → «General» → «Danger Zone» → «Change visibility») y que vuelva a invocar `/conectar-web` cuando lo esté. Si es privado, sigue en el punto 7.
+   - **Un repositorio de GitHub:** revisa su visibilidad como en el paso 1 de `/configurar` (`.claude/skills/configurar/paso-1-copia-privada.md`, punto 3). Si es público, no sigas: la instantánea lleva sus datos personales. Dile cómo volverlo privado («Settings» → «General» → «Danger Zone» → «Change visibility») y que vuelva a invocar `/conectar-web` cuando lo esté. Si es privado, sigue en el punto 7.
    - **Otro servicio** (GitLab, Bitbucket…): dile en dos líneas que el proyecto web solo lee repositorios de GitHub, así que puede crear un proyecto y subir a mano los módulos 01–11 y los archivos de `instantanea/`, reemplazándolos cada vez que cambien, o quedarse sin canal Web. Detente.
    - **Sin remoto:** su copia está solo en su equipo. Sigue en el paso 2.
 7. **Push pendiente:** `git status -sb`. Si su rama va adelante del remoto (`ahead`), ofrécele el push (`git push`). Si la primera línea no nombra una rama remota (`...origin/<rama>`), la rama nunca se subió: ofrécele `git push -u origin <rama>`. Sigue en el paso 3.
@@ -60,7 +60,7 @@ gh repo create <nombre> --private --source . --remote origin --push
 
 Con su permiso, corre `git remote add origin <URL>` y `git push -u origin <rama>`. Si el push pide usuario y contraseña, o falla por autenticación, GitHub no acepta la contraseña de la cuenta: pídele que corra él el mismo `git push -u origin <rama>` en la terminal de VS Code, que le abre el inicio de sesión de GitHub en el navegador, o que instale `gh` y entre con `gh auth login`.
 
-**Comprobación:** la primera línea de `git status -sb` nombra `origin/<rama>` sin `ahead`, y la visibilidad, revisada como en el paso 1 de `/configurar`, es privada. Sigue en el paso 3.
+**Comprobación:** la primera línea de `git status -sb` nombra `origin/<rama>` sin `ahead`, y la visibilidad, revisada como en el paso 1 de `/configurar` (`.claude/skills/configurar/paso-1-copia-privada.md`), es privada. Sigue en el paso 3.
 
 ## Paso 3: Proyecto en claude.ai
 

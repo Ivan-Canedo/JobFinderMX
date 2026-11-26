@@ -15,7 +15,7 @@ Esta carpeta es la copia de JobFinderMX de un titular: los módulos 00–11 con 
   - Los módulos 00–11 son `.md`. Si el titular usa el canal Web, llegan al conocimiento de un proyecto de claude.ai, con la instantánea de los registros, y 00 se pega en «Instrucciones».
   - Los registros viven donde indica 00 («Registros»), con el esquema de 11, no en CSV sueltos.
   - Los módulos solo se editan en el canal Code; el proyecto web es una réplica de solo lectura. Las notas para Code que deja un chat web se aplican aquí (00, «Cambios a los módulos»).
-- **Copia privada:** antes de editar el primer módulo de la sesión, haz la revisión del paso 1 de `/configurar` (`.claude/skills/configurar/SKILL.md`), salvo que la skill ya la haya hecho.
+- **Copia privada:** antes de editar el primer módulo de la sesión, haz la revisión del paso 1 de `/configurar` (`.claude/skills/configurar/paso-1-copia-privada.md`), salvo que la skill ya la haya hecho.
 - **Alcance de cada sesión:** un módulo o sección a la vez, salvo que el titular pida otra cosa. Un módulo ya lleno conserva su contenido, sus fuentes y sus IDs: amplíalo con hechos nuevos en lugar de repetir su entrevista.
 - **Datos y búsquedas:** no inventes datos, métricas, preferencias ni verificaciones; lo que falte se le pregunta al titular. No inicies búsquedas laborales por abrir la copia.
 - **Lenguaje sencillo:** todo lo que le dices al titular va en lenguaje sencillo, sin jerga, sepa o no de tecnología. Si hace falta un término técnico, como el nombre de un programa o de un archivo, explícalo en palabras simples la primera vez. No le preguntes su nivel ni lo anotes en la copia: la regla vale para todos.

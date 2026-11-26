@@ -16,7 +16,7 @@ Lleva a la copia del titular los cambios de una versión más nueva de la planti
 
 En los comandos, `<base>` y `<nueva>` son las etiquetas (`v1.0`, `v1.1`), `<url>` es la de 01 y `<directorio temporal>` es una carpeta nueva en el directorio temporal de la sesión o, si no tienes uno, en el del sistema; nunca en la copia.
 
-La actualización necesita red para traer la plantilla. Si `git ls-remote` o `git fetch` fallan porque no se resuelve el nombre o se niega la conexión, no es la URL ni la copia: sigue «Comandos sin red» de `/configurar` (`.claude/skills/configurar/SKILL.md`) y, cuando el agente tenga red, repite el comando.
+La actualización necesita red para traer la plantilla. Si `git ls-remote` o `git fetch` fallan porque no se resuelve el nombre o se niega la conexión, no es la URL ni la copia: sigue «Comandos sin red» de `/configurar` (`.claude/skills/configurar/comandos-sin-red.md`) y, cuando el agente tenga red, repite el comando.
 
 ## Paso 1: Condiciones
 
@@ -26,7 +26,7 @@ Revisa todo antes de cambiar nada. Si algo falla, detente y dile al titular qué
 2. **Repositorio:** `git rev-parse --is-inside-work-tree` debe dar `true`. Si no, la copia salió del ZIP sin `git init`: explícale que la actualización necesita un repositorio y que lo cree con `/configurar`, cuyo paso 2 le ofrece git y crea el repositorio con su primer commit.
 3. **Sin cambios pendientes:** `git status --porcelain` debe salir vacío, para que la actualización quede en un solo commit y se pueda deshacer. Si no, pídele que haga commit de sus cambios o de sus archivos nuevos, o que los descarte.
 4. **01:** la línea **Versión de la plantilla** debe tener la versión y la URL. Si falta alguna, no se puede elegir la base: pregúntale de qué versión y de qué URL salió su copia (la URL pública es la de su página de GitHub, «generated from …»). Sin esos dos datos, detente.
-5. **Copia privada:** haz la revisión del paso 1 de `/configurar` (`.claude/skills/configurar/SKILL.md`), porque la actualización edita módulos (AGENTS.md, «Copia privada»).
+5. **Copia privada:** haz la revisión del paso 1 de `/configurar` (`.claude/skills/configurar/paso-1-copia-privada.md`), porque la actualización edita módulos (AGENTS.md, «Copia privada»).
 
 ## Paso 2: Versión destino
 

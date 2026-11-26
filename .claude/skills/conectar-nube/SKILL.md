@@ -11,7 +11,7 @@ Escribe para alguien que nunca usó git: nada de jerga sin explicar, y los coman
 
 Si `git config --local --get plantilla.mantenedor` da `true`, esta carpeta es la plantilla: detente y dile al mantenedor que pruebe en un clon temporal con un repositorio privado de prueba aparte y datos sintéticos (`CONTRIBUTING.md`).
 
-Si un comando que sale a la red falla porque no se resuelve el nombre o se niega la conexión, sigue «Comandos sin red» de `.claude/skills/configurar/SKILL.md`.
+Si un comando que sale a la red falla porque no se resuelve el nombre o se niega la conexión, sigue «Comandos sin red» de `/configurar` (`.claude/skills/configurar/comandos-sin-red.md`).
 
 ## En palabras simples
 
