@@ -32,7 +32,7 @@ Tus archivos se guardan en tu computadora. El agente trabaja con un servicio de 
 
 No necesitas pagar ninguna suscripción: el agente se usa con el plan gratuito de Google.
 
-> **Por confirmar en la prueba:** que todo el recorrido funcione en una cuenta de Windows sin permisos de administrador, incluida la instalación de Antigravity. Si es así, agregar aquí: «Tampoco necesitas permisos de administrador».
+> **Por confirmar en la prueba:** que todo el recorrido funcione en una cuenta de Windows sin permisos de administrador. En la prueba del 24 de noviembre, Antigravity, Python y git se instalaron sin ellos, pero el recorrido se cortó antes del CV. Si se confirma, agregar aquí: «Tampoco necesitas permisos de administrador».
 
 ## 3. Descargar y descomprimir
 
@@ -51,11 +51,11 @@ Un archivo `.zip` es una carpeta comprimida: antes de usarla hay que **descompri
 
    > **Captura pendiente `03-carpeta-propuesta`:** la ventana «Extraer carpetas comprimidas» con la carpeta que propone Windows y el botón «Extraer».
 
-4. Se abre una carpeta `JobFinderMX`, y dentro hay otra `JobFinderMX`. **Tu copia es la de adentro**: la que tiene muchos archivos, como `README.md` y `01_MAPA_DEL_PROYECTO.md`. Recuerda dónde quedó: la vas a abrir en el paso 5.
+4. Se abre una carpeta `JobFinderMX`, y dentro hay otra `JobFinderMX`. **Tu copia es la de adentro**: la que tiene muchos archivos, como `README.md` y `01_MAPA_DEL_PROYECTO.md`. Queda en **Descargas › JobFinderMX › JobFinderMX**. Recuerda dónde quedó: la vas a abrir en el paso 5.
 
    > **Captura pendiente `03-carpeta-de-adentro`:** el Explorador dentro de la segunda carpeta `JobFinderMX`, con la lista de archivos y la ruta visible arriba.
-   >
-   > **Por confirmar en la prueba:** la ruta exacta que queda (por ejemplo, `Descargas\JobFinderMX\JobFinderMX`).
+
+**No borres esta carpeta cuando limpies Descargas:** ahí se guarda todo tu trabajo, como tu perfil, tu CV y tus vacantes.
 
 No abras el `.zip` con doble clic para trabajar desde ahí: así solo ves su contenido, sin sacarlo, y el agente no puede trabajar con él.
 
@@ -63,58 +63,47 @@ No abras el `.zip` con doble clic para trabajar desde ahí: así solo ves su con
 
 **Antigravity** es el programa de Google donde vive el agente. Está en inglés; aquí va cada pantalla traducida.
 
-1. Entra a <https://antigravity.google/download> y pulsa **«Download for x64»** (descargar la versión para casi todas las computadoras con Windows). Solo si tu computadora tiene un procesador Snapdragon, pulsa **«Download for ARM64»**.
+1. Entra a <https://antigravity.google/download>. La página sale en español: en la pestaña «Windows», pulsa **«Descargar para x64»** (la versión para casi todas las computadoras con Windows). Solo si tu computadora tiene un procesador Snapdragon, pulsa **«Descargar para ARM64»**.
 
-   > **Captura pendiente `04-descarga`:** la página de descarga con el botón «Download for x64» resaltado.
-   >
-   > **Por confirmar en la prueba:** los nombres del botón y del archivo (`Antigravity-x64.exe`), tomados de la documentación de Antigravity.
+   > **Captura pendiente `04-descarga`:** la página de descarga con el botón «Descargar para x64» resaltado.
 
-2. Abre el archivo que bajó (`Antigravity-x64.exe`) y sigue los pasos del instalador.
+2. Abre el archivo que bajó, `Antigravity-x64`, desde tu carpeta Descargas. El instalador muestra una sola pantalla, en español, «Instalando, espera un momento…», y termina solo: no tienes que pulsar nada.
 
-   > **Captura pendiente `04-instalador`:** cada pantalla del instalador, con su traducción y el botón que hay que pulsar.
-   >
-   > **Por confirmar en la prueba:** las pantallas del instalador y si pide permisos de administrador.
+   > **Captura pendiente `04-instalador`:** la pantalla «Instalación de Antigravity» con su barra de progreso.
 
-3. Abre Antigravity. Pulsa **«Sign in»** (iniciar sesión). Se abre tu navegador: entra con tu cuenta de Google y acepta. Luego vuelve a Antigravity.
+3. Al abrirse Antigravity, aparece **«Welcome to Antigravity!»** (¡bienvenido a Antigravity!). Pulsa **«Continue with Google»** (continuar con Google). Se abre tu navegador: entra con tu cuenta de Google y acepta. Luego vuelve a Antigravity.
 
-   > **Captura pendiente `04-iniciar-sesion`:** la pantalla de Antigravity con el botón «Sign in».
+   > **Captura pendiente `04-iniciar-sesion`:** la pantalla «Welcome to Antigravity!» con el botón «Continue with Google».
 
 4. Antigravity pregunta **«What best describes your work?»** (¿qué describe mejor tu trabajo?). Elige **«Knowledge Work»** (trabajo de oficina o de conocimiento) y pulsa **«Continue»** (continuar). Esta elección solo cambia cómo se ve el programa, y se puede cambiar después.
 
    > **Captura pendiente `04-rol`:** la pantalla «What best describes your work?» con «Knowledge Work» marcado.
    >
-   > **Por confirmar en la prueba:** qué rol conviene. Las opciones son Software Engineering, Knowledge Work, Data & Analytics, Science, Design y Other; «Knowledge Work» es una propuesta.
+   > **Por confirmar en la prueba:** qué rol conviene y si se puede cambiar después. Las opciones son Software Engineering, Knowledge Work, Data & Analytics, Science, Design y Other, más «Skip» (saltar); «Knowledge Work» es una propuesta.
 
-5. Aparece el aviso **«Terms & Data Use»** (términos y uso de datos): dice cómo usa Google lo que escribes y lo que lee el agente. Léelo y acéptalo para seguir.
+5. Si Antigravity te muestra sus **términos de uso**, léelos y acéptalos para seguir. Dicen cómo usa Google lo que escribes y lo que lee el agente.
+6. Abajo del cuadro donde le escribes al agente, Antigravity muestra el nivel de razonamiento, que empieza en **«High»** (alto). Cámbialo a **«Medium»** (medio): gasta menos de tu cuota y alcanza para JobFinderMX.
 
-   > **Captura pendiente `04-terminos`:** el aviso «Terms & Data Use» con el botón para aceptarlo.
+   > **Captura pendiente `04-razonamiento`:** dónde se cambia el nivel de razonamiento, con «Medium» elegido.
    >
-   > **Por confirmar en la prueba:** el nombre del botón que acepta el aviso.
+   > **Por confirmar en la prueba:** dónde está exactamente ese control y si se ve antes de abrir tu carpeta.
 
 ## 5. Abrir tu carpeta y escribir «configura mi copia»
 
-1. En la barra de la izquierda de Antigravity, pulsa el ícono **«New Project»** (proyecto nuevo; así llama Antigravity a una carpeta en la que trabaja el agente): una carpeta con un signo de más.
-2. Pulsa **«Add Folder»** (agregar carpeta), elige tu copia (la carpeta `JobFinderMX` de adentro, del paso 3) y pulsa **«Create»** (crear).
+1. En la barra de la izquierda de Antigravity, junto a **«Projects»** (proyectos; así llama Antigravity a una carpeta en la que trabaja el agente), pulsa el ícono de una carpeta con un signo de más: **«Create New Project»** (crear proyecto nuevo).
+2. Se abre una ventana de Windows, **«Open workspace»** (abrir espacio de trabajo). Entra a tu copia (la carpeta `JobFinderMX` de adentro, del paso 3) y pulsa **«Seleccionar carpeta»**. Tu proyecto `JobFinderMX` aparece bajo «Projects».
 
-   > **Captura pendiente `05-abrir-carpeta`:** la ventana «New Project» con la carpeta elegida y el botón «Create».
-   >
-   > **Por confirmar en la prueba:** el ícono y los nombres «New Project», «Add Folder» y «Create», tomados de la documentación de Antigravity.
-   >
-   > **Por confirmar en la prueba:** si, con el rol elegido, Antigravity pregunta entre «Local mode» y «New worktree mode». Si pregunta, la guía dice elegir «Local mode» (trabajar directo en tu carpeta).
+   > **Captura pendiente `05-abrir-carpeta`:** el ícono «Create New Project» junto a «Projects» y la ventana «Open workspace» con el botón «Seleccionar carpeta».
 
 3. En el cuadro de mensaje, escribe **configura mi copia** y pulsa Enter.
 
    > **Captura pendiente `05-configura-mi-copia`:** el cuadro de mensaje con «configura mi copia» escrito, dentro del proyecto de la carpeta.
 
-Lo primero que hace el agente es revisar dónde quedó tu copia. Si está en Descargas, te ofrece moverla a una carpeta más segura, `C:\Users\<tu usuario>\JobFinderMX`, porque Descargas se suele limpiar. Si aceptas y la mueve, la conversación se detiene: vuelve a abrir la carpeta en su lugar nuevo con «New Project» → «Add Folder», como en el punto 2, abre una conversación nueva y escribe otra vez **configura mi copia**. Sigue donde se quedó.
+Después, el agente te guía y te explica cada paso en español sencillo. Primero, en una conversación, deja listo lo que hace falta instalar y prueba que tu CV se puede generar. Luego te entrevista para tu perfil y escribe tu CV, en pasos cortos.
 
-> **Captura pendiente `05-mover-carpeta`:** el agente ofreciendo mover la carpeta.
->
-> **Por confirmar en la prueba:** si el agente puede mover la carpeta mientras Antigravity la tiene abierta. Si no puede, la copia se queda en Descargas, y la guía debe pedir que no la borres.
+Si tu copia está en Descargas, el agente te lo recuerda: no la borres al limpiar esa carpeta.
 
-Después, el agente te guía. Avanza en pasos cortos: instala lo que hace falta, te entrevista para tu perfil y escribe tu CV. Te explica cada paso en español sencillo.
-
-En el camino te ofrece **git**, un programa que guarda versiones de tus archivos: si algo sale mal, puedes volver atrás, y además te deja recibir las mejoras de JobFinderMX. Es opcional, pero te conviene aceptarlo.
+En el camino te ofrece **git**, un programa que guarda versiones de tus archivos: si algo sale mal, puedes volver atrás, y además te deja recibir las mejoras de JobFinderMX. Es opcional, pero te conviene aceptarlo. Si lo aceptas, te pregunta una sola vez si guarda una versión al terminar cada paso.
 
 ## 6. Aprobar comandos
 
@@ -136,7 +125,7 @@ Palabras en inglés que vas a ver:
 
 > **Por confirmar en la prueba:** los botones del aviso para aprobar un comando y su traducción, para agregarlos a la tabla, y que los cuatro modos de permisos, tomados de la documentación de Antigravity, se llamen así.
 
-«Request Review», «Default», «Auto» y «Turbo» son los **modos de permisos** de Antigravity. Usa «Default» o «Request Review». No uses «Turbo» ni «Auto»: en ellos el agente corre comandos sin preguntarte, y la regla deja de servir.
+«Request Review», «Default», «Auto» y «Turbo» son los **modos de permisos** de Antigravity. Usa «Default» o «Request Review». No uses «Turbo» ni «Auto»: en ellos el agente corre comandos sin preguntarte, y la regla deja de servir. Antigravity puede empezar en «Auto», así que revisa cuál tiene antes de escribir «configura mi copia».
 
 Según tu Windows:
 
@@ -147,9 +136,9 @@ Según tu Windows:
 
 ## 7. Cuando se acaba la cuota
 
-El plan gratuito tiene una **cuota semanal**: un límite de uso que se renueva cada semana. Cuánto rinde depende de lo que le pidas; buscar en muchas empresas, por ejemplo, gasta más.
+El plan gratuito tiene una **cuota semanal**: un límite de uso que se renueva cada semana. Cuánto rinde depende de lo que le pidas; buscar en muchas empresas, por ejemplo, gasta más. **El nivel 1 puede usar casi toda la cuota de una semana**, así que es normal que se acabe antes de terminar.
 
-Para aprovecharla, el agente te propone un paso de la configuración por conversación, y te avisa antes de algo que gaste mucha cuota.
+Para aprovecharla, el agente te propone una conversación nueva por cada paso de la configuración y se detiene al terminar tu primer CV. También te avisa antes de algo que gaste mucha cuota.
 
 Si se acaba, no se descompuso nada y no pierdes tu trabajo: tu carpeta guarda lo que ya hiciste. Espera a que se renueve, abre una conversación nueva y escribe otra vez **configura mi copia**: la configuración sigue donde se quedó. Si estabas pidiendo otra cosa, como una búsqueda, vuelve a pedirla.
 
@@ -211,4 +200,4 @@ Pulsa **«New issue»** (reporte nuevo) y cuenta:
 
 ---
 
-Probada con Antigravity **[X.Y]** en Windows **[N]**, el **[fecha]**.
+Probada en parte con Antigravity **2.35.1** en Windows **11**, el **24 de noviembre de 2026**. La prueba completa de esta versión de la guía está pendiente.
