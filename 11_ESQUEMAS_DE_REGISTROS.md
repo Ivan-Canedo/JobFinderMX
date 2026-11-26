@@ -1,6 +1,6 @@
 # 11 — Esquema de registros
 
-**Versión:** 1.11 — 2026-11-23 — El archivo de registros se llama `Registros.xlsx` (REG-ESQUEMA, ADR 0011).
+**Versión:** 1.12 — 2026-11-25 — La herramienta escribe cada valor en la columna de su nombre y rechaza una fila con columnas que la pestaña no tiene (REG-LOCAL, «Encabezados»).
 **Estado:** esquema de la plantilla. El paso 8 de `/configurar` (Registros) crea el archivo de registros desde el bloque de REG-ESQUEMA.
 
 ## Responsabilidad
@@ -418,7 +418,7 @@ En Windows, el Python es `.venv\Scripts\python.exe`. `--help` da las órdenes y 
 
   Lleva además `formato`, `version`, la ruta de la copia (`copia`) y la fecha en que se generó. `buscar.py` rechaza un estado de otra copia o con otra forma.
 - **Lectura:** `leer` da una pestaña completa o las filas de unos IDs; en `evaluaciones`, con su `encaje` calculado con los pesos de 08/EVAL-ACUERDOS. `informe` da la tabla resumen de una búsqueda: sus filas de `informes`, en el orden de 08/EVAL-INFORME, con las columnas calculadas de REG-CAMPOS, a la fecha de hoy en la zona horaria de 04 y con el umbral de «antigua» de 08/EVAL-ACUERDOS.
-- **Encabezados:** la herramienta los compara con el bloque en cada uso y se detiene si no coinciden (REG-DECISIONES, «Encabezados»).
+- **Encabezados:** la herramienta los compara con el bloque en cada uso y se detiene si no coinciden (REG-DECISIONES, «Encabezados»). Escribe cada valor en la columna de su nombre. Si una fila trae columnas que la pestaña no tiene, como las que `importar` escribe en un archivo de un 11 anterior, no escribe nada y dice cuáles faltan.
 - **Historial y respaldo:** git. El archivo se versiona en la copia, así que no se ignora. Al cerrar una sesión que lo modificó, el agente le ofrece al titular un commit con él y, si la copia tiene remoto privado, el push.
   - **Code en la nube:** la sesión trabaja en un clon nuevo, en una rama propia que Code local y el canal Web no leen. Al cerrar una sesión que cambió módulos, registros o CV de `muestras_cv/`, el agente integra en `main`, con permiso del titular para cada paso: commit, `git fetch origin main`, `git rebase origin/main` y `git push origin HEAD:main`. Si `main` no avanzó desde que abrió la sesión, el rebase no cambia nada. Si el push se rechaza porque `main` avanzó otra vez, se repiten el fetch y el rebase.
   - **La rama de la sesión no se conserva:** no se sube. Si ya está en el remoto, el agente la borra después del push a `main` (`git push origin --delete <rama>`), con permiso.

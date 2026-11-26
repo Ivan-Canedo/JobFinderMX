@@ -66,10 +66,11 @@ línea, con los de por defecto.
 
 Agregar, actualizar, importar y migrar comprueban cada fila que escriben contra el esquema: tipos, listas
 (empresa_id, contra 06/CAT-EMPRESAS, y bolsa_id, contra 06/CAT-BOLSAS; una vacante lleva exactamente una de las
-dos), la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias.
-Con un solo error no escriben nada: dicen todos en stderr y terminan con código 1. El JSON va a stdout. Si falta la
-configuración, el archivo u openpyxl, o se pide una pestaña o búsqueda inexistente, termina con código 2
-y dice qué falla.
+dos), la categoría de cada núcleo, obligatoriedad, IDs únicos y referencias. Escriben cada valor en la columna de su
+nombre, y rechazan una fila con columnas que la pestaña del archivo no tiene, como las que importar escribe en un
+archivo de un 11 anterior. Con un solo error no escriben nada: dicen todos en stderr y terminan con código 1. El
+JSON va a stdout. Si falta la configuración, el archivo u openpyxl, o se pide una pestaña o búsqueda inexistente,
+termina con código 2 y dice qué falla.
 """
 import argparse
 import collections
@@ -420,25 +421,45 @@ def agregar(esquema, entrada):
     return {"agregadas": {nombre: len(filas) for nombre, filas in nuevas.items()}}
 
 
+def columnas_del_libro(libro, filas):
+    """{pestaña: {columna: número}} según la fila 1 de cada pestaña del libro que nombran las filas,
+    {pestaña: [{columna: valor}]}. Si una fila trae columnas que su pestaña no tiene, como las que importar escribe
+    en un archivo de un 11 anterior, las rechaza todas sin escribir ninguna."""
+    columnas, errores = {}, []
+    for nombre, de_la_pestana in filas.items():
+        columnas[nombre] = {celda.value: celda.column for celda in libro[nombre][1] if celda.value}
+        faltan = list(dict.fromkeys(c for fila in de_la_pestana for c in fila if c not in columnas[nombre]))
+        if faltan:
+            errores.append(f"{nombre}: la pestaña no tiene las columnas {', '.join(faltan)}, que esta herramienta "
+                           "escribe. El 11 de la copia es de una versión anterior de la plantilla: ponla al día con "
+                           "/actualizar, que también pone al día el archivo de registros.")
+    if errores:
+        rechazar(errores)
+    return columnas
+
+
 def anexar(libro, nuevas):
-    """Escribe en el libro las filas nuevas, {pestaña: [fila con todas sus columnas, en orden]}, al final."""
+    """Escribe en el libro las filas nuevas, {pestaña: [{columna: valor}]}, al final, cada valor en la columna de su
+    nombre."""
+    columnas = columnas_del_libro(libro, nuevas)
     for nombre, filas in nuevas.items():
         pestana = libro[nombre]
         for fila in filas:
             numero = pestana.max_row + 1
-            for i, valor in enumerate(fila.values(), 1):
-                escribir(pestana.cell(numero, i), valor)
+            for columna, valor in fila.items():
+                escribir(pestana.cell(numero, columnas[nombre][columna]), valor)
 
 
 def escribir_cambios(esquema, libro, cambios):
     """Escribe en el libro las columnas dadas, {pestaña: [{columna_id: ID, columna: valor}]}, en la fila de su ID."""
+    columnas = columnas_del_libro(libro, cambios)
     for nombre, filas in cambios.items():
         pestana = libro[nombre]
-        columnas = encabezados(pestana_del_esquema(esquema, nombre))
+        id_ = clave(pestana_del_esquema(esquema, nombre))["nombre"]
         for cambio in filas:
-            numero = next(celda.row for celda in pestana["A"] if celda.value == cambio[columnas[0]])
+            numero = next(celda.row for celda in pestana["A"] if celda.value == cambio[id_])
             for columna, valor in cambio.items():
-                escribir(pestana.cell(numero, columnas.index(columna) + 1), valor)
+                escribir(pestana.cell(numero, columnas[nombre][columna]), valor)
 
 
 def actualizar(esquema, entrada):

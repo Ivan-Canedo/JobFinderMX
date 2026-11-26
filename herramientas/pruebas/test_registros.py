@@ -1012,6 +1012,26 @@ class Importar(CopiaFicticia):
         for columna in ("fuentes_consultas_filtros", "cobertura_limitaciones"):
             self.assertIn("EMP-ROTA: [FALLO] la plataforma 'inexistente' no tiene adaptador", busqueda[columna])
 
+    def test_con_un_11_anterior_a_las_columnas_de_bolsa_rechaza_sin_tocar_el_archivo(self):
+        # El 11 de una copia de antes de las bolsas de empleo: vacantes sin bolsa_id, empresa_literal ni
+        # sueldo_literal, que importar sí trae. El archivo, creado con ese 11, coincide con él.
+        modulo = self.dir / "11_ESQUEMAS_DE_REGISTROS.md"
+        texto = modulo.read_text(encoding="utf-8").replace(', "o_bien": "bolsa_id"', "")
+        texto = "".join(linea for linea in texto.splitlines(keepends=True)
+                        if not re.search(r'\{"nombre": "(bolsa_id|empresa_literal|sueldo_literal)"', linea))
+        modulo.write_text(texto, encoding="utf-8")
+        self.archivo.unlink()
+        self.ok("crear")
+        antes = self.archivo.read_bytes()
+        r = self.importar(self.buscar(PRIMERA, sin_detalle=["R-4"]), self.primeras_decisiones())
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        for t in ("vacantes", "bolsa_id", "empresa_literal", "sueldo_literal", "No se escribió ninguna fila."):
+            self.assertIn(t, r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
+        self.assertEqual(r.stdout, "")
+        self.assertEqual(self.archivo.read_bytes(), antes)
+        self.assertFalse((self.dir / "instantanea").exists())
+
     def test_una_decision_invalida_rechaza_todo_y_dice_todos_los_errores(self):
         salida = self.buscar(PRIMERA, sin_detalle=["R-4"])
         decisiones = self.primeras_decisiones()
