@@ -125,12 +125,17 @@ git worktree add "$(mktemp -d)/gh-pages" gh-pages
   ```
 
   Cada push a `gh-pages` vuelve a publicar la página en uno o dos minutos. Revísala en un teléfono.
+- **Cuándo publicarla:** junto con la versión que describe, o después, nunca antes. Su botón baja la última versión publicada, así que la guía no puede describir algo que esa versión no trae. Los cambios a la guía que describen algo nuevo salen en el ticket de publicar versión (ver «Versión de la plantilla»).
 - **Cuándo volver a probarla:** cuando alguien reporte un problema con la guía. Se repite el recorrido en Windows con Antigravity, se actualizan las capturas y los pasos que cambiaron, y el pie.
-- **Cómo probarla:** con el guion de `docs/guion-prueba-windows.md`, en una laptop con Windows 11 y una cuenta estándar sin permisos de administrador. Deja tomadas las capturas y anotadas las versiones del pie.
+- **Cómo probarla:** con el guion de `docs/guion-prueba-windows.md`, en una laptop con Windows 11 y una cuenta estándar sin permisos de administrador, siempre contra la versión publicada, bajada con el botón de la guía. Deja tomadas las capturas y anotadas las versiones del pie.
 
 ## Versión de la plantilla
 
-Cada versión publicada es una etiqueta `vX.Y` sobre su commit. `/actualizar` fusiona cada archivo de la copia en tres vías, con la etiqueta que anota su 01 como base, así que una etiqueta publicada no se mueve ni se borra. Para publicar una versión:
+Cada versión publicada es una etiqueta `vX.Y` sobre su commit. `/actualizar` fusiona cada archivo de la copia en tres vías, con la etiqueta que anota su 01 como base, así que una etiqueta publicada no se mueve ni se borra. Por eso, regenerar el ZIP del Release exige una versión nueva.
+
+**Cuándo se publica:** todo trabajo que cambie lo que reciben las copias termina con un ticket de publicar versión, con los pasos de abajo. La versión no se sube por cada commit, sino al cerrar el trabajo. Ningún ticket da por hecho que sus cambios son parte de la versión ya publicada: llegan a los titulares con la siguiente.
+
+Para publicar una versión:
 
 1. Sube la versión en la línea **Versión de la plantilla** de 01. Los módulos de la plantilla no cambian de versión por esto: la copia lleva la suya.
 2. Agrega a `CAMBIOS.md` la sección `## vX.Y — fecha`, arriba de las anteriores, con dos subsecciones:
@@ -145,14 +150,6 @@ Cada versión publicada es una etiqueta `vX.Y` sobre su commit. `/actualizar` fu
 
 4. **Release:** el push de la etiqueta activa `.github/workflows/release.yml`, que arma `JobFinderMX.zip` con el repositorio completo en una carpeta `JobFinderMX/` y crea el Release de la etiqueta, con las notas de su sección de `CAMBIOS.md` y el ZIP adjunto. Usa solo el token del repositorio y no corre en las copias. Cuando termine, descarga el enlace fijo, <https://github.com/Ivan-Canedo/JobFinderMX/releases/latest/download/JobFinderMX.zip>, y comprueba que sea la versión nueva: el ZIP trae la carpeta `JobFinderMX/`, el 01 de esa carpeta dice la versión que publicaste y, abierta con el agente, la copia ofrece `/configurar`.
 
+   Una copia salida del ZIP le sirve a `/actualizar` cuando la convierte en repositorio el paso 2 de `/configurar` (`git init` y un primer commit con todo): sus archivos son idénticos a los de la etiqueta que anota su 01, que es la base de la fusión.
+
 `v1.0` es el commit que trae `/actualizar` y `CAMBIOS.md`.
-
-### Probar el ZIP sin publicar
-
-El mismo ZIP del Release se arma en local con `git archive`, que toma lo que tiene commit en la referencia dada (`HEAD` o una etiqueta) y deja fuera `.git` y lo que no tiene commit, como `.scratch/`:
-
-```sh
-git archive --format=zip --prefix=JobFinderMX/ -o "$(mktemp -d)/JobFinderMX.zip" HEAD
-```
-
-Una copia salida del ZIP le sirve a `/actualizar` cuando la convierte en repositorio el paso 2 de `/configurar` (`git init` y un primer commit con todo): sus archivos son idénticos a los de la etiqueta que anota su 01, que es la base de la fusión.
