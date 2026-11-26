@@ -209,7 +209,8 @@ def leer_preferencias(ruta):
         p["tz"] = ZoneInfo(p["zona_horaria"])
     except (ValueError, KeyError, TypeError):
         mal(f"zona_horaria no es una zona IANA conocida: {p['zona_horaria']!r}. Si el nombre es correcto, al "
-            "sistema le falta la base de zonas horarias (en Windows: `py -3 -m pip install tzdata`).")
+            "sistema le falta la base de zonas horarias (en Windows: "
+            "`.venv\\Scripts\\python.exe -m pip install tzdata`).")
     if not (isinstance(p["moneda"], str) and re.fullmatch(r"[A-Z]{3}", p["moneda"])):
         mal(f"moneda debe ser un código ISO 4217 de tres letras mayúsculas; dice {p['moneda']!r}.")
     return p

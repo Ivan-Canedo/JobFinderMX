@@ -8,16 +8,38 @@ Corre en la conversación técnica (índice, «Cómo avanzar»). En cualquier ot
 
 1. **Sistema:** detecta el sistema operativo con `uname -s`: `Linux`; `Darwin` es macOS; `MINGW…`, `MSYS…` o un `uname` inexistente (PowerShell) es Windows. En Linux, lee `ID` e `ID_LIKE` en `/etc/os-release`: `dnf` sirve a Fedora y derivados; `apt`, a Debian, Ubuntu y derivados. En macOS el gestor es Homebrew (`brew`) y en Windows, `winget`.
 2. **Aviso:** solo en macOS, dile al titular que JobFinderMX solo se ha probado en Linux y Windows, así que un fallo puede venir de ahí.
-3. **Revisión:** corre la comprobación de cada herramienta que toca revisar: Python, git si el titular lo acepta (ver «git») y, solo si el titular los pidió, los opcionales. La que ya cumple no se toca.
+3. **Revisión:** corre la comprobación de cada herramienta que toca revisar: Python, git si el titular lo acepta (ver «git») y, solo si el titular los pidió, los opcionales. La que ya cumple no se toca. En Windows, la comprobación de Python y de git es «Búsqueda en Windows».
 4. **Instalación:** muéstrale al titular el comando de cada herramienta que falta y pide su permiso antes de instalar. Un comando con `sudo` pide contraseña: pídele que lo corra él en una terminal y que te avise al terminar. Si su sistema no tiene ninguno de estos gestores, dale el sitio oficial de descarga de la herramienta. En Windows, ninguna instalación de este paso pide permisos de administrador (ver «Windows sin administrador»).
-5. **Comprobación:** vuelve a correr la comprobación de cada herramienta instalada. Si dice que el programa no existe justo después de instalarlo, no lo reinstales: sigue el tropiezo «Programa recién instalado». Con Python listo, sigue con «git», «Guardar versiones», «Entorno virtual» y «Prueba del CV», en ese orden.
+5. **Comprobación:** vuelve a correr la comprobación de cada herramienta instalada; en Windows, para Python y git, «Búsqueda en Windows» de inmediato, sin reiniciar el agente, porque ya prueba la ruta donde instala cada comando de la tabla. Si dice que el programa no existe justo después de instalarlo, no lo reinstales: sigue el tropiezo «Programa recién instalado». Con Python listo, sigue con «git», «Guardar versiones», «Entorno virtual» y «Prueba del CV», en ese orden.
 
 **Fin del paso:** termina cuando la prueba del CV sale bien y, si la copia es un repositorio, porque ya lo era o porque el titular aceptó git, cuando tiene su primer commit y él contestó la pregunta de «Guardar versiones». Un opcional que no quedó instalado no lo detiene, y git tampoco: si no se pudo instalar, sigue como si lo hubiera rechazado («git», punto 4).
 
 | Herramienta | Comprobación | dnf / apt | brew | winget |
 | --- | --- | --- | --- | --- |
-| Python 3.9 o mayor | `python3 --version`; en Windows, `py -3 --version` | `sudo dnf install python3` / `sudo apt install python3` | `brew install python` | `winget install -e --id Python.Python.3.13 --scope user --silent --accept-package-agreements --accept-source-agreements` |
+| Python 3.9 o mayor | `python3 --version`; en Windows, «Búsqueda en Windows» | `sudo dnf install python3` / `sudo apt install python3` | `brew install python` | `winget install -e --id Python.Python.3.13 --scope user --silent --accept-package-agreements --accept-source-agreements` |
 | git (opcional, recomendado) | `git --version` | `sudo dnf install git` / `sudo apt install git` | `brew install git` | `winget install -e --id Git.Git --scope user --location "%LOCALAPPDATA%\Programs\Git" --silent --accept-package-agreements --accept-source-agreements` (en PowerShell, `"$env:LOCALAPPDATA\Programs\Git"`) |
+
+**Búsqueda en Windows:** la terminal del agente puede no ver un programa que sí está, porque conserva el `PATH` (la lista de carpetas donde la terminal busca los programas) de cuando se abrió el agente. Por eso, en Windows, nunca le digas al titular que falta Python o git ni le propongas instalarlo sin haber corrido antes este bloque de PowerShell. Prueba en orden las ubicaciones de cada programa y se queda con la primera que da una versión: para Python, `py` en el `PATH`, el lanzador de la instalación por usuario y el del equipo; para git, `git` en el `PATH`, la ubicación de winget por usuario, la de MinGit y la de la instalación para el equipo.
+
+```powershell
+function Find-Programa($Candidatos, $Argumentos, $Patron) {
+  foreach ($c in $Candidatos) {
+    if (-not $c -or -not (Test-Path -LiteralPath $c)) { continue }
+    try { $v = @($null | & $c @Argumentos 2>$null)[0] } catch { continue }
+    if ("$v" -match $Patron) { return "$c | $v" }
+  }
+  'no encontrado'
+}
+$enPath = { param($n) (Get-Command $n -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source }
+'Python: ' + (Find-Programa @((& $enPath py), "$env:LOCALAPPDATA\Programs\Python\Launcher\py.exe", "$env:WINDIR\py.exe") @('-3', '--version') '^Python 3\.(9|[1-9]\d)\b')
+'git: ' + (Find-Programa @((& $enPath git), "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe", "$env:LOCALAPPDATA\Programs\MinGit\cmd\git.exe", "$env:ProgramFiles\Git\cmd\git.exe") @('--version') '^git version')
+```
+
+- **Cómo correrlo:** pégalo tal cual en PowerShell. Si tu terminal no es PowerShell, guárdalo como `buscar.ps1` en el directorio temporal y córrelo con `powershell -NoProfile -ExecutionPolicy Bypass -File <directorio temporal>\buscar.ps1`.
+- **Qué imprime:** una línea por programa, con la ruta y su versión, o `no encontrado`. Python cumple con 3.9 o mayor; un Python más viejo sale como `no encontrado`.
+- **La ruta se usa toda la conversación:** escribe la ruta que imprimió en cada comando de ese programa, en PowerShell con `&` delante, como `& "<ruta de git>" status`. Vale también para los commits del cierre de la sesión (AGENTS.md, «Al cerrar una sesión…»).
+- **Python solo crea el entorno virtual,** con el lanzador `py -3` o su ruta («Entorno virtual»). Después, todo comando de Python usa el del `.venv` (`.venv\Scripts\python.exe`), no el lanzador ni `python`.
+- **Si dice `no encontrado`:** ese programa falta de verdad; sigue con la instalación (punto 4). Si sale así justo después de instalarlo, sigue el tropiezo «Programa recién instalado».
 
 **git:** si `git rev-parse --is-inside-work-tree` da `true`, la copia ya es un repositorio: no hay nada que ofrecer. Si no, ofrécelo una vez por conversación; si ya lo rechazó en esta, no insistas.
 
@@ -40,7 +62,7 @@ Corre en la conversación técnica (índice, «Cómo avanzar»). En cualquier ot
 | Sistema | Crear el entorno | Instalar las bibliotecas | Comprobación |
 | --- | --- | --- | --- |
 | Linux y macOS | `python3 -m venv .venv` | `.venv/bin/python -m pip install openpyxl fpdf2 python-docx pypdf pypdfium2` | `.venv/bin/python -I -c "import openpyxl, fpdf, docx, pypdf, pypdfium2; print('listo')"` |
-| Windows | `py -3 -m venv .venv` | `.venv\Scripts\python.exe -m pip install openpyxl tzdata fpdf2 python-docx pypdf pypdfium2` (Windows no trae la base de zonas horarias, `tzdata`) | `.venv\Scripts\python.exe -I -c "import openpyxl, fpdf, docx, pypdf, pypdfium2; print('listo')"` |
+| Windows | `py -3 -m venv .venv`, o con la ruta del lanzador que dio «Búsqueda en Windows» (`& "<ruta de py>" -3 -m venv .venv`) | `.venv\Scripts\python.exe -m pip install openpyxl tzdata fpdf2 python-docx pypdf pypdfium2` (Windows no trae la base de zonas horarias, `tzdata`) | `.venv\Scripts\python.exe -I -c "import openpyxl, fpdf, docx, pypdf, pypdfium2; print('listo')"` |
 
 En Debian y Ubuntu, si crear el entorno falla por `ensurepip`, falta el paquete del sistema: `sudo apt install python3-venv`, que corre el titular (punto 4). El entorno queda listo cuando la comprobación imprime «listo».
 
@@ -71,7 +93,7 @@ El informe debe decir «sí» en fuentes, en Carlito y en el texto del PDF y del
   }
   ```
 
-  El bloque `if` agrega git al `PATH` de su usuario una sola vez, que se lee al reiniciar el agente (tropiezo «Programa recién instalado»).
+  El bloque `if` agrega git al `PATH` de su usuario una sola vez, que se lee al reiniciar el agente. Mientras tanto, «Búsqueda en Windows» lo encuentra en la ubicación de MinGit y la conversación usa esa ruta.
 
 **Opcionales:** Node y markdownlint-cli2 solo revisan el formato de los `.md` que edita el agente (AGENTS.md, «Formato Markdown»); la copia funciona sin ellos. No los revises, ofrezcas ni instales salvo que el titular los pida. Si los pide, sigue con ellos los puntos 3 a 5 con esta tabla:
 
@@ -82,8 +104,8 @@ El informe debe decir «sí» en fuentes, en Carlito y en el texto del PDF y del
 
 **Tropiezos conocidos:**
 
-- **Python en Windows:** donde la documentación diga `python3`, usa `py -3`.
-- **Programa recién instalado:** si la comprobación no lo encuentra justo después de instalarlo, la terminal todavía no ve el `PATH` nuevo; pasa sobre todo en Windows. Antes de decir que falta, búscalo en las rutas donde lo instala este paso; para git en Windows, `%LOCALAPPDATA%\Programs\Git\cmd\git.exe` y `%LOCALAPPDATA%\Programs\MinGit\cmd\git.exe`, y usa en la conversación la ruta que dé una versión. Si no aparece, dile al titular que cierre y vuelva a abrir su agente (o la terminal, si instaló él el programa) y te vuelva a pedir «configura mi copia»: la configuración retoma en este paso.
+- **Python en Windows:** donde la documentación diga `python3`, usa el Python del `.venv` (`.venv\Scripts\python.exe`; ver «Búsqueda en Windows»).
+- **Programa recién instalado:** si la comprobación no lo encuentra justo después de instalarlo, la terminal todavía no ve el `PATH` nuevo; pasa sobre todo en Windows. Ahí, antes de decir que falta, corre «Búsqueda en Windows», que prueba las rutas donde lo instala este paso, y usa en la conversación la ruta que dé una versión. En Linux y macOS, búscalo con `command -v` después de abrir una terminal nueva. Reiniciar el agente es el último recurso: solo si la búsqueda tampoco lo encuentra, pídele al titular que lo cierre por completo y lo vuelva a abrir, y que te vuelva a pedir «configura mi copia»: la configuración retoma en este paso. Cerrar la ventana no basta, porque el programa puede seguir abierto con el `PATH` viejo. En Antigravity, dile que cierre todas sus ventanas con «File» → «Exit» y que, antes de abrirlo de nuevo, revise en el Administrador de tareas (Ctrl+Shift+Esc) que no quede «Antigravity» en la lista; si queda, que lo seleccione y pulse «Finalizar tarea». Si él instaló el programa en una terminal, basta con cerrar esa terminal y abrir otra.
 - **Sin red:** si una instalación falla porque no se resuelve un nombre o se niega la conexión, sigue «Comandos sin red» (`comandos-sin-red.md`).
 - **Node viejo:** si el gestor instala un Node más viejo que el que pide markdownlint-cli2 (pasa con `apt` en versiones anteriores de Debian y Ubuntu), ofrece la versión LTS con las instrucciones de <https://nodejs.org> para su distribución.
 - **markdownlint-cli2 ya instalado:** cumple si la primera línea de `--help` da la versión, aunque el código de salida no sea 0. No lo busques con `npm list -g`: no ve lo que se instaló con `--prefix ~/.local`.

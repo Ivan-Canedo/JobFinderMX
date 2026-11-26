@@ -4,7 +4,7 @@ Algunos agentes corren los comandos en un entorno aislado sin internet, como Ant
 
 1. **Cómo se reconoce:** el error no viene de ningún servidor. O no se resuelve el nombre (`Temporary failure in name resolution`, `Name or service not known`, `nodename nor servname`, `getaddrinfo`, `Could not resolve host`), o se niega la conexión (`Connection refused`, `Network is unreachable`, `Operation not permitted`, `Failed to connect`); `curl` da el código `000`.
 2. **No es falta de red:** un `[FALLO]` de `buscar.py` con un código HTTP (`HTTP 403`, `HTTP 404`…), un `robots.txt` que prohíbe una ruta o un error de la configuración de la ficha: ahí el portal respondió, o el problema es de la ficha, y se corrige como dice el paso 7. Tampoco lo es si en la misma búsqueda otra empresa dio `[OK]` o `[SIN TOTAL]`.
-3. **Confirmación:** si no está claro, prueba la red con un sitio que siempre responde (en Windows, con `py -3`):
+3. **Confirmación:** si no está claro, prueba la red con un sitio que siempre responde (en Windows, con `.venv\Scripts\python.exe` o, si el `.venv` aún no existe, con el lanzador que encontró «Búsqueda en Windows» del paso 2 y `-3`):
 
    ```sh
    python3 -I -c "import urllib.request; urllib.request.urlopen('https://github.com', timeout=20); print('con red')"
