@@ -119,7 +119,7 @@ class CopiaFicticia(unittest.TestCase):
     def correr(self, *argumentos):
         """El script de la copia por su línea de comandos."""
         return subprocess.run([sys.executable, "-I", "-B", str(self.dir / "herramientas" / "buscar.py"), *argumentos],
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, text=True, encoding="utf-8", timeout=60)
 
 
 class ConfiguracionFaltante(CopiaFicticia):
@@ -703,11 +703,13 @@ CAMPOS_DE_VACANTES_Y_OBSERVACIONES = {"empresa_id", "job_id", "titulo", "url_ofi
 
 
 class ConPortalFalso(CopiaFicticia):
-    def buscar(self, bloque_04, portal, *argumentos, consulta=None, codigo_esperado=0, red=None, nube=False):
+    def buscar(self, bloque_04, portal, *argumentos, consulta=None, codigo_esperado=0, red=None, nube=False,
+               terminal=None):
         """Corre main() del script de la copia con el portal falso en lugar de la red. Con red, el portal solo da la
         configuración: la red falsa reemplaza urllib.request.urlopen, las esperas entre intentos se anotan en
         self.esperas sin esperar, y se ejercita el pedir() real. nube: corre como Code en la nube
-        (CLAUDE_CODE_REMOTE=true); si no, sin la variable."""
+        (CLAUDE_CODE_REMOTE=true); si no, sin la variable. terminal: la codificación de stdout y stderr, como la
+        cp1252 de una terminal de Windows; lo que escribe el script se lee como UTF-8."""
         configuracion = {"plataforma": portal.PLATAFORMA, "portal": portal.PORTAL, "consulta": consulta}
         self.escribir(modulo_04(bloque_04), modulo_06({"EMP-ACME": ficha("EMP-ACME", configuracion)}))
         especificacion = importlib.util.spec_from_file_location("buscar_copia", self.dir / "herramientas" / "buscar.py")
@@ -725,7 +727,11 @@ class ConPortalFalso(CopiaFicticia):
         entorno = {k: v for k, v in os.environ.items() if k != "CLAUDE_CODE_REMOTE"}
         if nube:
             entorno["CLAUDE_CODE_REMOTE"] = "true"
-        salida, errores, codigo = io.StringIO(), io.StringIO(), 0
+        if terminal is None:
+            salida, errores = io.StringIO(), io.StringIO()
+        else:
+            salida, errores = (io.TextIOWrapper(io.BytesIO(), encoding=terminal) for _ in range(2))
+        codigo = 0
         with mock.patch.object(sys, "argv", ["buscar.py", *argumentos]), sustituir, \
                 mock.patch.dict(os.environ, entorno, clear=True), \
                 contextlib.redirect_stdout(salida), contextlib.redirect_stderr(errores):
@@ -733,6 +739,10 @@ class ConPortalFalso(CopiaFicticia):
                 script.main()
             except SystemExit as e:
                 codigo = e.code
+        if terminal is not None:
+            for f in (salida, errores):
+                f.flush()
+            salida, errores = (io.StringIO(f.buffer.getvalue().decode("utf-8")) for f in (salida, errores))
         self.assertEqual(codigo, codigo_esperado, errores.getvalue())
         self.assertNotIn("Traceback", errores.getvalue())
         return json.loads(salida.getvalue())["empresas"][0], errores.getvalue()
@@ -2757,6 +2767,14 @@ class ExploracionDeTerminos(ConOccFalso):
                 self.assertEqual(r.returncode, 2, r.stderr)
                 self.assertIn("--explorar", r.stderr)
                 self.assertEqual(r.stdout, "")
+
+
+class SalidaEnUtf8(ConPortalFalso):
+    def test_con_la_terminal_en_cp1252_escribe_en_utf8_lo_que_cp1252_no_tiene(self):
+        bloque = preferencias([grupo("XA", nombres=["Ciudad A1"])])
+        portal = WorkdayFalso([{"id": "R-★1", "pais": "País A", "ubicaciones": ["Ciudad A1, País A"]}])
+        r, _ = self.buscar(bloque, portal, terminal="cp1252")
+        self.assertEqual([v["titulo"] for v in r["vacantes"]], ["Puesto R-★1"])
 
 
 if __name__ == "__main__":

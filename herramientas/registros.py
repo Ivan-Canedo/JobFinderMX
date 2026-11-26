@@ -1565,7 +1565,16 @@ def leer(esquema, nombre, ids, columna):
     return [con_calculadas(p, f) for f in filas if not ids or f[columna] in ids]
 
 
+def salida_en_utf8():
+    """Escribe stdout y stderr en UTF-8. La terminal de Windows suele usar cp1252, que no tiene caracteres como
+    «★», y con ellos print fallaría, también en --help."""
+    for flujo in (sys.stdout, sys.stderr):
+        if hasattr(flujo, "reconfigure"):
+            flujo.reconfigure(encoding="utf-8")
+
+
 def main():
+    salida_en_utf8()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--copia", metavar="CARPETA",
                     help="usar los módulos, el archivo y la instantánea de otra copia (por defecto, la del script)")

@@ -94,6 +94,15 @@ def busqueda_ficticia():
 # con su valor exacto.
 CALCULADAS_AL_LEER = {"evaluaciones": {"encaje": "★★★☆☆ (3.3)"}}
 
+# Corre el script como `python registros.py ...`, con stdout y stderr en otra codificación. -I ignora
+# PYTHONIOENCODING, así que la terminal de Windows se imita en el mismo proceso.
+LANZADOR_CON_TERMINAL = """import runpy, sys
+for flujo in (sys.stdout, sys.stderr):
+    flujo.reconfigure(encoding="{terminal}")
+sys.argv = sys.argv[1:]
+runpy.run_path(sys.argv[0], run_name="__main__")
+"""
+
 
 @unittest.skipIf(SIN_OPENPYXL, "falta openpyxl: corre las pruebas con el Python del entorno virtual")
 class CopiaFicticia(unittest.TestCase):
@@ -111,15 +120,18 @@ class CopiaFicticia(unittest.TestCase):
     def tearDown(self):
         self._tmp.cleanup()
 
-    def correr(self, *argumentos, entrada=None):
-        """El script de la copia por su línea de comandos; entrada, el JSON que recibe por stdin."""
-        return subprocess.run([sys.executable, "-I", "-B", str(self.dir / "herramientas" / "registros.py"),
+    def correr(self, *argumentos, entrada=None, terminal=None):
+        """El script de la copia por su línea de comandos; entrada, el JSON que recibe por stdin. terminal: la
+        codificación de su stdout y stderr, como la cp1252 de una terminal de Windows; su salida se lee como UTF-8."""
+        lanzador = [] if terminal is None else ["-c", LANZADOR_CON_TERMINAL.format(terminal=terminal)]
+        return subprocess.run([sys.executable, "-I", "-B", *lanzador, str(self.dir / "herramientas" / "registros.py"),
                                *argumentos], input=None if entrada is None else json.dumps(entrada),
-                              capture_output=True, text=True, timeout=60)
+                              capture_output=True, text=True, encoding="utf-8", timeout=60)
 
-    def ok(self, *argumentos, entrada=None):
-        r = self.correr(*argumentos, entrada=entrada)
+    def ok(self, *argumentos, entrada=None, terminal=None):
+        r = self.correr(*argumentos, entrada=entrada, terminal=terminal)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
         return json.loads(r.stdout)
 
     def leer(self, pestana, *argumentos):
@@ -351,6 +363,21 @@ class Leer(CopiaFicticia):
         self.assertEqual(r.returncode, 2, r.stdout + r.stderr)
         self.assertIn("/configurar", r.stderr)
         self.assertNotIn("Traceback", r.stderr)
+
+
+class TerminalEnCp1252(CopiaFicticia):
+    """Con la terminal de Windows en cp1252, el script escribe en UTF-8 lo que cp1252 no tiene, como «★»."""
+
+    def test_leer_e_informe(self):
+        self.ok("crear")
+        self.ok("agregar", entrada=busqueda_ficticia())
+        self.assertEqual(self.ok("leer", "evaluaciones", terminal="cp1252")[0]["encaje"], "★★★☆☆ (3.3)")
+        self.assertIn("★★★☆☆", json.dumps(self.ok("informe", "BUS-0001", terminal="cp1252"), ensure_ascii=False))
+
+    def test_la_ayuda(self):
+        r = self.correr("--help", terminal="cp1252")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("★", r.stdout)
 
 
 def hoy():
@@ -823,7 +850,7 @@ class Importar(CopiaFicticia):
         salida = self.sesion / f"busqueda_{len(list(self.sesion.iterdir()))}.json"
         errores, codigo = io.StringIO(), 0
         with mock.patch.object(sys, "argv", ["buscar.py", *(empresas or ["EMP-ACME"]), "--salida", str(salida)]), \
-                contextlib.redirect_stderr(errores):
+                contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(errores):
             try:
                 script.main()
             except SystemExit as e:
@@ -856,6 +883,14 @@ class Importar(CopiaFicticia):
         for pestana in ("busquedas", "vacantes", "observaciones"):
             self.assertEqual(self.leer(pestana), [])
         self.assertFalse((self.dir / "instantanea").exists())
+
+    def test_con_la_terminal_en_cp1252_escribe_en_utf8_lo_que_cp1252_no_tiene(self):
+        salida = self.buscar(PRIMERA, sin_detalle=["R-4"])
+        salida.write_text(salida.read_text(encoding="utf-8").replace("Puesto R-1", "Puesto ★ R-1"), encoding="utf-8")
+        ruta = self.sesion / "decisiones.json"
+        ruta.write_text(json.dumps(self.primeras_decisiones(), ensure_ascii=False), encoding="utf-8")
+        r = self.ok("importar", str(salida), str(ruta), terminal="cp1252")
+        self.assertIn("VAC-0001 · Puesto ★ R-1 · —", r["vacantes"])
 
     def test_una_primera_busqueda_crea_su_fila_sus_vacantes_y_una_observacion_por_cada_una(self):
         salida = self.buscar(PRIMERA, sin_detalle=["R-4"])

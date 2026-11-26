@@ -2392,7 +2392,16 @@ def buscar_bolsa(bid, ficha, pref, remotas, previo):
     return adaptador(bid, conf, pref, leer_terminos(MODULO_05), remotas, previo)
 
 
+def salida_en_utf8():
+    """Escribe stdout y stderr en UTF-8. La terminal de Windows suele usar cp1252, que no tiene caracteres como
+    «★», y con ellos print fallaría, también en --help."""
+    for flujo in (sys.stdout, sys.stderr):
+        if hasattr(flujo, "reconfigure"):
+            flujo.reconfigure(encoding="utf-8")
+
+
 def main():
+    salida_en_utf8()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=f"Plataformas con adaptador: {', '.join(ADAPTADORES)}. Bolsas de empleo con "
                                         f"adaptador: {', '.join(BOLSAS)}.")
