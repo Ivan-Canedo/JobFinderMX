@@ -2,6 +2,26 @@
 
 Qué trae cada versión de la plantilla y qué hace `/actualizar` en la copia al llegar a ella. Lo escribe el mantenedor (`CONTRIBUTING.md`, «Versión de la plantilla»); en la copia no se edita.
 
+## v3.1 — 2026-11-26
+
+### Qué cambió
+
+- Tu CV se genera con bibliotecas de Python que se instalan dentro de tu copia, sin LibreOffice ni poppler y sin permisos de administrador. El PDF lleva la fuente Carlito incrustada, y el generador revisa ahora también el texto del Word.
+- `/configurar` deja listo todo lo que hay que instalar en una primera conversación, la conversación técnica, y prueba que tu CV se puede generar antes de entrevistarte. Después, la entrevista hasta tu primer CV ya no instala nada.
+- En Windows, `/configurar` instala Python y git solo para tu usuario, sin permisos de administrador, y los encuentra en cuanto se instalan, sin pedirte reiniciar. git es opcional, y te pregunta una sola vez si guarda una versión al terminar cada paso.
+- Con un agente que no es Claude Code, te recomienda una conversación nueva por paso, sin repetir revisiones, y se detiene al terminar tu primer CV: la búsqueda es el siguiente nivel. Además, te explica cada comando en español antes de que lo apruebes y te avisa antes de algo que gaste mucha cuota.
+- Los resúmenes que confirmas ya no muestran claves internas, fuentes ni bloques de configuración: solo hechos, en tus palabras.
+- Si nombras una zona metropolitana de México, su lista de municipios sale de la delimitación oficial, «Metrópolis de México 2020», en `herramientas/metropolis.json`.
+- En Windows, la herramienta de registros y la búsqueda ya no se caen por un carácter que la terminal no puede escribir. La herramienta de registros escribe cada dato en su columna por nombre y rechaza una fila con columnas que tu archivo no tiene, sin tocarlo.
+- Node y markdownlint dejan de ser necesarios en tu copia: el formato de los módulos se revisa solo si los tienes.
+- La plantilla se descarga como un ZIP de cada versión, y hay una guía de inicio para Windows en <https://ivan-canedo.github.io/JobFinderMX/>.
+
+### En la copia
+
+1. **Bibliotecas del CV (automática):** sigue «Entorno virtual» y luego «Prueba del CV» del paso 2 de `/configurar` (`.claude/skills/configurar/paso-2-herramientas.md`), con los comandos del sistema de la copia: crea `.venv` si no existe e instala en él las bibliotecas del CV y de los registros. Muéstrale al titular los comandos y pide su permiso antes de correrlos, como dice ese punto. En Code en la nube, el hook ya las instaló: corre solo la comprobación y la prueba. `.venv` no va en el commit. No edita módulos.
+2. **Zona metropolitana de México (con el titular):** si 04 está «Configurado» y su bloque de PREF-UBICACION tiene un grupo de `localidades` con `pais` `MX` y una `zona`, busca esa zona en la tabla con la línea del subpaso 4 del punto 3 del paso 4 de `/configurar` («Zona metropolitana»). Si hay coincidencia, compárala con los grupos de esa `zona`, que son uno por estado, y muéstrale al titular, agrupados por estado, los municipios de la tabla que su grupo no tiene, con la fuente, como dice ese subpaso. Pregúntale cuáles agrega; no le pidas confirmar que pertenecen a la zona. Agrega los que acepte, con sus variantes de escritura (subpaso 5) y su `PREF-U##` (04/PREF-FUENTES). Si 04 tiene un `PREF-P##` para verificar esa lista contra la fuente oficial, resuélvelo. Si no hay coincidencia o no falta ningún municipio, dile que su lista ya coincide con la tabla, o que la tabla no tiene su zona, y la acción termina sin editar módulos. Retoma el paso 4 (Preferencias) en la fila de 04 de ESTADO hasta terminar la comparación; luego la fila vuelve a su siguiente paso.
+3. **Programas que ya no hacen falta (con el titular):** dile en una línea que LibreOffice, poppler y Node ya no son necesarios para JobFinderMX, así que puede desinstalarlos si no los usa para otra cosa. No edita módulos.
+
 ## v3.0 — 2026-11-23
 
 ### Qué cambió
