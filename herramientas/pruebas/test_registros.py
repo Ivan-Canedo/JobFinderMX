@@ -792,7 +792,8 @@ class Instantanea(CopiaFicticia):
         busqueda["habilidades_vacante"][0]["habilidad_literal"] = "_SQL_ or ~~Excel~~ | > 3 years"
         self.ok("agregar", entrada=busqueda)
         shutil.copy(RAIZ / ".markdownlint-cli2.jsonc", self.dir)
-        r = subprocess.run(["markdownlint-cli2", "--no-globs", "instantanea/informes.md", "instantanea/vacantes.md"],
+        # La ruta de which: en Windows es un .cmd, que subprocess no encuentra solo por su nombre.
+        r = subprocess.run([shutil.which("markdownlint-cli2"), "--no-globs", "instantanea/informes.md", "instantanea/vacantes.md"],
                            cwd=self.dir, capture_output=True, text=True, timeout=60)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
